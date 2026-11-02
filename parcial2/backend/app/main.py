@@ -10,6 +10,16 @@ from .modules.planes.router import router as planes_router
 from .modules.sucursales.router import router as sucursales_router
 from .modules.suscripciones.router import router as suscripciones_router
 from .modules.tenants.router import router as tenants_router
+from .modules.usuarios.router import router as usuarios_router
+from .modules.catalogos.router import router as catalogos_router
+from .modules.productos.router import router as productos_router
+from .modules.proveedores.router import router as proveedores_router
+from .modules.clientes.router import router as clientes_router
+from .modules.inventario.router import router as inventario_router
+from .modules.reservas.router import router as reservas_router
+from .modules.ventas.router import router as ventas_router
+from .modules.cambios.router import router as cambios_router
+from .modules.offline.router import router as offline_router
 
 
 settings = get_settings()
@@ -48,6 +58,10 @@ def create_app() -> FastAPI:
     app.include_router(sucursales_router, prefix=prefix)
     app.include_router(suscripciones_router, prefix=prefix)
     app.include_router(planes_router, prefix=prefix)
+    for router in (usuarios_router, catalogos_router, productos_router, proveedores_router,
+                   clientes_router, inventario_router, reservas_router, ventas_router,
+                   cambios_router, offline_router):
+        app.include_router(router, prefix=prefix)
 
     @app.get("/health", tags=["health"])
     def health():

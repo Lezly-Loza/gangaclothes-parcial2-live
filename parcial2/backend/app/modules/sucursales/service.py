@@ -44,7 +44,7 @@ def crear(db: Session, tenant_id: int, data: schemas.SucursalIn) -> Sucursal:
         estado="activa",
         activo=True,
     )
-    db.add(s)
+    s.verificarYGuardar(db)
     db.commit()
     db.refresh(s)
     return s

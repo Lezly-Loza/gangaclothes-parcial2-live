@@ -69,7 +69,7 @@ def contratar_plan(db: Session, tenant_id: int, data: schemas.ContratarPlanIn) -
         fecha_fin=inicio + timedelta(days=data.duracion_dias),
         estado="activa",
     )
-    db.add(nueva)
+    nueva.activarSuscripcion(db)
     db.commit()
     db.refresh(nueva)
     return nueva
@@ -98,7 +98,11 @@ def exigir_capacidad(db: Session, tenant_id: int, recurso: str) -> tuple[Plan, i
 
     limite = limite_por_recurso[recurso]
     if recurso == "productos":
-        return plan, 0, limite
+        from ...models import Producto
+        actual = _count(db, Producto, tenant_id)
+        if actual >= limite:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Limite alcanzado para productos")
+        return plan, actual, limite
 
     modelo = modelo_por_recurso[recurso]
     actual = _count(db, modelo, tenant_id)
@@ -109,3 +113,35 @@ def exigir_capacidad(db: Session, tenant_id: int, recurso: str) -> tuple[Plan, i
             f"Contrata un plan superior para seguir dando de alta {recurso}.",
         )
     return plan, actual, limite
+
+
+def validar_uso_en_plan(db: Session, tenant_id: int, plan_nuevo: Plan) -> None:
+    if (_count(db, Sucursal, tenant_id) > plan_nuevo.max_sucursales or
+            _count(db, User, tenant_id) > plan_nuevo.max_usuarios):
+        raise HTTPException(409, "El uso actual supera el plan elegido")
+
+
+def cambiar_plan(db: Session, tenant_id: int, data: schemas.CambiarPlanIn) -> Suscripcion:
+    plan = db.query(Plan).filter(Plan.codigo == data.plan_codigo, Plan.activo.is_(True)).first()
+    if plan is None:
+        raise HTTPException(404, "Plan no encontrado")
+    validar_uso_en_plan(db, tenant_id, plan)
+    actual, _ = suscripcion_vigente(db, tenant_id)
+    if actual:
+        actual.estado = "cancelada"
+    nueva = Suscripcion(tenant_id=tenant_id, plan_id=plan.id, fecha_inicio=date.today(),
+                         fecha_fin=date.today() + timedelta(days=data.duracion_dias))
+    nueva.validarUsoYGuardar(db)
+    db.commit()
+    db.refresh(nueva)
+    return nueva
+
+
+def renovar_plan(db: Session, tenant_id: int, data: schemas.RenovarPlanIn) -> Suscripcion:
+    actual, _ = suscripcion_vigente(db, tenant_id)
+    if actual is None:
+        raise HTTPException(404, "Suscripcion no encontrada")
+    actual.fecha_fin = max(actual.fecha_fin or date.today(), date.today()) + timedelta(days=data.duracion_dias)
+    actual.validarUsoYGuardar(db)
+    db.commit()
+    return actual

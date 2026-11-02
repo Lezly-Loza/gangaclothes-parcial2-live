@@ -8,6 +8,15 @@ class ContratarPlanIn(BaseModel):
     duracion_dias: int = Field(default=30, ge=1, le=3650)
 
 
+class CambiarPlanIn(BaseModel):
+    plan_codigo: str
+    duracion_dias: int = Field(default=30, ge=1)
+
+
+class RenovarPlanIn(BaseModel):
+    duracion_dias: int = Field(default=30, ge=1)
+
+
 class PlanOut(BaseModel):
     id: int
     codigo: str

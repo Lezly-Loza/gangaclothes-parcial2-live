@@ -2,17 +2,31 @@
 __pycache__/
 *.pyc
 .venv/
+.venv-run/
+.uv-cache/
+.uv-python/
+.testtmp*/
+.pytest_cache/
 venv/
 .env
 *.db
 # Node / Angular
 node_modules/
+.npm-cache/
 dist/
 .angular/
 # Flutter
 mobile/build/
+parcial2/mobile/build/
 mobile/.dart_tool/
+parcial2/mobile/.dart_tool/
 mobile/.flutter-plugins*
+parcial2/mobile/.flutter-plugins*
+.pub-cache/
+.appdata/
+.localappdata/
+.idea/
+*.iml
 *.apk
 # Certificados de las pasarelas: jamas al repositorio.
 # La carpeta entera, y ademas por extension por si alguien los deja en otro lado.
@@ -26,3 +40,5 @@ certificados/
 
 # Otros
 .DS_Store
+.claude/
+CLAUDE.md

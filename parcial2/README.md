@@ -371,3 +371,66 @@ Cuando armes tus endpoints:
   crear — devuelve 409 con mensaje consistente al resto del sistema.
 - Agregá tus endpoints documentándolos acá debajo cuando los termines.
 
+## 10. Parcial 2 completo: CU-01 a CU-18
+
+Los módulos nuevos siguen `router.py` → `service.py` → modelos SQLAlchemy con
+`TenantMixin`. Están registrados en `app/main.py`. La venta guarda venta,
+detalles, pago y movimientos con un solo `commit`; la reserva aparta inventario
+en la misma transacción. Stripe se usa solo si se configura una clave
+`STRIPE_SECRET_KEY=sk_test_...`; sin ella la pasarela simula la aprobación.
+
+| CU | Módulo / ruta principal |
+|---|---|
+| 03 | `GET/POST /api/v1/usuarios` |
+| 06 | `POST /api/v1/suscripciones/cambiar`, `/renovar` |
+| 08 | `GET/POST /api/v1/productos` |
+| 09 | `GET/POST /api/v1/catalogos/{tipo}` |
+| 10 | `GET/POST /api/v1/proveedores` |
+| 11 | `GET/POST /api/v1/clientes` |
+| 12 | `GET /api/v1/inventario`, `POST /api/v1/inventario/movimientos` |
+| 14 | `POST /api/v1/reservas` |
+| 15 | `POST /api/v1/ventas` |
+| 16 | `GET /api/v1/ventas/{codigo}`, `POST /api/v1/cambios` |
+| 17 | `POST /api/v1/ventas/{id}/anular`, `/reservas/{id}/anular` |
+| 18 | `GET /api/v1/offline/catalogo?sucursal_id=...&desde=...` |
+
+CU-13 vive en `web/`: PWA Angular con service worker, manifest e íconos.
+El cliente móvil vive en `mobile/` y usa SQLite (`sqflite`) para el catálogo
+offline. Para una instalación ya existente de SQLite, usa una base nueva o
+aplica una migración: `Tenant` ahora tiene `plazo_cambio_dias` y `create_all`
+no modifica tablas preexistentes.
+
+### Ejecutar y verificar
+
+```powershell
+cd parcial2/backend
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m app.seeds.demo
+.venv\Scripts\python.exe -m pytest -q
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+En otra terminal:
+
+```powershell
+cd parcial2/web
+npm install
+npm start
+```
+
+Para Flutter:
+
+```powershell
+cd parcial2/mobile
+flutter pub get
+flutter run
+```
+
+Las 24 capturas están en `docs/capturas/`. Las seis `_movil` se tomaron con
+Flutter web a 390×844 porque no había emulador Android; las `_web` con Angular
+a 1366×768. El script `docs/capturas/capturar_web.ts` las repite con Playwright
+tras iniciar backend, Angular y el servidor de `mobile/build/web` en los
+puertos 8000, 4200 y 8002 respectivamente. Para repetir los flujos de escritura
+con los mismos datos, empieza con una base SQLite nueva y ejecuta las semillas.
+
