@@ -25,3 +25,14 @@ class Suscripcion(Base, TenantMixin):
 
     tenant: Mapped["Tenant"] = relationship(back_populates="suscripciones")
     plan: Mapped["Plan"] = relationship()
+
+    def activarSuscripcion(self, db):
+        self.estado = "activa"
+        db.add(self)
+        db.flush()
+        return self
+
+    def validarUsoYGuardar(self, db):
+        db.add(self)
+        db.flush()
+        return self

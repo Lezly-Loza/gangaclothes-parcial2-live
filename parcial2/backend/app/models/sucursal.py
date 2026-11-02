@@ -28,3 +28,8 @@ class Sucursal(Base, TenantMixin):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     tenant: Mapped["Tenant"] = relationship(back_populates="sucursales")
+
+    def verificarYGuardar(self, db):
+        db.add(self)
+        db.flush()
+        return self
