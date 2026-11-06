@@ -1,148 +1,99 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { TenantsService } from '../../../services/tenants.service';
+import { Tenant, TenantsService } from '../../../core/tenants.service';
+import { PlanesService, Plan } from '../../../core/planes.service';
 import { Notificaciones } from '../../../core/notificaciones';
 import { mensajeDeError } from '../../../core/errores.interceptor';
+import { fechaCortaLocal } from '../../../shared/formato';
 
 @Component({
   selector: 'app-empresas',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <div class="cabecera">
-      <div>
-        <div class="ceja">CU-01 Empresas contratantes</div>
-        <h1>Empresas</h1>
-      </div>
-      <button class="btn rosa" (click)="abrirForm()">+ Nueva empresa</button>
-    </div>
-
-    <div class="marco-tabla">
-      @if (cargando()) {
-        <p class="mensaje">Cargando empresas…</p>
-      } @else if (empresas().length === 0) {
-        <div class="mensaje vacio">
-          <h2>Todavia no hay empresas</h2>
-          <p>Registra la primera empresa contratante.</p>
-          <button class="btn rosa" (click)="abrirForm()">+ Nueva empresa</button>
-        </div>
-      } @else {
-        <table>
-          <thead><tr>
-            <th class="col-indice">#</th>
-            <th>Razon social</th><th>Codigo</th><th>NIT</th><th>Correo</th><th>Plan</th><th>Vence</th>
-          </tr></thead>
-          <tbody>
-            @for (e of empresas(); track e.id; let i = $index) {
-              <tr>
-                <td class="col-indice">{{ i + 1 }}</td>
-                <td><b>{{ e.razon_social }}</b></td>
-                <td class="mono">{{ e.codigo }}</td>
-                <td class="mono">{{ e.nit }}</td>
-                <td>{{ e.correo }}</td>
-                <td>@if (e.plan_actual) { <span class="estado rosa">{{ e.plan_actual }}</span> } @else { — }</td>
-                <td class="mono">{{ e.fecha_fin_suscripcion || '—' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      }
-    </div>
-
-    @if (formAbierto()) {
-      <div class="fondo" (click)="cerrarForm()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h2>Registrar empresa</h2>
-          <div class="rejilla">
-            <div class="grupo completo">
-              <label class="etiqueta">Razon social <span class="req">*</span></label>
-              <input class="campo" [(ngModel)]="datos.razon_social" placeholder="Boutique Nueva SRL">
-            </div>
-            <div class="grupo"><label class="etiqueta">NIT</label><input class="campo" [(ngModel)]="datos.nit"></div>
-            <div class="grupo"><label class="etiqueta">Codigo</label><input class="campo" [(ngModel)]="datos.codigo" placeholder="nueva"></div>
-            <div class="grupo"><label class="etiqueta">Correo</label><input class="campo" type="email" [(ngModel)]="datos.correo"></div>
-            <div class="grupo"><label class="etiqueta">Telefono</label><input class="campo" [(ngModel)]="datos.telefono"></div>
-            <div class="grupo completo"><label class="etiqueta">Administrador inicial</label></div>
-            <div class="grupo"><label class="etiqueta">Nombre</label><input class="campo" [(ngModel)]="datos.admin.nombre"></div>
-            <div class="grupo"><label class="etiqueta">Correo admin</label><input class="campo" type="email" [(ngModel)]="datos.admin.email"></div>
-            <div class="grupo"><label class="etiqueta">Contrasena</label><input class="campo" type="password" [(ngModel)]="datos.admin.password"></div>
-            <div class="grupo">
-              <label class="etiqueta">Plan</label>
-              <select class="campo" [(ngModel)]="datos.plan_codigo">
-                <option value="basico">Basico</option>
-                <option value="profesional">Profesional</option>
-                <option value="empresarial">Empresarial</option>
-              </select>
-            </div>
-          </div>
-          @if (error()) { <p class="error-servidor">{{ error() }}</p> }
-          <div class="acciones">
-            <button class="btn linea" (click)="cerrarForm()">Cancelar</button>
-            <button class="btn rosa" (click)="registrarEmpresa(datos)" [disabled]="guardando()">
-              {{ guardando() ? 'Guardando…' : 'Registrar' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    }
-  `,
-  styles: [`
-    .cabecera{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;}
-    h1{font-size:22px;font-weight:800;letter-spacing:-0.02em;margin-top:2px;}
-    h2{font-size:18px;font-weight:800;letter-spacing:-0.02em;margin:3px 0 16px;}
-  `],
+  imports: [CommonModule, ReactiveFormsModule],
+  templateUrl: './empresas.html',
+  styleUrl: './empresas.css',
 })
-export class RegistrarEmpresaForm {
+export class Empresas {
   private api = inject(TenantsService);
+  private planesApi = inject(PlanesService);
   private avisos = inject(Notificaciones);
+  private fb = inject(FormBuilder);
 
-  readonly empresas = signal<any[]>([]);
+  readonly empresas = signal<Tenant[]>([]);
+  readonly planes = signal<Plan[]>([]);
   readonly cargando = signal(true);
-  readonly formAbierto = signal(false);
+  readonly errorCarga = signal<string | null>(null);
+
+  readonly modalAbierto = signal(false);
   readonly guardando = signal(false);
-  readonly error = signal('');
+  readonly errorFormulario = signal<string | null>(null);
 
-  datos: any = {
-    razon_social: 'Boutique Nueva SRL', nit: '', correo: '', telefono: '',
-    codigo: 'nueva',
-    admin: { nombre: 'Administradora', email: '', password: '' },
-    plan_codigo: 'profesional',
-  };
+  readonly formulario = this.fb.nonNullable.group({
+    razon_social: ['', [Validators.required, Validators.minLength(2)]],
+    nit: ['', Validators.required],
+    correo: ['', [Validators.required, Validators.email]],
+    telefono: [''],
+    codigo: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9_-]+$/)]],
+    admin_nombre: ['', [Validators.required, Validators.minLength(2)]],
+    admin_email: ['', [Validators.required, Validators.email]],
+    admin_password: ['', [Validators.required, Validators.minLength(6)]],
+    plan_codigo: ['profesional'],
+  });
 
-  constructor() { this.listar(); }
+  constructor() { this.cargar(); }
 
-  async listar() {
+  async cargar() {
     this.cargando.set(true);
-    try { this.empresas.set(await firstValueFrom(this.api.listar())); }
-    finally { this.cargando.set(false); }
-  }
-  abrirForm() { this.error.set(''); this.formAbierto.set(true); }
-  cerrarForm() { this.formAbierto.set(false); }
-
-  async registrarEmpresa(datos: any) {
-    this.error.set(''); this.guardando.set(true);
+    this.errorCarga.set(null);
     try {
-      await firstValueFrom(this.api.crear(datos));
-      this.avisos.ok('Empresa registrada');
-      this.formAbierto.set(false);
-      await this.listar();
-    } catch (e: any) { this.error.set(mensajeDeError(e, 'No se pudo registrar')); }
-    finally { this.guardando.set(false); }
+      const [emp, pl] = await Promise.all([
+        firstValueFrom(this.api.listar()),
+        firstValueFrom(this.planesApi.listar()),
+      ]);
+      this.empresas.set(emp);
+      this.planes.set(pl);
+    } catch (e: any) {
+      this.errorCarga.set(mensajeDeError(e, 'No se pudieron cargar las empresas.'));
+    } finally {
+      this.cargando.set(false);
+    }
   }
-}
 
-@Component({
-  selector: 'app-empresas-list',
-  standalone: true,
-  imports: [CommonModule],
-  template: `<p *ngFor="let e of empresas()">{{ e.razon_social }}</p>`,
-})
-export class EmpresasList {
-  private api = inject(TenantsService);
-  readonly empresas = signal<any[]>([]);
-  constructor() { this.listar(); }
-  async listar() { this.empresas.set(await firstValueFrom(this.api.listar())); }
-  async registrarEmpresa(datos: any) { await firstValueFrom(this.api.crear(datos)); await this.listar(); }
+  abrirNuevo() {
+    this.formulario.reset({ plan_codigo: 'profesional' } as any);
+    this.errorFormulario.set(null);
+    this.modalAbierto.set(true);
+  }
+
+  cerrarModal() { this.modalAbierto.set(false); }
+
+  invalido(campo: string): boolean {
+    const c = this.formulario.get(campo);
+    return !!(c && c.invalid && (c.dirty || c.touched));
+  }
+
+  async guardar() {
+    this.errorFormulario.set(null);
+    if (this.formulario.invalid) { this.formulario.markAllAsTouched(); return; }
+    const v = this.formulario.getRawValue();
+    this.guardando.set(true);
+    try {
+      await firstValueFrom(this.api.crear({
+        razon_social: v.razon_social, nit: v.nit, correo: v.correo,
+        telefono: v.telefono || null, codigo: v.codigo,
+        admin: { nombre: v.admin_nombre, email: v.admin_email, password: v.admin_password },
+        plan_codigo: v.plan_codigo || null,
+      }));
+      this.avisos.ok(`Empresa "${v.razon_social}" registrada.`);
+      this.modalAbierto.set(false);
+      await this.cargar();
+    } catch (e: any) {
+      this.errorFormulario.set(mensajeDeError(e, 'No se pudo registrar la empresa.'));
+    } finally {
+      this.guardando.set(false);
+    }
+  }
+
+  fecha(iso: string | null | undefined) { return fechaCortaLocal(iso, true); }
 }

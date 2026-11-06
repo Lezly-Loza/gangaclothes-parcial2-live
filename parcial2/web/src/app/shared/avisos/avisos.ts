@@ -1,29 +1,47 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Notificaciones } from '../../core/notificaciones';
 
 @Component({
   selector: 'app-avisos',
-  standalone: true,
-  imports: [CommonModule],
   template: `
-    <div class="avisos" aria-live="polite">
-      @for (a of n.avisos(); track a.id) {
-        <div class="aviso" [class.ok]="a.tipo === 'ok'" [class.error]="a.tipo === 'error'" role="status">
-          <span>{{ a.texto }}</span>
-          <button class="cerrar" (click)="n.cerrar(a.id)" aria-label="Cerrar">×</button>
+    <div class="avisos">
+      @for (aviso of notificaciones.avisos(); track aviso.id) {
+        <div class="aviso" [class.error]="aviso.tipo === 'error'" (click)="notificaciones.cerrar(aviso.id)">
+          <span class="icono">{{ aviso.tipo === 'error' ? '!' : '✓' }}</span>
+          <span>{{ aviso.texto }}</span>
         </div>
       }
     </div>
   `,
-  styles: [`
-    .aviso{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:10px;
-           background:#fff;border:1.5px solid var(--linea);font-size:12.5px;box-shadow:0 8px 18px rgba(20,22,26,.12);}
-    .aviso.ok{border-color:var(--ok);color:var(--ok);background:#e4f2ec;}
-    .aviso.error{border-color:var(--alerta);color:var(--alerta);background:#fce9e2;}
-    .cerrar{background:none;border:none;font-size:18px;line-height:1;cursor:pointer;color:inherit;margin-left:auto;}
-  `],
+  styles: `
+    .aviso {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: #fff;
+      border: 1.5px solid var(--ok);
+      border-left-width: 5px;
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      box-shadow: 0 8px 22px rgba(20, 22, 26, 0.16);
+      cursor: pointer;
+    }
+    .aviso.error {
+      border-color: var(--alerta);
+    }
+    .icono {
+      font-family: var(--mono);
+      font-weight: 700;
+      color: var(--ok);
+    }
+    .aviso.error .icono {
+      color: var(--alerta);
+    }
+  `,
 })
 export class Avisos {
-  n = inject(Notificaciones);
+  readonly notificaciones = inject(Notificaciones);
 }

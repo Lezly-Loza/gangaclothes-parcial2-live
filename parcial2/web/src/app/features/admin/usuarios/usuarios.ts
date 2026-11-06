@@ -1,120 +1,264 @@
-import { Component, inject, output, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
-import { UsuariosService } from '../../../services/usuarios.service';
-import { Notificaciones } from '../../../core/notificaciones';
+import { HttpClient } from '@angular/common/http';
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+
+import { API_URL } from '../../../core/api';
 import { mensajeDeError } from '../../../core/errores.interceptor';
+import { Notificaciones } from '../../../core/notificaciones';
+import { Registro } from '../../../core/recurso.service';
+import { SesionStore } from '../../../core/sesion';
+import { esInactivo, filtrarPorEstado, FiltroEstado, textoPie, textoVacio } from '../../../shared/estado/estado';
+import { SelectorEstado } from '../../../shared/estado/selector-estado';
+import { contrasenaSegura, ReglasContrasena } from '../../../shared/contrasena/reglas-contrasena';
 
-@Component({
-  selector: 'app-usuario-form',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <div class="fondo" (click)="cerrar.emit()">
-      <div class="modal angosto" (click)="$event.stopPropagation()">
-        <h2>Nuevo usuario</h2>
-        <label class="etiqueta">Nombre <span class="req">*</span></label>
-        <input class="campo" [(ngModel)]="datos.nombre">
-        <label class="etiqueta" style="margin-top:12px">Correo <span class="req">*</span></label>
-        <input class="campo" type="email" [(ngModel)]="datos.email">
-        <label class="etiqueta" style="margin-top:12px">Contrasena <span class="req">*</span></label>
-        <input class="campo" type="password" [(ngModel)]="datos.password">
-        <label class="etiqueta" style="margin-top:12px">Rol</label>
-        <select class="campo" [(ngModel)]="datos.rol">
-          <option value="admin">admin</option>
-          <option value="encargado">encargado</option>
-          <option value="vendedor">vendedor</option>
-          <option value="cliente">cliente</option>
-        </select>
-        @if (error()) { <p class="error-servidor">{{ error() }}</p> }
-        <div class="acciones">
-          <button class="btn linea" (click)="cerrar.emit()">Cancelar</button>
-          <button class="btn rosa" (click)="crear()" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : 'Crear' }}</button>
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`h2{font-size:18px;font-weight:800;margin:3px 0 16px;}`],
-})
-export class UsuarioForm {
-  private api = inject(UsuariosService);
-  private avisos = inject(Notificaciones);
-
-  readonly cerrar = output<void>();
-  readonly creado = output<void>();
-
-  datos: any = { nombre: 'Nuevo usuario', email: '', password: '', rol: 'vendedor' };
-  readonly guardando = signal(false);
-  readonly error = signal('');
-
-  async crear() {
-    this.error.set(''); this.guardando.set(true);
-    try {
-      await firstValueFrom(this.api.crear(this.datos));
-      this.avisos.ok('Usuario creado');
-      this.creado.emit();
-      this.cerrar.emit();
-    } catch (e: any) { this.error.set(mensajeDeError(e, 'No se pudo crear')); }
-    finally { this.guardando.set(false); }
-  }
-}
-
+/**
+ * Administrar usuarios y roles. No usa la fabrica generica porque los roles
+ * son una lista, la contrasena solo se manda al crear, el correo no se puede
+ * editar y no hay DELETE: el usuario se archiva con `activo`.
+ */
 @Component({
   selector: 'app-usuarios',
-  standalone: true,
-  imports: [CommonModule, FormsModule, UsuarioForm],
-  template: `
-    <div class="cabecera">
-      <div>
-        <div class="ceja">CU-03 Usuarios y roles</div>
-        <h1>Usuarios</h1>
-      </div>
-      <button class="btn rosa" (click)="formAbierto.set(true)">+ Nuevo usuario</button>
-    </div>
-
-    <div class="marco-tabla">
-      @if (cargando()) { <p class="mensaje">Cargando…</p> }
-      @else if (usuarios().length === 0) {
-        <div class="mensaje vacio"><h2>Aun no hay usuarios</h2><p>Crea el primero.</p></div>
-      } @else {
-        <table>
-          <thead><tr><th class="col-indice">#</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th></tr></thead>
-          <tbody>
-            @for (u of usuarios(); track u.id; let i = $index) {
-              <tr [class.inactiva]="!u.activo">
-                <td class="col-indice">{{ i + 1 }}</td>
-                <td><b>{{ u.nombre }}</b></td>
-                <td>{{ u.email }}</td>
-                <td><span class="estado rosa">{{ u.rol }}</span></td>
-                <td><span class="estado" [class.ok]="u.activo" [class.bajo]="!u.activo">{{ u.activo ? 'activo' : 'inactivo' }}</span></td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      }
-    </div>
-
-    @if (formAbierto()) {
-      <app-usuario-form (cerrar)="formAbierto.set(false)" (creado)="listar()"></app-usuario-form>
-    }
-  `,
-  styles: [`
-    .cabecera{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;}
-    h1{font-size:22px;font-weight:800;letter-spacing:-0.02em;margin-top:2px;}
-    h2{font-size:18px;font-weight:800;}
-  `],
+  imports: [ReactiveFormsModule, SelectorEstado, ReglasContrasena],
+  templateUrl: './usuarios.html',
+  styleUrl: './usuarios.css',
+  host: { '(document:keydown.escape)': 'cerrarModal()' },
 })
-export class UsuariosList {
-  private api = inject(UsuariosService);
-  readonly usuarios = signal<any[]>([]);
-  readonly cargando = signal(true);
-  readonly formAbierto = signal(false);
+export class Usuarios {
+  private http = inject(HttpClient);
+  private fb = inject(FormBuilder);
+  private avisos = inject(Notificaciones);
+  private sesion = inject(SesionStore);
 
-  constructor() { this.listar(); }
-  async listar() {
+  /** Los roles se traen de la API: si se crea uno nuevo, aparece aca solo. */
+  readonly roles = signal<string[]>([]);
+
+  // ---- listado ----
+  readonly usuarios = signal<Registro[]>([]);
+  readonly cargando = signal(true);
+  readonly errorCarga = signal<string | null>(null);
+  readonly busqueda = signal('');
+  readonly estado = signal<FiltroEstado>('activos');
+
+  // ---- formulario ----
+  readonly modalAbierto = signal(false);
+  readonly editando = signal<Registro | null>(null);
+  readonly guardando = signal(false);
+  readonly errorFormulario = signal<string | null>(null);
+  /** Los roles se manejan aparte del FormGroup porque son chips, no un control. */
+  readonly rolesElegidos = signal<string[]>([]);
+  readonly errorRoles = signal(false);
+  /** CU9: una cuenta con rol proveedor administra la oferta de UN proveedor. */
+  readonly proveedores = signal<{ id: number; nombre: string; activo: boolean | null; usuario_id: number | null }[]>([]);
+  readonly proveedorElegido = signal<number | null>(null);
+  readonly errorProveedor = signal(false);
+  formulario: FormGroup = this.fb.group({});
+
+  readonly cambiandoEstado = signal<number | null>(null);
+
+  readonly enEstado = computed(() => filtrarPorEstado(this.usuarios(), this.estado()));
+
+  readonly visibles = computed(() => {
+    const texto = this.busqueda().trim().toLowerCase();
+    if (!texto) return this.enEstado();
+    return this.enEstado().filter((u) =>
+      [u['nombre'], u['apellido'], u['email'], (u['roles'] as string[])?.join(' ')]
+        .join(' ')
+        .toLowerCase()
+        .includes(texto),
+    );
+  });
+
+  readonly archivados = computed(() => this.usuarios().filter((u) => esInactivo(u)).length);
+  readonly muestraEstado = computed(() => this.estado() === 'todos');
+  readonly pie = computed(() => textoPie(this.visibles().length, this.enEstado().length, this.estado(), true));
+  readonly mensajeVacio = computed(() =>
+    textoVacio(this.usuarios().length, this.archivados(), this.estado(), 'usuarios'),
+  );
+
+  constructor() {
+    this.cargarRoles();
+    this.cargarProveedores();
+    this.cargar();
+  }
+
+  private cargarProveedores(): void {
+    this.http
+      .get<{ id: number; nombre: string; activo: boolean | null; usuario_id: number | null }[]>(
+        `${API_URL}/admin/proveedores`,
+      )
+      .subscribe({
+        next: (filas) => this.proveedores.set(filas.filter((p) => p.activo !== false)),
+        error: () => this.proveedores.set([]),
+      });
+  }
+
+  /** Proveedores sin cuenta, mas el que ya tiene este usuario. */
+  readonly proveedoresLibres = computed(() => {
+    const usuarioId = this.editando()?.id ?? null;
+    return this.proveedores().filter((p) => p.usuario_id === null || p.usuario_id === usuarioId);
+  });
+
+  private cargarRoles(): void {
+    this.http.get<{ nombre: string; activo: boolean }[]>(`${API_URL}/seguridad/roles`).subscribe({
+      next: (filas) => this.roles.set(filas.filter((r) => r.activo).map((r) => r.nombre)),
+      error: () => this.avisos.error('No se pudieron cargar los roles disponibles.'),
+    });
+  }
+
+  cargar(): void {
     this.cargando.set(true);
-    try { this.usuarios.set(await firstValueFrom(this.api.listar())); }
-    finally { this.cargando.set(false); }
+    this.errorCarga.set(null);
+    this.http.get<Registro[]>(`${API_URL}/usuarios`).subscribe({
+      next: (filas) => {
+        this.usuarios.set(filas);
+        this.cargando.set(false);
+      },
+      error: (err) => {
+        this.errorCarga.set(mensajeDeError(err, 'No se pudieron cargar los usuarios.'));
+        this.cargando.set(false);
+      },
+    });
+  }
+
+  // ------------------------------------------------------------- formulario
+  abrirNuevo(): void {
+    this.editando.set(null);
+    this.errorFormulario.set(null);
+    this.errorRoles.set(false);
+    this.rolesElegidos.set(['cliente']);
+    this.proveedorElegido.set(null);
+    this.errorProveedor.set(false);
+    this.formulario = this.fb.group({
+      nombre: ['', Validators.required],
+      apellido: [''],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.maxLength(72), contrasenaSegura]],
+      telefono: [''],
+    });
+    this.modalAbierto.set(true);
+  }
+
+  abrirEdicion(usuario: Registro): void {
+    this.editando.set(usuario);
+    this.errorFormulario.set(null);
+    this.errorRoles.set(false);
+    this.rolesElegidos.set([...((usuario['roles'] as string[]) ?? [])]);
+    this.proveedorElegido.set((usuario['proveedor'] as { id: number } | null)?.id ?? null);
+    this.errorProveedor.set(false);
+    const texto = (clave: string) =>
+      usuario[clave] === null || usuario[clave] === undefined ? '' : String(usuario[clave]);
+    // Al editar, el correo se muestra pero no se toca: el backend no lo actualiza.
+    this.formulario = this.fb.group({
+      nombre: [texto('nombre'), Validators.required],
+      apellido: [texto('apellido')],
+      telefono: [texto('telefono')],
+    });
+    this.modalAbierto.set(true);
+  }
+
+  invalido(campo: string): boolean {
+    const control = this.formulario.get(campo);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  alternarRol(rol: string): void {
+    this.rolesElegidos.update((actuales) =>
+      actuales.includes(rol) ? actuales.filter((r) => r !== rol) : [...actuales, rol],
+    );
+    if (this.rolesElegidos().length > 0) this.errorRoles.set(false);
+  }
+
+  tieneRol(rol: string): boolean {
+    return this.rolesElegidos().includes(rol);
+  }
+
+  guardar(): void {
+    // Sin rol el usuario entraria al sistema sin poder hacer nada.
+    if (this.rolesElegidos().length === 0) this.errorRoles.set(true);
+    if (this.formulario.invalid) this.formulario.markAllAsTouched();
+    const esProveedor = this.rolesElegidos().includes('proveedor');
+    this.errorProveedor.set(esProveedor && this.proveedorElegido() === null);
+    if (this.formulario.invalid || this.rolesElegidos().length === 0 || this.errorProveedor()) return;
+    const proveedor_id = esProveedor ? this.proveedorElegido() : null;
+
+    this.errorFormulario.set(null);
+    this.guardando.set(true);
+
+    const crudo = this.formulario.getRawValue();
+    const usuario = this.editando();
+
+    const peticion = usuario
+      ? this.http.put<Registro>(`${API_URL}/usuarios/${usuario.id}`, {
+          nombre: crudo.nombre,
+          apellido: crudo.apellido || null,
+          telefono: crudo.telefono || null,
+          roles: this.rolesElegidos(),
+          proveedor_id,
+        })
+      : this.http.post<Registro>(`${API_URL}/usuarios`, {
+          nombre: crudo.nombre,
+          apellido: crudo.apellido || null,
+          email: crudo.email,
+          password: crudo.password,
+          telefono: crudo.telefono || null,
+          roles: this.rolesElegidos(),
+          proveedor_id,
+        });
+
+    peticion.subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.modalAbierto.set(false);
+        this.avisos.ok(usuario ? 'Se actualizo el usuario.' : 'Se creo el usuario.');
+        this.cargar();
+        this.cargarProveedores();
+      },
+      error: (err) => {
+        this.guardando.set(false);
+        this.errorFormulario.set(mensajeDeError(err, 'No se pudo guardar el usuario.'));
+      },
+    });
+  }
+
+  /** No hay DELETE de usuarios: se archiva y se reactiva con `activo`. */
+  cambiarEstado(usuario: Registro, activo: boolean): void {
+    this.cambiandoEstado.set(usuario.id);
+    this.http.put<Registro>(`${API_URL}/usuarios/${usuario.id}`, { activo }).subscribe({
+      next: () => {
+        this.cambiandoEstado.set(null);
+        this.avisos.ok(activo ? 'Se reactivo el usuario.' : 'Se archivo el usuario.');
+        this.cargar();
+      },
+      error: (err) => {
+        this.cambiandoEstado.set(null);
+        this.avisos.error(mensajeDeError(err, 'No se pudo cambiar el estado del usuario.'));
+      },
+    });
+  }
+
+  cerrarModal(): void {
+    this.modalAbierto.set(false);
+  }
+
+  // ------------------------------------------------------------ presentacion
+  esInactivo(usuario: Registro): boolean {
+    return esInactivo(usuario);
+  }
+
+  proveedorDe(usuario: Registro): string | null {
+    return (usuario['proveedor'] as { nombre: string } | null)?.nombre ?? null;
+  }
+
+  rolesDe(usuario: Registro): string[] {
+    return (usuario['roles'] as string[]) ?? [];
+  }
+
+  nombreCompleto(usuario: Registro): string {
+    return [usuario['nombre'], usuario['apellido']].filter(Boolean).join(' ');
+  }
+
+  /** Nadie deberia poder archivar su propia cuenta y quedarse afuera. */
+  esMiCuenta(usuario: Registro): boolean {
+    return this.sesion.usuario()?.id === usuario.id;
   }
 }

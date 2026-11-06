@@ -1,20 +1,18 @@
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+
+import { Asistente } from './shared/asistente/asistente';
 import { Avisos } from './shared/avisos/avisos';
-import { PwaService } from './services/pwa.service';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
-  imports: [RouterOutlet, Avisos],
+  imports: [RouterOutlet, Avisos, Asistente],
   template: `
     <router-outlet />
     <app-avisos />
+    <!-- CU28: flota sobre cualquier pantalla; el propio componente decide si
+         se muestra (hay sesion) y en que modo (cliente o personal). -->
+    <app-asistente />
   `,
 })
-export class App {
-  private pwa = inject(PwaService);
-  constructor() {
-    this.pwa.registrarServiceWorker();
-  }
-}
+export class App {}

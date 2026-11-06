@@ -1,52 +1,226 @@
 import { Routes } from '@angular/router';
-import { authGuard, rolGuard, invitadoGuard } from './core/auth.guard';
 
-const SUPER = { roles: ['superadmin'] };
-const ADMIN = { roles: ['admin'] };
-const ADMIN_O_ENCARGADO = { roles: ['admin', 'encargado'] };
-const ADMIN_O_VENDEDOR = { roles: ['admin', 'vendedor'] };
-const CUALQUIER_PERSONAL = { roles: ['admin', 'encargado', 'vendedor'] };
-const SUPER_O_ADMIN = { roles: ['superadmin', 'admin', 'encargado', 'vendedor'] };
+import { authGuard, invitadoGuard, permisoGuard, rolGuard } from './core/auth.guard';
+import {
+  CATEGORIAS,
+  CIUDADES,
+  COLECCIONES,
+  COLORES,
+  PROVEEDORES,
+  SUCURSALES,
+  TALLAS,
+  TEMPORADAS,
+} from './features/admin/catalogos/configs';
+import { ConfigCrud } from './shared/crud/config';
+
+const SOLO_ADMIN = { roles: ['administrador'] };
+/** Reservas, compras y carrito son de la cuenta del cliente: el personal usa el panel. */
 const SOLO_CLIENTE = { roles: ['cliente'] };
+/** Panel del encargado de sucursal: inventario, movimientos, compras y reservas. */
+const OPERACION_SUCURSAL = { roles: ['administrador', 'encargado'] };
+
+/**
+ * Los 7 catalogos comparten el componente `Crud`: lo unico que cambia es el
+ * `config`, que llega como input gracias a `withComponentInputBinding()`.
+ */
+function rutaCrud(camino: string, config: ConfigCrud, acceso: { roles: string[] } = SOLO_ADMIN) {
+  return {
+    path: camino,
+    canActivate: [rolGuard],
+    data: { ...acceso, config },
+    loadComponent: () => import('./shared/crud/crud').then((m) => m.Crud),
+  };
+}
 
 export const routes: Routes = [
   {
     path: 'login',
     canActivate: [invitadoGuard],
-    loadComponent: () => import('./features/auth/login/login').then(m => m.LoginPage),
+    loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
   },
   {
-    path: 'tienda',
-    loadComponent: () => import('./features/tienda/tienda-shell').then(m => m.TiendaShell),
-    children: [
-      { path: '', loadComponent: () => import('./features/tienda/catalogo-cliente').then(m => m.CatalogoCliente) },
-      { path: 'reservar', loadComponent: () => import('./features/tienda/reservar').then(m => m.ReservarPrendaPage) },
-      { path: 'carrito', loadComponent: () => import('./features/tienda/carrito').then(m => m.CarritoPage) },
-    ],
+    path: 'registro',
+    canActivate: [invitadoGuard],
+    loadComponent: () => import('./features/auth/registro/registro').then((m) => m.Registro),
+  },
+  {
+    path: 'recuperar',
+    canActivate: [invitadoGuard],
+    loadComponent: () => import('./features/auth/recuperar/recuperar').then((m) => m.Recuperar),
+  },
+  {
+    path: 'catalogo',
+    loadComponent: () => import('./features/catalogo/catalogo').then((m) => m.Catalogo),
+  },
+  {
+    path: 'mis-reservas',
+    canActivate: [authGuard, rolGuard],
+    data: SOLO_CLIENTE,
+    loadComponent: () => import('./features/tienda/mis-reservas/mis-reservas').then((m) => m.MisReservas),
+  },
+  {
+    path: 'mis-compras',
+    canActivate: [authGuard, rolGuard],
+    data: SOLO_CLIENTE,
+    loadComponent: () => import('./features/tienda/mis-compras/mis-compras').then((m) => m.MisCompras),
+  },
+  {
+    // CU29: seguimiento de los pedidos que se entregan a domicilio.
+    path: 'mis-envios',
+    canActivate: [authGuard, rolGuard],
+    data: SOLO_CLIENTE,
+    loadComponent: () => import('./features/tienda/mis-envios/mis-envios').then((m) => m.MisEnvios),
+  },
+  {
+    path: 'carrito',
+    canActivate: [authGuard, rolGuard],
+    data: SOLO_CLIENTE,
+    loadComponent: () => import('./features/tienda/carrito/carrito').then((m) => m.Carrito),
   },
   {
     path: 'admin',
     canActivate: [authGuard, rolGuard],
-    data: SUPER_O_ADMIN,
-    loadComponent: () => import('./features/admin/shell').then(m => m.AdminShell),
+    data: { roles: ['administrador', 'encargado', 'cajero'] },
+    loadComponent: () => import('./features/admin/shell').then((m) => m.AdminShell),
     children: [
-      { path: '', loadComponent: () => import('./features/admin/inicio/inicio').then(m => m.AdminInicio) },
-      { path: 'empresas',    canActivate: [rolGuard], data: SUPER,              loadComponent: () => import('./features/admin/empresas/empresas').then(m => m.RegistrarEmpresaForm) },
-      { path: 'usuarios',    canActivate: [rolGuard], data: ADMIN,              loadComponent: () => import('./features/admin/usuarios/usuarios').then(m => m.UsuariosList) },
-      { path: 'sucursales',  canActivate: [rolGuard], data: ADMIN,              loadComponent: () => import('./features/admin/sucursales/sucursales').then(m => m.SucursalesList) },
-      { path: 'contratar',   canActivate: [rolGuard], data: ADMIN,              loadComponent: () => import('./features/admin/contratar/contratar').then(m => m.ContratarPlanForm) },
-      { path: 'suscripcion', canActivate: [rolGuard], data: ADMIN,              loadComponent: () => import('./features/admin/suscripcion/suscripcion').then(m => m.MiSuscripcion) },
-      { path: 'catalogos',   canActivate: [rolGuard], data: ADMIN,              loadComponent: () => import('./features/admin/catalogos/catalogos').then(m => m.CatalogosPage) },
-      { path: 'catalogos/:tipo', canActivate: [rolGuard], data: ADMIN,          loadComponent: () => import('./features/admin/catalogos/catalogos').then(m => m.CatalogosPage) },
-      { path: 'productos',   canActivate: [rolGuard], data: ADMIN,              loadComponent: () => import('./features/admin/productos/productos').then(m => m.ProductosList) },
-      { path: 'proveedores', canActivate: [rolGuard], data: ADMIN,              loadComponent: () => import('./features/admin/proveedores/proveedores').then(m => m.ProveedoresList) },
-      { path: 'clientes',    canActivate: [rolGuard], data: ADMIN_O_VENDEDOR,   loadComponent: () => import('./features/admin/clientes/clientes').then(m => m.ClientesList) },
-      { path: 'inventario',  canActivate: [rolGuard], data: ADMIN_O_ENCARGADO,  loadComponent: () => import('./features/admin/inventario/inventario').then(m => m.InventarioPage) },
-      { path: 'caja',        canActivate: [rolGuard], data: ADMIN_O_VENDEDOR,   loadComponent: () => import('./features/admin/caja/caja').then(m => m.PuntoVentaPage) },
-      { path: 'cambios',     canActivate: [rolGuard], data: ADMIN_O_VENDEDOR,   loadComponent: () => import('./features/admin/cambios/cambios').then(m => m.CambioPrendaPage) },
-      { path: 'anular',      canActivate: [rolGuard], data: { roles: ['admin', 'encargado'] }, loadComponent: () => import('./features/admin/anular/anular').then(m => m.AnularOperacionDialog) },
-      { path: 'offline',     canActivate: [rolGuard], data: { roles: ['admin', 'encargado', 'vendedor'] }, loadComponent: () => import('./features/admin/offline/offline').then(m => m.ModoOfflinePage) },
-      { path: 'instalar',    loadComponent: () => import('./features/admin/instalar/instalar').then(m => m.AvisoInstalacionComponent) },
+      {
+        path: '',
+        loadComponent: () => import('./features/admin/inicio/inicio').then((m) => m.AdminInicio),
+      },
+      {
+        path: 'dashboard',
+        canActivate: [rolGuard, permisoGuard],
+        data: { ...OPERACION_SUCURSAL, permiso: 'reportes:ver' },
+        loadComponent: () => import('./features/reportes/dashboard/dashboard').then((m) => m.Dashboard),
+      },
+      {
+        path: 'reportes',
+        canActivate: [rolGuard, permisoGuard],
+        data: { ...OPERACION_SUCURSAL, permiso: 'reportes:ver' },
+        loadComponent: () => import('./features/reportes/reportes/reportes').then((m) => m.Reportes),
+      },
+      {
+        path: 'promociones',
+        canActivate: [rolGuard, permisoGuard],
+        data: { ...SOLO_ADMIN, permiso: 'promociones:ver' },
+        loadComponent: () => import('./features/admin/promociones/promociones').then((m) => m.Promociones),
+      },
+      {
+        path: 'usuarios',
+        canActivate: [rolGuard],
+        data: SOLO_ADMIN,
+        loadComponent: () => import('./features/admin/usuarios/usuarios').then((m) => m.Usuarios),
+      },
+      {
+        path: 'roles',
+        canActivate: [rolGuard],
+        data: SOLO_ADMIN,
+        loadComponent: () => import('./features/admin/roles/roles').then((m) => m.Roles),
+      },
+      {
+        path: 'bitacora',
+        canActivate: [rolGuard],
+        data: SOLO_ADMIN,
+        loadComponent: () => import('./features/admin/bitacora/bitacora').then((m) => m.Bitacora),
+      },
+      rutaCrud('categorias', CATEGORIAS),
+      rutaCrud('tallas', TALLAS),
+      rutaCrud('colores', COLORES),
+      rutaCrud('temporadas', TEMPORADAS),
+      rutaCrud('colecciones', COLECCIONES),
+      rutaCrud('ciudades', CIUDADES),
+      rutaCrud('sucursales', SUCURSALES),
+      {
+        path: 'prendas',
+        canActivate: [rolGuard],
+        data: SOLO_ADMIN,
+        loadComponent: () => import('./features/admin/prendas/prendas').then((m) => m.Prendas),
+      },
+      {
+        path: 'inventario',
+        canActivate: [rolGuard],
+        data: OPERACION_SUCURSAL,
+        loadComponent: () => import('./features/inventario/inventario/inventario').then((m) => m.Inventario),
+      },
+      {
+        path: 'movimientos',
+        canActivate: [rolGuard],
+        data: OPERACION_SUCURSAL,
+        loadComponent: () => import('./features/inventario/movimientos/movimientos').then((m) => m.Movimientos),
+      },
+      {
+        path: 'compras',
+        canActivate: [rolGuard],
+        data: OPERACION_SUCURSAL,
+        loadComponent: () => import('./features/inventario/compras/compras').then((m) => m.Compras),
+      },
+      rutaCrud('proveedores', PROVEEDORES, OPERACION_SUCURSAL),
+      {
+        // CU9/CU10: a que prenda del catalogo corresponde cada producto que ofrecen los proveedores.
+        path: 'oferta-proveedores',
+        canActivate: [rolGuard, permisoGuard],
+        data: { ...OPERACION_SUCURSAL, permiso: 'inventario:crear' },
+        loadComponent: () =>
+          import('./features/inventario/oferta-proveedores/oferta-proveedores').then((m) => m.OfertaProveedores),
+      },
+      {
+        path: 'reservas',
+        canActivate: [rolGuard],
+        data: OPERACION_SUCURSAL,
+        loadComponent: () =>
+          import('./features/reservas/sucursal/reservas-sucursal').then((m) => m.ReservasSucursal),
+      },
+      {
+        // CU29: envios a domicilio de la sucursal (asignar, despachar, entregar).
+        path: 'envios',
+        canActivate: [rolGuard, permisoGuard],
+        data: { roles: ['administrador', 'encargado', 'cajero'], permiso: 'envios:ver' },
+        loadComponent: () => import('./features/envios/sucursal/envios-sucursal').then((m) => m.EnviosSucursal),
+      },
+      {
+        path: 'caja',
+        canActivate: [rolGuard],
+        data: { roles: ['administrador', 'cajero'] },
+        loadComponent: () => import('./features/caja/caja').then((m) => m.Caja),
+      },
+      // Parcial 2 — CU-01 / CU-05 / CU-06 / CU-07 (suscripciones y plataforma)
+      {
+        path: 'empresas',
+        canActivate: [rolGuard, permisoGuard],
+        data: { ...SOLO_ADMIN, permiso: 'tenants:gestionar' },
+        loadComponent: () => import('./features/admin/empresas/empresas').then((m) => m.Empresas),
+      },
+      {
+        path: 'planes',
+        canActivate: [rolGuard, permisoGuard],
+        data: { ...SOLO_ADMIN, permiso: 'planes:gestionar' },
+        loadComponent: () => import('./features/admin/planes/planes').then((m) => m.Planes),
+      },
+      {
+        path: 'contratar-plan',
+        canActivate: [rolGuard, permisoGuard],
+        data: { ...SOLO_ADMIN, permiso: 'suscripcion:gestionar' },
+        loadComponent: () => import('./features/admin/contratar-plan/contratar-plan').then((m) => m.ContratarPlan),
+      },
+      {
+        path: 'mi-suscripcion',
+        canActivate: [rolGuard, permisoGuard],
+        data: { ...SOLO_ADMIN, permiso: 'suscripcion:gestionar' },
+        loadComponent: () => import('./features/admin/mi-suscripcion/mi-suscripcion').then((m) => m.MiSuscripcion),
+      },
+    ],
+  },
+  {
+    // CU9: portal del proveedor. Reusa el marco del panel con su propio menu.
+    path: 'proveedor',
+    canActivate: [authGuard, rolGuard],
+    data: { roles: ['proveedor'] },
+    loadComponent: () => import('./features/admin/shell').then((m) => m.AdminShell),
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./features/proveedor/mi-oferta/mi-oferta').then((m) => m.MiOferta),
+      },
     ],
   },
   { path: '', pathMatch: 'full', redirectTo: 'login' },

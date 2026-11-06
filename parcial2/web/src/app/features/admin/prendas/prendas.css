@@ -1,0 +1,188 @@
+.encabezado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.titulo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: auto;
+}
+h1 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.buscador {
+  width: 230px;
+}
+.filtros {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.filtro .ceja {
+  display: block;
+  margin-bottom: 5px;
+}
+.pie {
+  margin-top: 10px;
+}
+
+/* ------------------------------------------------------ tabla de prendas */
+.num {
+  text-align: right;
+}
+.margen {
+  color: var(--ok);
+  font-weight: 700;
+}
+.sub {
+  display: block;
+  font-size: 11px;
+  color: var(--gris);
+}
+.col-acciones {
+  width: 290px;
+}
+tr.abierta,
+tr.abierta:hover {
+  background: #fdf1f5;
+}
+.estado.borrador {
+  background: #ececea;
+  color: var(--gris);
+}
+.enlace.publicar {
+  color: var(--ganga);
+}
+
+/* --------------------------------------------------- detalle de variantes */
+.detalle {
+  margin-top: 26px;
+  border-top: 2px solid var(--tinta);
+  padding-top: 18px;
+}
+.cabecera-detalle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.cabecera-detalle > div:first-child {
+  margin-right: auto;
+}
+.cabecera-detalle h2 {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 2px;
+}
+.cabecera-detalle h2 .estado {
+  vertical-align: 3px;
+  margin-left: 6px;
+}
+.resumen {
+  font-size: 12px;
+  color: var(--gris);
+  margin-top: 2px;
+}
+.cerrar {
+  background: none;
+  border: 1.5px solid var(--linea);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  color: var(--gris);
+}
+.cerrar:hover {
+  border-color: var(--tinta);
+  color: var(--tinta);
+}
+.detalle .col-acciones {
+  width: 220px;
+}
+.ayuda-th {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.talla {
+  display: inline-block;
+  min-width: 30px;
+}
+.en-sucursal {
+  display: inline-block;
+  font-size: 11px;
+  border: 1px solid #bfe0d2;
+  background: #eef7f2;
+  border-radius: 99px;
+  padding: 2px 9px;
+  margin: 2px 4px 2px 0;
+}
+.en-sucursal b {
+  font-family: var(--mono);
+  color: var(--ok);
+  margin-left: 3px;
+}
+.en-sucursal.agotado {
+  border-color: #f3cdbf;
+  background: #fdf0ea;
+}
+.en-sucursal.agotado b {
+  color: var(--alerta);
+}
+
+/* -------------------------------------------------------------- modales */
+.modal.ancho {
+  max-width: 640px;
+}
+.advertencia {
+  font-size: 12px;
+  color: var(--gris);
+  line-height: 1.5;
+  margin-top: 10px;
+}
+.separada {
+  margin-top: 14px;
+}
+.modal .chip .swatch {
+  width: 11px;
+  height: 11px;
+  vertical-align: -1px;
+}
+.combinaciones {
+  font-size: 12px;
+  line-height: 1.6;
+  background: var(--suave);
+  border: 1.5px dashed var(--linea);
+  border-radius: 10px;
+  padding: 8px 11px;
+  margin-top: 6px;
+}
+.combinaciones .existe {
+  text-decoration: line-through;
+  color: var(--gris);
+}
+.sku {
+  color: var(--gris);
+  margin: -10px 0 14px;
+}
+.aviso-ceja {
+  color: var(--alerta);
+}
+.acciones.columna {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+@media (max-width: 620px) {
+  .buscador {
+    width: 100%;
+  }
+}

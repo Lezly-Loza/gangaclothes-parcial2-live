@@ -1,0 +1,76 @@
+<div class="cabecera">
+  <div>
+    <div class="ceja">CU-06 · CU-07 Suscripcion</div>
+    <h1>Mi suscripcion</h1>
+  </div>
+  @if (estado()?.tiene_suscripcion) {
+    <div class="botones">
+      <button type="button" class="btn linea" (click)="abrirCambio()">Cambiar plan</button>
+      <button type="button" class="btn rosa" (click)="renovar()" [disabled]="renovando()">
+        {{ renovando() ? 'Renovando…' : 'Renovar ' + diasRenovacion() + ' dias' }}
+      </button>
+    </div>
+  }
+</div>
+
+@if (cargando()) {
+  <p class="mensaje">Cargando suscripcion…</p>
+} @else if (errorCarga()) {
+  <div class="mensaje error">
+    <p>{{ errorCarga() }}</p>
+    <button class="btn linea" (click)="verMiSuscripcion()">Reintentar</button>
+  </div>
+} @else if (!estado()?.tiene_suscripcion) {
+  <div class="mensaje vacio">
+    <h2>Sin suscripcion activa</h2>
+    <p>Contrata un plan para desbloquear la operacion.</p>
+    <a routerLink="/admin/contratar-plan" class="btn rosa">Contratar ahora</a>
+  </div>
+} @else {
+  <div class="fichas">
+    <div class="ficha">
+      <div class="ceja">Plan vigente</div>
+      <div class="numero">{{ estado()!.plan!.nombre }}</div>
+      <div class="apoyo">Bs {{ estado()!.plan!.precio_mensual }} / mes</div>
+    </div>
+    <div class="ficha">
+      <div class="ceja">Inicio</div>
+      <div class="numero">{{ fecha(estado()!.fecha_inicio) }}</div>
+      <div class="apoyo">Estado: <b>{{ estado()!.estado }}</b></div>
+    </div>
+    <div class="ficha">
+      <div class="ceja">Vence</div>
+      <div class="numero">{{ fecha(estado()!.fecha_fin) }}</div>
+    </div>
+    <div class="ficha destacada">
+      <div class="ceja">Modulos habilitados</div>
+      <div class="apoyo lista">{{ estado()!.modulos_habilitados.join(' · ') }}</div>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="cabecera-panel"><h2>Consumo por recurso</h2></div>
+    <app-barras-h [filas]="filas()" />
+  </section>
+}
+
+@if (dialogoCambiar()) {
+  <div class="fondo" (click)="dialogoCambiar.set(false)">
+    <div class="modal angosto" (click)="$event.stopPropagation()">
+      <h2>Cambiar de plan</h2>
+      <p class="sub">El cambio queda vigente hoy. Si el consumo actual supera los limites del nuevo plan, el backend rechaza con mensaje.</p>
+      <label class="etiqueta" style="margin-top:12px">Nuevo plan</label>
+      <select class="campo" [ngModel]="planNuevo()" (ngModelChange)="planNuevo.set($event)">
+        @for (p of planes(); track p.id) {
+          <option [value]="p.codigo">{{ p.nombre }} · Bs {{ p.precio_mensual }} · {{ p.max_sucursales }} suc</option>
+        }
+      </select>
+      <div class="acciones">
+        <button type="button" class="btn linea" (click)="dialogoCambiar.set(false)">Cancelar</button>
+        <button type="button" class="btn rosa" (click)="cambiarPlan(planNuevo())" [disabled]="guardandoCambio() || !planNuevo()">
+          {{ guardandoCambio() ? 'Cambiando…' : 'Confirmar cambio' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

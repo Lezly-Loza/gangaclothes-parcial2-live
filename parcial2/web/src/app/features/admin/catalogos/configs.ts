@@ -1,0 +1,124 @@
+import { ConfigCrud } from '../../../shared/crud/config';
+
+/**
+ * Una entrada por cada catalogo generado con la fabrica del backend.
+ * Cambian los campos, no el comportamiento: la pantalla es siempre `Crud`.
+ */
+
+export const CATEGORIAS: ConfigCrud = {
+  titulo: 'Categorias',
+  singular: 'la categoria',
+  ruta: 'admin/categorias',
+  archivable: true,
+  nota: 'tipos de prenda',
+  campos: [
+    { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'texto', requerido: true, marcador: 'Poleras' },
+    { nombre: 'descripcion', etiqueta: 'Descripcion', tipo: 'parrafo', ancho: 'completo' },
+  ],
+};
+
+export const TALLAS: ConfigCrud = {
+  titulo: 'Tallas',
+  singular: 'la talla',
+  ruta: 'admin/tallas',
+  nota: 'el orden define como se listan',
+  campos: [
+    { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'texto', requerido: true, marcador: 'M' },
+    { nombre: 'orden', etiqueta: 'Orden', tipo: 'numero', marcador: '2' },
+  ],
+};
+
+export const COLORES: ConfigCrud = {
+  titulo: 'Colores',
+  singular: 'el color',
+  ruta: 'admin/colores',
+  nota: 'el hex se usa en el catalogo y el probador',
+  campos: [
+    { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'texto', requerido: true, marcador: 'Rojo' },
+    { nombre: 'codigo_hex', etiqueta: 'Color', tipo: 'color' },
+  ],
+};
+
+export const TEMPORADAS: ConfigCrud = {
+  titulo: 'Temporadas',
+  singular: 'la temporada',
+  ruta: 'admin/temporadas',
+  archivable: true,
+  nota: 'agrupan colecciones por periodo',
+  campos: [
+    { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'texto', requerido: true, marcador: 'Verano 2026' },
+    { nombre: 'fecha_inicio', etiqueta: 'Inicio', tipo: 'fecha' },
+    { nombre: 'fecha_fin', etiqueta: 'Fin', tipo: 'fecha' },
+  ],
+};
+
+export const COLECCIONES: ConfigCrud = {
+  titulo: 'Colecciones',
+  singular: 'la coleccion',
+  ruta: 'admin/colecciones',
+  nota: 'cada coleccion pertenece a una temporada',
+  campos: [
+    {
+      nombre: 'temporada_id',
+      etiqueta: 'Temporada',
+      tipo: 'select',
+      requerido: true,
+      origen: { ruta: 'admin/temporadas' },
+    },
+    { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'texto', requerido: true, marcador: 'Primavera-Verano' },
+    { nombre: 'anio', etiqueta: 'Anio', tipo: 'numero', marcador: '2026' },
+    { nombre: 'descripcion', etiqueta: 'Descripcion', tipo: 'parrafo', ancho: 'completo' },
+  ],
+};
+
+export const CIUDADES: ConfigCrud = {
+  titulo: 'Ciudades',
+  singular: 'la ciudad',
+  ruta: 'admin/ciudades',
+  nota: 'donde hay sucursales',
+  campos: [
+    {
+      nombre: 'nombre',
+      etiqueta: 'Nombre',
+      tipo: 'texto',
+      requerido: true,
+      marcador: 'Santa Cruz de la Sierra',
+    },
+    { nombre: 'departamento', etiqueta: 'Departamento', tipo: 'texto', marcador: 'Santa Cruz' },
+  ],
+};
+
+export const PROVEEDORES: ConfigCrud = {
+  titulo: 'Proveedores',
+  singular: 'el proveedor',
+  ruta: 'admin/proveedores',
+  archivable: true,
+  nota: 'a quienes se les hacen las compras',
+  campos: [
+    { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'texto', requerido: true, marcador: 'Textiles Andinos SRL' },
+    { nombre: 'nit', etiqueta: 'NIT', tipo: 'texto', marcador: '1020304025' },
+    { nombre: 'contacto', etiqueta: 'Contacto', tipo: 'texto', marcador: 'Rosa Mamani' },
+    { nombre: 'telefono', etiqueta: 'Telefono', tipo: 'texto', marcador: '70012345' },
+    { nombre: 'email', etiqueta: 'Correo', tipo: 'texto', marcador: 'ventas@proveedor.bo' },
+    { nombre: 'direccion', etiqueta: 'Direccion', tipo: 'texto', ancho: 'completo', enTabla: false },
+  ],
+};
+
+export const SUCURSALES: ConfigCrud = {
+  titulo: 'Sucursales',
+  singular: 'la sucursal',
+  ruta: 'admin/sucursales',
+  archivable: true,
+  nota: 'cada sucursal maneja su propio inventario',
+  campos: [
+    { nombre: 'ciudad_id', etiqueta: 'Ciudad', tipo: 'select', requerido: true, origen: { ruta: 'admin/ciudades' } },
+    { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'texto', requerido: true, marcador: 'Sucursal Central' },
+    { nombre: 'direccion', etiqueta: 'Direccion', tipo: 'texto', marcador: 'Av. Principal #123' },
+    { nombre: 'telefono', etiqueta: 'Telefono', tipo: 'texto', marcador: '3-3456789' },
+    { nombre: 'horario', etiqueta: 'Horario', tipo: 'texto', marcador: 'Lun-Sab 9:00-20:00', ancho: 'completo' },
+    // CU29: el punto del mapa desde el que sale el delivery de esta sucursal.
+    // Se sacan de OpenStreetMap o de Google Maps (clic derecho sobre el local).
+    { nombre: 'latitud', etiqueta: 'Latitud', tipo: 'numero', paso: 0.000001, marcador: '-17.783400' },
+    { nombre: 'longitud', etiqueta: 'Longitud', tipo: 'numero', paso: 0.000001, marcador: '-63.182100' },
+  ],
+};
