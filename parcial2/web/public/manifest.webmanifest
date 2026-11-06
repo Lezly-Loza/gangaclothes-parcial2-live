@@ -1,1 +1,13 @@
-{"name":"GangaClothes","short_name":"GangaClothes","theme_color":"#263469","background_color":"#f7f8fc","display":"standalone","scope":"/","start_url":"/","icons":[{"src":"assets/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"assets/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}
+{
+  "name": "GangaClothes",
+  "short_name": "GangaClothes",
+  "theme_color": "#14161a",
+  "background_color": "#f2f2ed",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,50 @@
+<section class="pantalla">
+  <div class="tarjeta">
+    <div class="marca">
+      <div>
+        <div class="logo">Ganga<b>Clothes</b></div>
+        <div class="ceja">SaaS para tiendas de ropa</div>
+      </div>
+      <div class="pie">
+        <p class="pie-titulo">Multiempresa &middot; Multisucursal</p>
+        <p class="pie-texto">Gestiona empresas, planes, sucursales y catalogos desde un solo panel.</p>
+      </div>
+    </div>
+    <div class="formulario">
+      <h1>Iniciar sesion</h1>
+      <p class="sub">{{ modo() === 'super' ? 'Acceso del superadministrador' : 'Accede a tu empresa' }}</p>
+
+      <div class="selector-modo" role="tablist">
+        <button type="button" class="chip" [class.on]="modo() === 'tenant'" (click)="cambiarModo('tenant')">Empresa</button>
+        <button type="button" class="chip" [class.on]="modo() === 'super'"  (click)="cambiarModo('super')">Superadministrador</button>
+      </div>
+
+      <form (ngSubmit)="entrar()" #f="ngForm">
+        @if (modo() === 'tenant') {
+          <label class="etiqueta" for="codigo">Codigo de empresa <span class="req">*</span></label>
+          <input id="codigo" class="campo" [(ngModel)]="datos.codigo_tenant" name="codigo_tenant" placeholder="luna" required>
+
+          <label class="etiqueta" for="email">Correo <span class="req">*</span></label>
+          <input id="email" class="campo" type="email" [(ngModel)]="datos.email" name="email" placeholder="tu@empresa.com" required>
+
+          <label class="etiqueta" for="password">Contrasena <span class="req">*</span></label>
+          <input id="password" class="campo" type="password" [(ngModel)]="datos.password" name="password" required>
+        } @else {
+          <label class="etiqueta" for="email2">Correo <span class="req">*</span></label>
+          <input id="email2" class="campo" type="email" [(ngModel)]="superDatos.email" name="emailSuper" required>
+
+          <label class="etiqueta" for="password2">Contrasena <span class="req">*</span></label>
+          <input id="password2" class="campo" type="password" [(ngModel)]="superDatos.password" name="passSuper" required>
+        }
+
+        <button type="submit" class="btn bloque rosa entrar" [disabled]="cargando()">
+          {{ cargando() ? 'Entrando…' : 'Ingresar' }}
+        </button>
+
+        @if (error()) {
+          <p class="error-servidor">{{ error() }}</p>
+        }
+      </form>
+    </div>
+  </div>
+</section>

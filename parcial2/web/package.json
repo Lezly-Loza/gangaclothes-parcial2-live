@@ -1,10 +1,11 @@
 {
   "name": "gangaclothes-web",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "start": "ng serve",
-    "build": "ng build"
+    "build": "ng build",
+    "verificar:contrato": "node scripts/verificar_contrato.mjs"
   },
   "dependencies": {
     "@angular/animations": "^19.2.0",
@@ -12,7 +13,6 @@
     "@angular/compiler": "^19.2.0",
     "@angular/core": "^19.2.0",
     "@angular/forms": "^19.2.0",
-    "@angular/material": "^19.2.0",
     "@angular/platform-browser": "^19.2.0",
     "@angular/router": "^19.2.0",
     "@angular/service-worker": "^19.2.0",
