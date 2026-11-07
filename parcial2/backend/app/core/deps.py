@@ -61,6 +61,12 @@ def get_scope(
     tiene scope garantizado.
     """
     scope = _scope_from_token(token)
+    if scope.is_super:
+        if scope.tenant_id is None:
+            scope.tenant_id = 1
+        scope.roles = ["admin", "superadmin", "administrador"]
+        from .permisos import codigos
+        scope.permisos = list(codigos()) + ["tenants:gestionar", "planes:gestionar"]
     attach_scope(db, scope)
     if not scope.is_super:
         from ..models import User
@@ -81,13 +87,19 @@ def require_super(scope: TenantScope = Depends(get_scope)) -> TenantScope:
 
 
 def require_tenant(scope: TenantScope = Depends(get_scope)) -> TenantScope:
-    if scope.is_super or scope.tenant_id is None:
+    if scope.is_super:
+        if scope.tenant_id is None:
+            scope.tenant_id = 1
+        return scope
+    if scope.tenant_id is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Se requiere scope de tenant")
     return scope
 
 
 def require_roles(*roles: str):
     def _dep(scope: TenantScope = Depends(require_tenant)) -> TenantScope:
+        if scope.is_super:
+            return scope
         if not any(r in scope.roles for r in roles):
             raise HTTPException(status.HTTP_403_FORBIDDEN, f"Requiere rol: {roles}")
         return scope
@@ -97,6 +109,8 @@ def require_roles(*roles: str):
 
 def require_permiso(permiso: str):
     def _dep(scope: TenantScope = Depends(require_tenant)) -> TenantScope:
+        if scope.is_super:
+            return scope
         if permiso not in scope.permisos:
             raise HTTPException(status.HTTP_403_FORBIDDEN, f"Requiere permiso: {permiso}")
         return scope

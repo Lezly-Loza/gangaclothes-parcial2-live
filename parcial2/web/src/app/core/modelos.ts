@@ -63,7 +63,7 @@ export function permisosPorRoles(rolesBackend: string[]): string[] {
     'cambios:crear',
     'suscripcion:gestionar',
   ];
-  if (esSuper) return ['tenants:gestionar', 'planes:gestionar'];
+  if (esSuper) return ['tenants:gestionar', 'planes:gestionar', ...TODOS];
   if (esAdmin) return TODOS;
   if (esEncargado) base.push('reportes:ver', 'inventario:ver', 'inventario:editar', 'envios:ver', 'reservas:crear', 'reservas:anular');
   if (esVendedor) base.push('ventas:crear', 'cambios:crear', 'envios:ver');

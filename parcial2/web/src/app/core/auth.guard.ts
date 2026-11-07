@@ -32,6 +32,7 @@ export const rolGuard: CanActivateFn = (ruta) => {
   const nombreRuta = ruta.routeConfig?.path ?? '';
   const permiso = (ruta.data['permiso'] as string | undefined) || PERMISO_POR_RUTA[`/admin/${nombreRuta}`];
 
+  if (sesion.esSuper()) return true;
   if (nombreRuta === 'admin' && tieneAccesoPanel(sesion.roles(), sesion.permisos())) return true;
   if (nombreRuta === 'anular' && (sesion.tienePermiso('ventas:anular') || sesion.tienePermiso('reservas:anular'))) return true;
   if (permiso) {
@@ -57,6 +58,7 @@ export const permisoGuard: CanActivateFn = (ruta) => {
   const sesion = inject(SesionStore);
   const router = inject(Router);
   const avisos = inject(Notificaciones);
+  if (sesion.esSuper()) return true;
   const permiso = ruta.data['permiso'] as string | undefined;
 
   if (!permiso || sesion.tienePermiso(permiso)) return true;
