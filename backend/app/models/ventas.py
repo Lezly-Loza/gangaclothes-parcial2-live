@@ -7,10 +7,12 @@ from app.core.database import Base
 class Reserva(Base):
     __tablename__ = "reserva"
     id = Column(Integer, primary_key=True)
+    codigo = Column(String(20), unique=True, index=True)  # CU-14: codigo amigable RES-XXXXXX
     cliente_id = Column(Integer, ForeignKey("cliente.id"), nullable=False)
     sucursal_id = Column(Integer, ForeignKey("sucursal.id"), nullable=False)
     fecha_creacion = Column(DateTime, server_default=func.now())
     fecha_hora_prueba = Column(DateTime, nullable=False)
+    fecha_limite = Column(DateTime)                       # CU-14: fecha de vencimiento
     estado = Column(String(20), default="pendiente")  # pendiente|preparada|atendida|cancelada|expirada
     notas = Column(String(200))
 
@@ -92,3 +94,23 @@ class PromocionPrenda(Base):
     id = Column(Integer, primary_key=True)
     promocion_id = Column(Integer, ForeignKey("promocion.id"), nullable=False)
     prenda_id = Column(Integer, ForeignKey("prenda.id"), nullable=False)
+
+
+class CambioPrenda(Base):
+    """CU-16: Cambio de una prenda vendida por otra variante.
+
+    Registra el intercambio, el saldo resultante y queda como auditoría.
+    Solo se permite dentro de los 7 días siguientes a la venta confirmada.
+    """
+    __tablename__ = "cambio_prenda"
+    id = Column(Integer, primary_key=True)
+    venta_id = Column(Integer, ForeignKey("venta.id"), nullable=False)
+    # Variante que el cliente devuelve (sale del stock del cliente, entra al inventario)
+    variante_devuelta_id = Column(Integer, ForeignKey("variante.id"), nullable=False)
+    # Variante que el cliente lleva (sale del inventario)
+    variante_nueva_id = Column(Integer, ForeignKey("variante.id"), nullable=False)
+    motivo = Column(String(200))
+    # Positivo: cliente paga diferencia; negativo: tienda da saldo a favor
+    saldo = Column(Numeric(10, 2), default=0)
+    fecha = Column(DateTime, server_default=func.now())
+    usuario_id = Column(Integer, ForeignKey("usuario.id"))

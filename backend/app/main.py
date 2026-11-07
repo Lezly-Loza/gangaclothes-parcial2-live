@@ -21,6 +21,9 @@ from app.modules.promociones.router import router as promociones_router
 from app.modules.reportes.router import router as reportes_router
 from app.modules.proveedores.router import router as oferta_router
 from app.modules.ia.router import router as ia_router
+from app.modules.cambios.router import router as cambios_router
+from app.modules.anulaciones.router import router as anulaciones_router
+from app.modules.analitica.router import router as analitica_router
 
 # Mensajes propios (por ejemplo, si un correo no se pudo enviar) en la consola,
 # junto a los de uvicorn. En Render se ven en la pestana Logs.
@@ -69,6 +72,18 @@ app.include_router(oferta_router, prefix="/api/oferta", tags=["6c. Oferta del pr
 app.include_router(promociones_router, prefix="/api/promociones", tags=["10. Promociones (CU18)"])
 app.include_router(reportes_router, prefix="/api/reportes", tags=["11. Reportes y dashboard (CU19)"])
 app.include_router(ia_router, prefix="/api/ia", tags=["12. IA: recomendador y asistente (CU28)"])
+app.include_router(cambios_router, prefix="/api/ventas/cambio", tags=["8b. Cambio de prendas (CU-16)"])
+app.include_router(anulaciones_router, prefix="/api/operaciones/anular", tags=["8c. Anulaciones (CU-17)"])
+app.include_router(analitica_router, prefix="/api/analitica", tags=["13. Analítica ML (CU-26)"])
+
+# Soporte para prefijo /api/v1 (compatibilidad total con especificación)
+app.include_router(inventario_router, prefix="/api/v1/inventario", tags=["v1 - Inventario (CU-12)"])
+app.include_router(reservas_router, prefix="/api/v1/reservas", tags=["v1 - Reservas (CU-14)"])
+app.include_router(ventas_router, prefix="/api/v1/ventas", tags=["v1 - Ventas"])
+app.include_router(cambios_router, prefix="/api/v1/ventas/cambio", tags=["v1 - Cambio de prendas (CU-16)"])
+app.include_router(anulaciones_router, prefix="/api/v1/operaciones/anular", tags=["v1 - Anulaciones (CU-17)"])
+app.include_router(reportes_router, prefix="/api/v1/reportes", tags=["v1 - Reportes (CU-24)"])
+app.include_router(analitica_router, prefix="/api/v1/analitica", tags=["v1 - Analítica ML (CU-26)"])
 
 
 @app.get("/", tags=["raiz"])

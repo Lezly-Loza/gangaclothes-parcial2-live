@@ -28,6 +28,12 @@ def listar(sucursal_id: int | None = None, db=Depends(get_db), _=Depends(ver)):
     return service.listar(db, sucursal_id)
 
 
+@router.get("/sucursal/{sucursal_id}", summary="CU-12: existencias de variantes por sucursal")
+def listar_por_sucursal(sucursal_id: int, db=Depends(get_db), _=Depends(ver)):
+    """Retorna variantes, tallas, colores y existencias físicas/disponibles para esa sede."""
+    return service.listar(db, sucursal_id)
+
+
 @router.get("/alertas", summary="CU11: variantes que llegaron al stock minimo")
 def alertas(sucursal_id: int | None = None, db=Depends(get_db), _=Depends(ver)):
     return service.listar(db, sucursal_id, solo_alertas=True)
@@ -57,6 +63,7 @@ def actualizar_limites(id: int, datos: LimitesUpd, peticion: Request,
 
 # -------------------------------------------------------- CU12: movimientos
 @router.post("/movimientos", status_code=201, summary="CU12: registrar un movimiento de stock")
+@router.post("/movimiento", status_code=201, summary="CU-12: registrar un movimiento de stock (alias)")
 def crear_movimiento(datos: MovimientoIn, peticion: Request,
                      db=Depends(get_db), usuario=Depends(editar)):
     resultado = service.registrar_movimiento(db, datos, usuario.id)

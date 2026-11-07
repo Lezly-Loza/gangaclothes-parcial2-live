@@ -578,3 +578,328 @@ def csv_margen(r: dict) -> bytes:
            f["unidades_vendidas"], f["ingreso"], f["descuento_otorgado"], f["ganancia_realizada"]]
           for f in r["prendas"]]),
     ])
+
+
+# =========================================================== CU-24: EXCEL ===
+
+def xlsx_ventas(r: dict) -> bytes:
+    """Genera un archivo Excel (.xlsx) con formato corporativo para ventas (CU-24)."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Ventas"
+
+    AZUL_MARINO = "1E293B"
+    ROJO_OSCURO = "C60000"
+    CELESTE = "E0F2FE"
+    BLANCO = "FFFFFF"
+    GRIS_CLARO = "F8FAFC"
+
+    def _header_font(color=BLANCO):
+        return Font(bold=True, color=color, size=11)
+
+    def _header_fill(hex_color=AZUL_MARINO):
+        return PatternFill("solid", fgColor=hex_color)
+
+    def _border():
+        thin = Side(style="thin", color="CBD5E1")
+        return Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    def _centrar():
+        return Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    p = r["periodo"]
+    ws.merge_cells("A1:J1")
+    titulo = ws["A1"]
+    titulo.value = f"GangaClothes · Reporte de Ventas · {p['desde']} al {p['hasta']}"
+    titulo.font = Font(bold=True, size=14, color=ROJO_OSCURO)
+    titulo.alignment = _centrar()
+    ws.row_dimensions[1].height = 28
+
+    ws.append([])
+
+    t = r["totales"]
+    ws.append(["RESUMEN GENERAL"])
+    ws[f"A{ws.max_row}"].font = Font(bold=True, size=12, color=AZUL_MARINO)
+
+    encab_totales = ["Ventas", "Unidades", "Subtotal (Bs)", "Descuento (Bs)", "Total (Bs)",
+                     "Costo (Bs)", "Ganancia (Bs)", "Ticket Promedio (Bs)", "Margen %"]
+    ws.append(encab_totales)
+    fila_enc = ws.max_row
+    for col_idx in range(1, len(encab_totales) + 1):
+        cell = ws.cell(row=fila_enc, column=col_idx)
+        cell.font = _header_font()
+        cell.fill = _header_fill(AZUL_MARINO)
+        cell.border = _border()
+        cell.alignment = _centrar()
+
+    ws.append([t["ventas"], t["unidades"], t["subtotal"], t["descuento"], t["total"],
+               t.get("costo", 0), t["ganancia"], t["ticket_promedio"], t["margen_porcentaje"]])
+    fila_datos = ws.max_row
+    for col_idx in range(1, len(encab_totales) + 1):
+        cell = ws.cell(row=fila_datos, column=col_idx)
+        cell.fill = PatternFill("solid", fgColor=CELESTE)
+        cell.border = _border()
+        cell.alignment = _centrar()
+
+    ws.append([])
+    ws.append(["DETALLE DE VENTAS"])
+    ws[f"A{ws.max_row}"].font = Font(bold=True, size=11, color=AZUL_MARINO)
+
+    encab_det = ["#Venta", "Fecha", "Comprobante", "Sucursal", "Canal",
+                 "Unidades", "Subtotal (Bs)", "Descuento (Bs)", "Total (Bs)", "Ganancia (Bs)"]
+    ws.append(encab_det)
+    fila_enc_det = ws.max_row
+    for col_idx in range(1, len(encab_det) + 1):
+        c = ws.cell(row=fila_enc_det, column=col_idx)
+        c.font = _header_font()
+        c.fill = _header_fill(AZUL_MARINO)
+        c.border = _border()
+        c.alignment = _centrar()
+
+    for idx, v in enumerate(r["ventas"]):
+        fill = PatternFill("solid", fgColor=GRIS_CLARO if idx % 2 else BLANCO)
+        fecha_str = v.get("fecha", "")[:19].replace("T", " ")
+        row_data = [v["id"], fecha_str, v.get("nro_comprobante", ""),
+                    v["sucursal"], v["canal"], v["unidades"],
+                    v["subtotal"], v["descuento"], v["total"], v["ganancia"]]
+        ws.append(row_data)
+        for col_idx in range(1, len(row_data) + 1):
+            c = ws.cell(row=ws.max_row, column=col_idx)
+            c.fill = fill
+            c.border = _border()
+
+    for col in ws.columns:
+        max_len = max((len(str(cell.value or "")) for cell in col), default=0)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = min(max_len + 4, 35)
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
+
+
+def xlsx_inventario(r: dict) -> bytes:
+    """Genera un archivo Excel (.xlsx) para inventario con estilos (CU-24)."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Inventario"
+
+    AZUL_MARINO = "1E293B"
+    ROJO_OSCURO = "C60000"
+    NARANJA = "FEF3C7"
+    BLANCO = "FFFFFF"
+    GRIS = "F8FAFC"
+
+    def _hf():
+        return Font(bold=True, color="FFFFFF", size=10)
+
+    def _hfill(hex_color=AZUL_MARINO):
+        return PatternFill("solid", fgColor=hex_color)
+
+    def _bd():
+        s = Side(style="thin", color="CBD5E1")
+        return Border(left=s, right=s, top=s, bottom=s)
+
+    p = r["periodo"]
+    ws.merge_cells("A1:I1")
+    ws["A1"].value = f"GangaClothes · Inventario · {p['desde']} al {p['hasta']}"
+    ws["A1"].font = Font(bold=True, size=13, color=ROJO_OSCURO)
+    ws["A1"].alignment = Alignment(horizontal="center")
+    ws.row_dimensions[1].height = 25
+    ws.append([])
+
+    tot = r["totales"]
+    ws.append(["RESUMEN GENERAL"])
+    ws[f"A{ws.max_row}"].font = Font(bold=True, color=AZUL_MARINO)
+    encab = ["Unidades", "Reservadas", "Disponibles", "Bajo Mínimo", "Sin Stock",
+             "Valor Costo (Bs)", "Valor Venta (Bs)"]
+    ws.append(encab)
+    fila_e = ws.max_row
+    for c in range(1, len(encab)+1):
+        cell = ws.cell(fila_e, c)
+        cell.font = _hf(); cell.fill = _hfill(); cell.border = _bd()
+    ws.append([tot["unidades"], tot["reservadas"], tot["disponibles"],
+               tot["bajo_minimo"], tot["sin_stock"], tot["valor_costo"], tot["valor_venta"]])
+    fila_v = ws.max_row
+    for c in range(1, 8):
+        cell = ws.cell(fila_v, c)
+        cell.fill = PatternFill("solid", fgColor=NARANJA); cell.border = _bd()
+
+    ws.append([])
+    ws.append(["STOCK POR SUCURSAL"])
+    ws[f"A{ws.max_row}"].font = Font(bold=True, color=AZUL_MARINO)
+    encab2 = ["Sucursal", "Variantes", "Unidades", "Reservadas", "Disponibles",
+              "Bajo Mínimo", "Sin Stock", "Valor Costo (Bs)", "Valor Venta (Bs)"]
+    ws.append(encab2)
+    fila_e2 = ws.max_row
+    for c in range(1, len(encab2)+1):
+        cell = ws.cell(fila_e2, c)
+        cell.font = _hf(); cell.fill = _hfill(ROJO_OSCURO); cell.border = _bd()
+    for idx, f in enumerate(r["por_sucursal"]):
+        fill = PatternFill("solid", fgColor=GRIS if idx % 2 else BLANCO)
+        ws.append([f["sucursal"], f["variantes"], f["unidades"], f["reservadas"],
+                   f["disponibles"], f["bajo_minimo"], f["sin_stock"],
+                   f["valor_costo"], f["valor_venta"]])
+        fila_cur = ws.max_row
+        for c in range(1, len(encab2)+1):
+            cell = ws.cell(fila_cur, c); cell.fill = fill; cell.border = _bd()
+
+    # Movimientos en hoja separada
+    ws2 = wb.create_sheet("Movimientos")
+    encab_mov = ["Fecha", "Tipo", "SKU", "Prenda", "Talla", "Color", "Sucursal", "Cantidad", "Motivo", "Usuario"]
+    ws2.append(encab_mov)
+    for c in range(1, len(encab_mov)+1):
+        cell = ws2.cell(1, c)
+        cell.font = _hf(); cell.fill = _hfill(); cell.border = _bd()
+    for idx, m in enumerate(r["movimientos"][:100]):
+        fill = PatternFill("solid", fgColor=GRIS if idx % 2 else BLANCO)
+        fecha_m = m.get("fecha", "")[:19].replace("T", " ") if m.get("fecha") else ""
+        ws2.append([fecha_m, m["tipo"], m["sku"], m["prenda"],
+                    m["talla"], m["color"], m["sucursal"], m["cantidad"], m["motivo"], m["usuario"]])
+        fila_cur_m = ws2.max_row
+        for c in range(1, len(encab_mov)+1):
+            cell = ws2.cell(fila_cur_m, c); cell.fill = fill; cell.border = _bd()
+
+    for sheet in [ws, ws2]:
+        for col in sheet.columns:
+            ml = max((len(str(cell.value or "")) for cell in col), default=0)
+            col_letter = get_column_letter(col[0].column)
+            sheet.column_dimensions[col_letter].width = min(ml + 4, 35)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+# =========================================================== CU-24: PDF ====
+
+def pdf_ventas(r: dict) -> bytes:
+    """PDF corporativo de ventas con ReportLab (CU-24)."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
+                            rightMargin=1.5*cm, leftMargin=1.5*cm,
+                            topMargin=1.5*cm, bottomMargin=1.5*cm)
+    styles = getSampleStyleSheet()
+    p = r["periodo"]
+    t = r["totales"]
+
+    AZUL = colors.HexColor("#1E293B")
+    ROJO = colors.HexColor("#C60000")
+    CELESTE = colors.HexColor("#E0F2FE")
+    GRIS = colors.HexColor("#F8FAFC")
+
+    estilo_titulo = ParagraphStyle("titulo", fontSize=16, textColor=ROJO,
+                                   spaceAfter=4, fontName="Helvetica-Bold", alignment=1)
+    estilo_sub = ParagraphStyle("sub", fontSize=10, textColor=AZUL,
+                                spaceAfter=4, fontName="Helvetica-Bold")
+
+    contenido = [
+        Paragraph("GANGACLOTHES · E-COMMERCE", estilo_titulo),
+        Paragraph(f"Reporte de Ventas · {p['desde']} al {p['hasta']}", estilo_sub),
+        HRFlowable(width="100%", thickness=2, color=ROJO),
+        Spacer(1, 0.3*cm),
+    ]
+
+    datos_resumen = [
+        ["Ventas", "Unidades", "Subtotal (Bs)", "Descuento (Bs)", "Total (Bs)", "Ganancia (Bs)", "Margen %"],
+        [t["ventas"], t["unidades"], f"{t['subtotal']:.2f}", f"{t['descuento']:.2f}",
+         f"{t['total']:.2f}", f"{t['ganancia']:.2f}", f"{t['margen_porcentaje']:.1f}%"],
+    ]
+    tabla_res = Table(datos_resumen, repeatRows=1)
+    tabla_res.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), AZUL),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [CELESTE]),
+    ]))
+    contenido += [Paragraph("Resumen General", estilo_sub), tabla_res, Spacer(1, 0.4*cm)]
+
+    filas_det = [["#Venta", "Fecha", "Sucursal", "Canal", "Unidades", "Total (Bs)"]]
+    for v in r["ventas"][:20]:
+        fecha_legible = v.get("fecha", "")[:10]
+        filas_det.append([v["id"], fecha_legible, v["sucursal"], v["canal"],
+                          v["unidades"], f"{v['total']:.2f}"])
+    tabla_det = Table(filas_det, repeatRows=1)
+    tabla_det.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), AZUL),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (4, 0), (-1, -1), "CENTER"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, GRIS]),
+    ]))
+    contenido += [Paragraph(f"Detalle de Ventas (primeras {min(20, len(r['ventas']))} ventas)", estilo_sub),
+                  tabla_det]
+
+    doc.build(contenido)
+    return buf.getvalue()
+
+
+def pdf_inventario(r: dict) -> bytes:
+    """PDF corporativo de inventario con ReportLab (CU-24)."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
+                            rightMargin=1.5*cm, leftMargin=1.5*cm,
+                            topMargin=1.5*cm, bottomMargin=1.5*cm)
+    p = r["periodo"]
+    tot = r["totales"]
+    AZUL = colors.HexColor("#1E293B")
+    ROJO = colors.HexColor("#C60000")
+    GRIS = colors.HexColor("#F8FAFC")
+
+    estilo_titulo = ParagraphStyle("titulo", fontSize=16, textColor=ROJO,
+                                   spaceAfter=4, fontName="Helvetica-Bold", alignment=1)
+    estilo_sub = ParagraphStyle("sub", fontSize=10, textColor=AZUL,
+                                spaceAfter=4, fontName="Helvetica-Bold")
+
+    contenido = [
+        Paragraph("GANGACLOTHES · E-COMMERCE", estilo_titulo),
+        Paragraph(f"Reporte de Inventario · {p['desde']} al {p['hasta']}", estilo_sub),
+        HRFlowable(width="100%", thickness=2, color=ROJO),
+        Spacer(1, 0.3*cm),
+    ]
+
+    filas_suc = [["Sucursal", "Variantes", "Unidades", "Reservadas", "Disponibles",
+                  "Bajo Mín", "Sin Stock", "Valor Costo (Bs)", "Valor Venta (Bs)"]]
+    for s in r["por_sucursal"]:
+        filas_suc.append([s["sucursal"], s["variantes"], s["unidades"], s["reservadas"],
+                          s["disponibles"], s["bajo_minimo"], s["sin_stock"],
+                          f"{s['valor_costo']:.2f}", f"{s['valor_venta']:.2f}"])
+
+    tabla = Table(filas_suc, repeatRows=1)
+    tabla.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), AZUL),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, GRIS]),
+    ]))
+    contenido += [Paragraph("Stock por Sucursal", estilo_sub), tabla]
+    doc.build(contenido)
+    return buf.getvalue()

@@ -16,18 +16,18 @@ from app.modules.reportes import service
 router = APIRouter()
 ver = require_permiso("reportes:ver")
 
-Formato = Literal["json", "csv"]
+Formato = Literal["json", "csv", "xlsx", "pdf"]
 
 
-def _descarga(contenido: bytes, nombre: str) -> Response:
-    return Response(content=contenido, media_type="text/csv; charset=utf-8",
+def _descarga(contenido: bytes, nombre: str, media_type: str = "text/csv; charset=utf-8") -> Response:
+    return Response(content=contenido, media_type=media_type,
                     headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
 
 
-def _exportado(db, usuario, peticion, reporte: str, r: dict) -> None:
+def _exportado(db, usuario, peticion, reporte: str, r: dict, formato: str = "CSV") -> None:
     p = r["periodo"]
     registrar(db, modulo="REPORTES", accion="EXPORTAR", usuario=usuario, peticion=peticion,
-              entidad="reporte", detalle=f"Exporto el reporte de {reporte} del {p['desde']} al {p['hasta']} a CSV")
+              entidad="reporte", detalle=f"Exporto el reporte de {reporte} del {p['desde']} al {p['hasta']} a {formato.upper()}")
 
 
 @router.get("/dashboard", summary="CU19: indicadores principales y series para los graficos")
@@ -36,27 +36,45 @@ def dashboard(desde: date | None = None, hasta: date | None = None, sucursal_id:
     return service.dashboard(db, desde, hasta, sucursal_id)
 
 
-@router.get("/ventas", summary="CU19: ventas por sucursal, canal y periodo")
+@router.get("/ventas", summary="CU19/CU24: ventas por sucursal, canal y periodo")
 def ventas(peticion: Request, desde: date | None = None, hasta: date | None = None,
            sucursal_id: int | None = None, canal: str | None = None,
            agrupar: str = "dia", formato: Formato = "json",
            db=Depends(get_db), usuario=Depends(ver)):
     r = service.ventas(db, desde, hasta, sucursal_id, canal, agrupar)
     if formato == "csv":
-        _exportado(db, usuario, peticion, "ventas", r)
+        _exportado(db, usuario, peticion, "ventas", r, "CSV")
         return _descarga(service.csv_ventas(r), f"ventas_{r['periodo']['desde']}_{r['periodo']['hasta']}.csv")
+    if formato == "xlsx":
+        _exportado(db, usuario, peticion, "ventas", r, "Excel (.xlsx)")
+        return _descarga(service.xlsx_ventas(r), f"ventas_{r['periodo']['desde']}_{r['periodo']['hasta']}.xlsx",
+                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    if formato == "pdf":
+        _exportado(db, usuario, peticion, "ventas", r, "PDF")
+        return _descarga(service.pdf_ventas(r), f"ventas_{r['periodo']['desde']}_{r['periodo']['hasta']}.pdf",
+                         "application/pdf")
     return r
 
 
-@router.get("/inventario", summary="CU19: stock valorizado por sucursal y movimientos del periodo")
+@router.get("/inventario", summary="CU19/CU24: stock valorizado por sucursal y movimientos del periodo")
 def inventario(peticion: Request, desde: date | None = None, hasta: date | None = None,
                sucursal_id: int | None = None, formato: Formato = "json",
                db=Depends(get_db), usuario=Depends(ver)):
     r = service.inventario(db, desde, hasta, sucursal_id)
     if formato == "csv":
-        _exportado(db, usuario, peticion, "inventario y movimientos", r)
+        _exportado(db, usuario, peticion, "inventario y movimientos", r, "CSV")
         return _descarga(service.csv_inventario(r),
                          f"inventario_{r['periodo']['desde']}_{r['periodo']['hasta']}.csv")
+    if formato == "xlsx":
+        _exportado(db, usuario, peticion, "inventario y movimientos", r, "Excel (.xlsx)")
+        return _descarga(service.xlsx_inventario(r),
+                         f"inventario_{r['periodo']['desde']}_{r['periodo']['hasta']}.xlsx",
+                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    if formato == "pdf":
+        _exportado(db, usuario, peticion, "inventario y movimientos", r, "PDF")
+        return _descarga(service.pdf_inventario(r),
+                         f"inventario_{r['periodo']['desde']}_{r['periodo']['hasta']}.pdf",
+                         "application/pdf")
     return r
 
 

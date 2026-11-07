@@ -221,22 +221,23 @@ def _aplicar(inv: Inventario, tipo: str, cantidad: int) -> None:
 
 
 def registrar_movimiento(db: Session, datos, usuario_id: int | None) -> dict:
-    if datos.tipo not in TIPOS:
+    tipo = datos.obtener_tipo() if hasattr(datos, "obtener_tipo") else datos.tipo
+    if tipo not in TIPOS:
         raise HTTPException(400, f"Tipo invalido. Use uno de: {', '.join(sorted(TIPOS))}")
     if datos.cantidad < 0:
         raise HTTPException(400, "La cantidad no puede ser negativa")
-    if datos.cantidad == 0 and datos.tipo != "ajuste":
+    if datos.cantidad == 0 and tipo != "ajuste":
         raise HTTPException(400, "La cantidad debe ser mayor que cero")
 
     inv = _stock_de(db, datos.variante_id, datos.sucursal_id)
     antes = inv.cantidad
-    _aplicar(inv, datos.tipo, datos.cantidad)
+    _aplicar(inv, tipo, datos.cantidad)
 
     movimiento = MovimientoInventario(
         variante_id=datos.variante_id,
         sucursal_id=datos.sucursal_id,
         usuario_id=usuario_id,
-        tipo=datos.tipo,
+        tipo=tipo,
         cantidad=datos.cantidad,
         motivo=datos.motivo,
     )

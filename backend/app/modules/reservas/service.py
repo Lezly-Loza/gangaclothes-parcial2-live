@@ -62,12 +62,15 @@ def _salida(db: Session, reserva: Reserva, con_cliente: bool = False) -> dict:
         "estado": d.estado,
     } for d, v, p, t, c in filas]
 
+    codigo_amigable = getattr(reserva, "codigo", None) or f"RES-{reserva.id:06d}"
     salida = {
         "id": reserva.id,
+        "codigo": codigo_amigable,
         "estado": reserva.estado,
         "fecha_creacion": utc_iso(reserva.fecha_creacion),
         # Hora de la tienda elegida por el cliente: no es UTC, viaja sin zona.
         "fecha_hora_prueba": reserva.fecha_hora_prueba.isoformat() if reserva.fecha_hora_prueba else None,
+        "fecha_limite": reserva.fecha_limite.isoformat() if getattr(reserva, "fecha_limite", None) else None,
         "notas": reserva.notas,
         "sucursal_id": reserva.sucursal_id,
         "sucursal": sucursal.nombre if sucursal else None,
@@ -95,6 +98,8 @@ def _hora_del_servidor(fecha: datetime) -> datetime:
 
 
 def crear(db: Session, usuario: Usuario, datos) -> dict:
+    if hasattr(datos, "normalizar"):
+        datos.normalizar()
     cliente = cliente_de(db, usuario)
 
     sucursal = db.get(Sucursal, datos.sucursal_id)
@@ -154,10 +159,18 @@ def crear(db: Session, usuario: Usuario, datos) -> dict:
         )
 
     # 2) Todo o nada: reserva, detalle y stock apartado van en una transaccion.
-    reserva = Reserva(cliente_id=cliente.id, sucursal_id=datos.sucursal_id,
-                      fecha_hora_prueba=fecha, estado="pendiente", notas=datos.notas)
+    from datetime import timedelta
+    reserva = Reserva(
+        cliente_id=cliente.id,
+        sucursal_id=datos.sucursal_id,
+        fecha_hora_prueba=fecha,
+        fecha_limite=fecha + timedelta(hours=24),  # vencimiento 24h tras la cita
+        estado="pendiente",
+        notas=datos.notas,
+    )
     db.add(reserva)
     db.flush()
+    reserva.codigo = f"RES-{reserva.id:06d}"
 
     for linea in datos.detalle:
         inv_id, nombre = inventarios[linea.variante_id]

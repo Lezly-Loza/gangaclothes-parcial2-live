@@ -57,6 +57,9 @@ def aplicar(engine) -> None:
         _columna_nueva(conexion, "sucursal", "longitud", "FLOAT")
         _columna_nueva(conexion, "venta", "tipo_entrega", "VARCHAR(15)")
         _columna_nueva(conexion, "venta", "costo_envio", "NUMERIC(12, 2)")
+        # CU-14: codigo amigable y fecha limite para reservas
+        _columna_nueva(conexion, "reserva", "codigo", "VARCHAR(20)")
+        _columna_nueva(conexion, "reserva", "fecha_limite", "DATETIME")
         # Las ventas anteriores al delivery se retiraban todas en sucursal.
         if inspect(conexion).has_table("venta"):
             conexion.execute(text(

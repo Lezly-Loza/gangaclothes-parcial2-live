@@ -19,12 +19,23 @@ class LimitesUpd(BaseModel):
 
 
 class MovimientoIn(BaseModel):
-    tipo: str = Field(description="ingreso | salida | ajuste | devolucion")
+    tipo: str | None = Field(default=None, description="ingreso | salida | ajuste | devolucion")
+    tipo_movimiento: str | None = Field(default=None, description="ENTRADA | SALIDA | AJUSTE")
     variante_id: int
     sucursal_id: int
     # En un ajuste la cantidad es el total contado, no lo que entra o sale.
     cantidad: int = Field(ge=0)
     motivo: str | None = Field(default=None, max_length=200)
+
+    def obtener_tipo(self) -> str:
+        t = self.tipo or self.tipo_movimiento or "ingreso"
+        mapa = {
+            "ENTRADA": "ingreso",
+            "SALIDA": "salida",
+            "AJUSTE": "ajuste",
+            "DEVOLUCION": "devolucion",
+        }
+        return mapa.get(t.upper(), t.lower())
 
 
 class LineaCompraIn(BaseModel):
