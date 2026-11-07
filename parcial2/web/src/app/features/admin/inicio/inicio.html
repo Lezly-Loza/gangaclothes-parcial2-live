@@ -1,24 +1,230 @@
-<div class="titulo">
-  <h1>Hola, {{ sesion.usuario()?.nombre }}</h1>
-  <span class="ceja">catalogos base, red de tiendas y prendas</span>
-</div>
-
-<p class="intro">
-  Sesion iniciada como <b>{{ sesion.rolPrincipal() }}</b>. El menu lateral muestra unicamente las secciones
-  habilitadas para tu rol.
-</p>
-
-<div class="ceja seccion">Registros en la base de datos</div>
-
-@if (cargando()) {
-  <p class="cargando">Consultando la API…</p>
-} @else {
-  <div class="fichas">
-    @for (ficha of fichas(); track ficha.etiqueta) {
-      <div class="ficha">
-        <div class="numero">{{ ficha.total ?? '—' }}</div>
-        <div class="ceja">{{ ficha.etiqueta }}</div>
+<div class="panel-inicio">
+  <!-- Cabecera Principal -->
+  <header class="inicio-hero">
+    <div class="hero-info">
+      <div class="ceja-tag">
+        <span class="punto-verde"></span>
+        SaaS Multitenant · {{ tenantNombre() }}
       </div>
+      <h1>Panel de Control Ejecutivo</h1>
+      <p class="intro">
+        Bienvenido(a), <b>{{ sesion.usuario()?.nombre }}</b>. Sesión iniciada con rol 
+        <span class="badge-rol">{{ sesion.rolPrincipal() }}</span>.
+        Desde aquí puedes supervisar el inventario por sucursal, reservas, cambios de prendas y métricas analíticas.
+      </p>
+    </div>
+    <div class="hero-acciones">
+      <button type="button" class="btn btn-primario" (click)="irA('/admin/dashboard')">
+        📊 Abrir Dashboard & IA
+      </button>
+      <button type="button" class="btn btn-secundario" (click)="cargarDatos()">
+        🔄 Actualizar
+      </button>
+    </div>
+  </header>
+
+  @if (cargando()) {
+    <div class="cargando-box">
+      <div class="spinner"></div>
+      <p>Cargando métricas y registros del sistema…</p>
+    </div>
+  } @else {
+    <!-- KPIs Ejecutivos (Tenant) -->
+    @if (!esSuper() && indicadores()) {
+      <section class="seccion-bloque">
+        <div class="bloque-cabecera">
+          <div>
+            <h2>Rendimiento Comercial y Operativo</h2>
+            <p class="subtexto">Métricas consolidadas de ventas, existencias e inventario en sucursales.</p>
+          </div>
+          <span class="periodo-badge">Últimos 30 días</span>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card destacado">
+            <div class="kpi-icono">💰</div>
+            <div class="kpi-contenido">
+              <span class="kpi-etiqueta">Ventas Facturadas</span>
+              <div class="kpi-valor">Bs {{ indicadores()!.total | number:'1.2-2' }}</div>
+              <div class="kpi-sub">
+                @if (indicadores()!.variacion_porcentaje !== null) {
+                  <span class="sub-ok">▲ +{{ indicadores()!.variacion_porcentaje | number:'1.1-1' }}%</span> vs periodo anterior
+                } @else {
+                  <span>Periodo inicial</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icono">🛍️</div>
+            <div class="kpi-contenido">
+              <span class="kpi-etiqueta">Transacciones Confirmadas</span>
+              <div class="kpi-valor">{{ indicadores()!.ventas }} ventas</div>
+              <div class="kpi-sub">{{ indicadores()!.unidades }} prendas comercializadas</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icono">📦</div>
+            <div class="kpi-contenido">
+              <span class="kpi-etiqueta">Stock Disponible</span>
+              <div class="kpi-valor">{{ indicadores()!.unidades_en_stock | number }} uds</div>
+              <div class="kpi-sub">Valoración: Bs {{ indicadores()!.valor_inventario_venta | number:'1.0-0' }}</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icono">⏳</div>
+            <div class="kpi-contenido">
+              <span class="kpi-etiqueta">Reservas Activas (CU-14)</span>
+              <div class="kpi-valor">{{ indicadores()!.reservas_activas }} apartadas</div>
+              <div class="kpi-sub">En espera de retiro en 48h</div>
+            </div>
+          </div>
+
+          <div class="kpi-card" [class.alerta]="indicadores()!.alertas_stock > 0">
+            <div class="kpi-icono">⚠️</div>
+            <div class="kpi-contenido">
+              <span class="kpi-etiqueta">Alertas de Stock Bajo</span>
+              <div class="kpi-valor" [class.texto-alerta]="indicadores()!.alertas_stock > 0">
+                {{ indicadores()!.alertas_stock }} variantes
+              </div>
+              <div class="kpi-sub">Requieren reposición inmediata</div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icono">🎯</div>
+            <div class="kpi-contenido">
+              <span class="kpi-etiqueta">Ticket Promedio</span>
+              <div class="kpi-valor">Bs {{ indicadores()!.ticket_promedio | number:'1.2-2' }}</div>
+              <div class="kpi-sub">Por cliente / compra</div>
+            </div>
+          </div>
+        </div>
+      </section>
     }
-  </div>
-}
+
+    <!-- Accesos Rápidos a Casos de Uso (Centro de Operaciones) -->
+    <section class="seccion-bloque">
+      <div class="bloque-cabecera">
+        <div>
+          <h2>Casos de Uso y Operaciones Rápidas</h2>
+          <p class="subtexto">Accesos directos a los flujos clave asignados para la evaluación del sistema.</p>
+        </div>
+      </div>
+
+      <div class="acciones-grid">
+        <div class="accion-card" (click)="irA('/admin/inventario')">
+          <div class="accion-icon bg-azul">📦</div>
+          <div class="accion-body">
+            <h3>CU-12: Inventario por Sucursal</h3>
+            <p>Control de existencias por tienda, alertas de stock mínimo y ajustes (Entrada/Salida/Ajuste).</p>
+            <span class="enlace-accion">Gestionar inventario →</span>
+          </div>
+        </div>
+
+        <div class="accion-card" (click)="irA('/admin/inventario')">
+          <div class="accion-icon bg-verde">🔄</div>
+          <div class="accion-body">
+            <h3>CU-16: Gestionar Cambios de Prenda</h3>
+            <p>Validación de 7 días, cálculo de saldo en vivo, comprobante y reposición/descuento atómico.</p>
+            <span class="enlace-accion">Asistente de cambios →</span>
+          </div>
+        </div>
+
+        <div class="accion-card" (click)="irA('/admin/inventario')">
+          <div class="accion-icon bg-rojo">🛑</div>
+          <div class="accion-body">
+            <h3>CU-17: Anular Venta o Reserva</h3>
+            <p>Confirmación de seguridad, motivo de anulación obligatorio y restitución automática de stock.</p>
+            <span class="enlace-accion">Módulo de anulación →</span>
+          </div>
+        </div>
+
+        <div class="accion-card" (click)="irA('/admin/reportes')">
+          <div class="accion-icon bg-morado">📊</div>
+          <div class="accion-body">
+            <h3>CU-24: Reportes Oficiales</h3>
+            <p>Generación de reportes paginados y exportación corporativa a Excel (.xlsx) y PDF formal.</p>
+            <span class="enlace-accion">Exportar reportes →</span>
+          </div>
+        </div>
+
+        <div class="accion-card" (click)="irA('/admin/dashboard')">
+          <div class="accion-icon bg-rosa">🧠</div>
+          <div class="accion-body">
+            <h3>CU-26: Machine Learning</h3>
+            <p>Predicción de ventas a 3 meses con Regresión Lineal OLS y segmentación RFM con K-Means.</p>
+            <span class="enlace-accion">Ver modelos ML →</span>
+          </div>
+        </div>
+
+        <div class="accion-card" (click)="irA('/offline')">
+          <div class="accion-icon bg-ambar">📡</div>
+          <div class="accion-body">
+            <h3>CU-19 / CU-20: Modo Offline</h3>
+            <p>Consulta de catálogo y registro de reservas sin conexión con UUIDv4 e IndexedDB local.</p>
+            <span class="enlace-accion">Abrir catálogo offline →</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Top Prendas Vendidas y Registros -->
+    <div class="dos-columnas">
+      @if (topPrendas().length > 0) {
+        <section class="seccion-bloque col-left">
+          <div class="bloque-cabecera">
+            <div>
+              <h2>Prendas Más Vendidas</h2>
+              <p class="subtexto">Top artículos con mayor demanda y facturación.</p>
+            </div>
+          </div>
+
+          <div class="tabla-contenedor">
+            <table class="tabla-simple">
+              <thead>
+                <tr>
+                  <th>Prenda</th>
+                  <th class="der">Unidades</th>
+                  <th class="der">Total Facturado</th>
+                  <th class="der">% Part.</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of topPrendas(); track item.clave) {
+                  <tr>
+                    <td><b>{{ item.etiqueta }}</b></td>
+                    <td class="der">{{ item.unidades }} uds</td>
+                    <td class="der mono">Bs {{ item.total | number:'1.2-2' }}</td>
+                    <td class="der"><span class="badge-part">{{ item.participacion | number:'1.1-1' }}%</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+
+      <section class="seccion-bloque col-right">
+        <div class="bloque-cabecera">
+          <div>
+            <h2>Entidades en Base de Datos</h2>
+            <p class="subtexto">Recursos activos configurados para este inquilino.</p>
+          </div>
+        </div>
+
+        <div class="fichas">
+          @for (ficha of fichas(); track ficha.etiqueta) {
+            <div class="ficha">
+              <div class="numero">{{ ficha.total ?? '—' }}</div>
+              <div class="ceja">{{ ficha.etiqueta }}</div>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+</div>
