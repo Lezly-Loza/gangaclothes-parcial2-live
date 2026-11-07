@@ -24,7 +24,7 @@ class User(Base, TenantMixin):
     apellido: Mapped[str | None] = mapped_column(String(200))
     telefono: Mapped[str | None] = mapped_column(String(50))
     rol: Mapped[str] = mapped_column(String(50), nullable=False, default="admin")
-    """admin | encargado | cajero | ..."""
+    """admin | encargado | vendedor | cliente"""
     estado: Mapped[str] = mapped_column(String(20), nullable=False, default="activo")
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

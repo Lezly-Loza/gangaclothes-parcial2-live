@@ -1,87 +1,39 @@
-from __future__ import annotations
-
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
-
 from ...models import Proveedor
 from . import schemas
 
 
-def _get_mio(db: Session, tenant_id: int, proveedor_id: int) -> Proveedor:
-    p = db.query(Proveedor).filter(Proveedor.id == proveedor_id, Proveedor.tenant_id == tenant_id).first()
-    if not p:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Proveedor no encontrado")
-    return p
+def listar(db: Session, tenant_id: int):
+    return db.query(Proveedor).filter_by(tenant_id=tenant_id).order_by(Proveedor.id).all()
 
 
-def listar(db: Session, tenant_id: int) -> list[Proveedor]:
-    return db.query(Proveedor).filter(Proveedor.tenant_id == tenant_id).order_by(Proveedor.id).all()
-
-
-def crear(db: Session, tenant_id: int, data: schemas.ProveedorIn) -> Proveedor:
-    existe = (
-        db.query(Proveedor)
-        .filter(Proveedor.tenant_id == tenant_id, Proveedor.nombre == data.nombre)
-        .first()
-    )
-    if existe:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            f"Ya existe un proveedor con el nombre '{data.nombre}'",
-        )
-
-    proveedor = Proveedor(
-        tenant_id=tenant_id,
-        nombre=data.nombre,
-        nit=data.nit,
-        contacto=data.contacto,
-        telefono=data.telefono,
-        email=data.email,
-        direccion=data.direccion,
-        estado="activo",
-        activo=data.activo,
-    )
-    db.add(proveedor)
+def crear(db: Session, tenant_id: int, data: schemas.ProveedorIn):
+    if db.query(Proveedor).filter_by(tenant_id=tenant_id, nit=data.nit).first():
+        raise HTTPException(409, "NIT repetido")
+    row = Proveedor(tenant_id=tenant_id, **data.model_dump(), activo=True)
+    db.add(row)
     db.commit()
-    db.refresh(proveedor)
-    return proveedor
+    db.refresh(row)
+    return row
 
 
-def obtener(db: Session, tenant_id: int, proveedor_id: int) -> Proveedor:
-    return _get_mio(db, tenant_id, proveedor_id)
-
-
-def actualizar(
-    db: Session, tenant_id: int, proveedor_id: int, data: schemas.ProveedorUpdateIn
-) -> Proveedor:
-    prov = _get_mio(db, tenant_id, proveedor_id)
-    payload = data.model_dump(exclude_unset=True)
-
-    if "nombre" in payload and payload["nombre"] != prov.nombre:
-        existe = (
-            db.query(Proveedor)
-            .filter(
-                Proveedor.tenant_id == tenant_id,
-                Proveedor.nombre == payload["nombre"],
-                Proveedor.id != proveedor_id,
-            )
-            .first()
-        )
-        if existe:
-            raise HTTPException(
-                status.HTTP_409_CONFLICT,
-                f"Ya existe un proveedor con el nombre '{payload['nombre']}'",
-            )
-
-    for k, v in payload.items():
-        setattr(prov, k, v)
-
+def actualizar(db: Session, tenant_id: int, id: int, data: schemas.ProveedorUpdateIn):
+    row = db.query(Proveedor).filter_by(tenant_id=tenant_id, id=id).first()
+    if not row:
+        raise HTTPException(404, "Proveedor no encontrado")
+    if data.nit and db.query(Proveedor).filter(Proveedor.tenant_id == tenant_id, Proveedor.nit == data.nit, Proveedor.id != id).first():
+        raise HTTPException(409, "NIT repetido")
+    for key, val in data.model_dump(exclude_unset=True).items():
+        setattr(row, key, val)
     db.commit()
-    db.refresh(prov)
-    return prov
+    return row
 
 
-def eliminar(db: Session, tenant_id: int, proveedor_id: int) -> None:
-    prov = _get_mio(db, tenant_id, proveedor_id)
-    db.delete(prov)
+def desactivar(db: Session, tenant_id: int, id: int):
+    row = db.query(Proveedor).filter_by(tenant_id=tenant_id, id=id).first()
+    if not row:
+        raise HTTPException(404, "Proveedor no encontrado")
+    row.activo = False
     db.commit()
+    return row

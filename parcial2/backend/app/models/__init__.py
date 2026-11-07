@@ -5,10 +5,9 @@ from .user import User
 from .superadmin import SuperAdmin
 from .sucursal import Sucursal
 from .operacion import OperacionLog
-from .catalogos import Categoria, Talla, Color, Temporada
-from .proveedor import Proveedor
-from .producto import Producto, Variante
-from .cliente import Cliente
+from .negocio import (Categoria, Talla, Color, Temporada, Producto, Variante, Proveedor,
+                      Cliente, Inventario, MovimientoInventario, Reserva, DetalleReserva,
+                      Venta, DetalleVenta, Pago, CambioPrenda)
 
 __all__ = [
     "Tenant",
@@ -18,15 +17,7 @@ __all__ = [
     "SuperAdmin",
     "Sucursal",
     "OperacionLog",
-    "Categoria",
-    "Talla",
-    "Color",
-    "Temporada",
-    "Proveedor",
-    "Producto",
-    "Variante",
-    "Cliente",
+    "Categoria", "Talla", "Color", "Temporada", "Producto", "Variante", "Proveedor",
+    "Cliente", "Inventario", "MovimientoInventario", "Reserva", "DetalleReserva",
+    "Venta", "DetalleVenta", "Pago", "CambioPrenda",
 ]
-
-
-

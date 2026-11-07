@@ -20,6 +20,7 @@ class Tenant(Base):
     codigo: Mapped[str] = mapped_column(String(50), nullable=False, unique=True, index=True)
     estado: Mapped[str] = mapped_column(String(20), nullable=False, default="activo")
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    plazo_cambio_dias: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     usuarios: Mapped[list["User"]] = relationship(back_populates="tenant", cascade="all, delete-orphan")

@@ -6,9 +6,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ...models import Plan, Producto, Sucursal, Suscripcion, User
+from ...models import Plan, Sucursal, Suscripcion, User
 from . import schemas
-
 
 
 def suscripcion_vigente(db: Session, tenant_id: int) -> tuple[Suscripcion | None, Plan | None]:
@@ -40,7 +39,6 @@ def consumo(db: Session, tenant_id: int) -> schemas.EstadoSuscripcionOut:
     consumos = [
         schemas.ConsumoLimite.build("sucursales", _count(db, Sucursal, tenant_id), plan.max_sucursales),
         schemas.ConsumoLimite.build("usuarios", _count(db, User, tenant_id), plan.max_usuarios),
-        schemas.ConsumoLimite.build("productos", _count(db, Producto, tenant_id), plan.max_productos),
     ]
 
     return schemas.EstadoSuscripcionOut(
@@ -71,7 +69,7 @@ def contratar_plan(db: Session, tenant_id: int, data: schemas.ContratarPlanIn) -
         fecha_fin=inicio + timedelta(days=data.duracion_dias),
         estado="activa",
     )
-    db.add(nueva)
+    nueva.activarSuscripcion(db)
     db.commit()
     db.refresh(nueva)
     return nueva
@@ -88,7 +86,7 @@ def exigir_capacidad(db: Session, tenant_id: int, recurso: str) -> tuple[Plan, i
             "La empresa no tiene un plan de suscripcion activo. Contrata un plan antes de continuar.",
         )
 
-    modelo_por_recurso = {"sucursales": Sucursal, "usuarios": User, "productos": Producto}
+    modelo_por_recurso = {"sucursales": Sucursal, "usuarios": User}
     limite_por_recurso = {
         "sucursales": plan.max_sucursales,
         "usuarios": plan.max_usuarios,
@@ -99,6 +97,13 @@ def exigir_capacidad(db: Session, tenant_id: int, recurso: str) -> tuple[Plan, i
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Recurso desconocido: {recurso}")
 
     limite = limite_por_recurso[recurso]
+    if recurso == "productos":
+        from ...models import Producto
+        actual = _count(db, Producto, tenant_id)
+        if actual >= limite:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Limite alcanzado para productos")
+        return plan, actual, limite
+
     modelo = modelo_por_recurso[recurso]
     actual = _count(db, modelo, tenant_id)
     if actual >= limite:
@@ -109,3 +114,34 @@ def exigir_capacidad(db: Session, tenant_id: int, recurso: str) -> tuple[Plan, i
         )
     return plan, actual, limite
 
+
+def validar_uso_en_plan(db: Session, tenant_id: int, plan_nuevo: Plan) -> None:
+    if (_count(db, Sucursal, tenant_id) > plan_nuevo.max_sucursales or
+            _count(db, User, tenant_id) > plan_nuevo.max_usuarios):
+        raise HTTPException(409, "El uso actual supera el plan elegido")
+
+
+def cambiar_plan(db: Session, tenant_id: int, data: schemas.CambiarPlanIn) -> Suscripcion:
+    plan = db.query(Plan).filter(Plan.codigo == data.plan_codigo, Plan.activo.is_(True)).first()
+    if plan is None:
+        raise HTTPException(404, "Plan no encontrado")
+    validar_uso_en_plan(db, tenant_id, plan)
+    actual, _ = suscripcion_vigente(db, tenant_id)
+    if actual:
+        actual.estado = "cancelada"
+    nueva = Suscripcion(tenant_id=tenant_id, plan_id=plan.id, fecha_inicio=date.today(),
+                         fecha_fin=date.today() + timedelta(days=data.duracion_dias))
+    nueva.validarUsoYGuardar(db)
+    db.commit()
+    db.refresh(nueva)
+    return nueva
+
+
+def renovar_plan(db: Session, tenant_id: int, data: schemas.RenovarPlanIn) -> Suscripcion:
+    actual, _ = suscripcion_vigente(db, tenant_id)
+    if actual is None:
+        raise HTTPException(404, "Suscripcion no encontrada")
+    actual.fecha_fin = max(actual.fecha_fin or date.today(), date.today()) + timedelta(days=data.duracion_dias)
+    actual.validarUsoYGuardar(db)
+    db.commit()
+    return actual

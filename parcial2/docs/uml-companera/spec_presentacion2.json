@@ -1,0 +1,581 @@
+{
+ "proyecto": "GangaClothes SaaS — Presentación 2 (Compañera)",
+ "stack": {
+  "web": {
+   "ui": ": Angular",
+   "servicio": ": HttpClient"
+  },
+  "movil": {
+   "ui": ": Flutter",
+   "servicio": ": dio + JWT",
+   "servicio_nombre": "ApiService"
+  },
+  "router": ": FastAPI Router",
+  "service": ": service.py",
+  "bd": ": PostgreSQL multitenant"
+ },
+ "actores": [
+  {
+   "id": "ADM",
+   "nombre": "Administrador"
+  },
+  {
+   "id": "ENC",
+   "nombre": "Encargado"
+  },
+  {
+   "id": "VEN",
+   "nombre": "Vendedor"
+  },
+  {
+   "id": "CLI",
+   "nombre": "Cliente"
+  },
+  {
+   "id": "USR",
+   "nombre": "Usuario"
+  },
+  {
+   "id": "PAS",
+   "nombre": "Pasarela de pagos",
+   "externo": true
+  }
+ ],
+ "cus": [
+  {
+   "id": "CU-12",
+   "nombre": "Gestionar inventario por sucursal",
+   "actores": [
+    "ENC"
+   ],
+   "plataforma": "web",
+   "ciclo": 2
+  },
+  {
+   "id": "CU-14",
+   "nombre": "Registrar reserva de prendas en línea",
+   "actores": [
+    "CLI"
+   ],
+   "plataforma": "web+movil",
+   "ciclo": 2
+  },
+  {
+   "id": "CU-16",
+   "nombre": "Gestionar cambios de prendas",
+   "actores": [
+    "VEN"
+   ],
+   "plataforma": "web",
+   "ciclo": 2
+  },
+  {
+   "id": "CU-17",
+   "nombre": "Anular reserva o venta",
+   "actores": [
+    "ENC"
+   ],
+   "plataforma": "web+movil",
+   "ciclo": 2
+  }
+ ],
+ "comunicacion": {
+  "CU-12": {
+   "boundary": "InventarioUI",
+   "control": "InventarioCtr",
+   "entity": "Inventario",
+   "mensajes": [
+    "abrirInventario()",
+    "registrarMovimiento(datos)",
+    "registrar_movimiento(d)",
+    "validarStockYGuardar()",
+    "stockActualizado()",
+    "mostrarStock()"
+   ]
+  },
+  "CU-14": {
+   "boundary": "ReservaUI",
+   "control": "ReservaCtr",
+   "entity": "Reserva",
+   "mensajes": [
+    "elegirPrenda()",
+    "reservar(datos)",
+    "crear(tenant_id, data)",
+    "validarStockYApartar()",
+    "reservaCreada()",
+    "mostrarCodigo()"
+   ]
+  },
+  "CU-16": {
+   "boundary": "CambioPrendaUI",
+   "control": "CambioCtr",
+   "entity": "CambioPrenda",
+   "mensajes": [
+    "buscarVenta(codigo)",
+    "cambiar(item, nueva)",
+    "registrar_cambio(data)",
+    "verificarPlazoYGuardar()",
+    "cambioRegistrado()",
+    "mostrarComprobante()"
+   ]
+  },
+  "CU-17": {
+   "boundary": "AnularOperacionUI",
+   "control": "AnulacionCtr",
+   "entity": "Venta",
+   "mensajes": [
+    "buscarOperacion()",
+    "anular(id, motivo)",
+    "anular_venta(id, motivo)",
+    "validarYRevertirStock()",
+    "operacionAnulada()",
+    "mostrarAnulada()"
+   ]
+  }
+ },
+ "secuencia": {
+  "CU-12": {
+   "cadena": {
+    "ui": "InventarioPage + MovimientoForm",
+    "servicio": "inventario.service",
+    "ruta": "POST /inventario/movimientos",
+    "service_py": "inventario/service.py",
+    "tablas": "inventarios, movimientos_inventario"
+   },
+   "pasos": [
+    [
+     "A",
+     "U",
+     "registrarMovimiento(variante, tipo, cantidad, motivo)"
+    ],
+    [
+     "U",
+     "S",
+     "registrarMovimiento(MovimientoIn)"
+    ],
+    [
+     "S",
+     "R",
+     "POST /inventario/movimientos"
+    ],
+    [
+     "R",
+     "R",
+     "require_roles('encargado', 'admin')",
+     "self"
+    ],
+    [
+     "R",
+     "V",
+     "registrar_movimiento(tenant_id, data)"
+    ],
+    [
+     "V",
+     "B",
+     "SELECT Inventario (sucursal, variante)"
+    ],
+    [
+     "B",
+     "V",
+     "inventario",
+     "ret"
+    ],
+    [
+     "V",
+     "B",
+     "INSERT MovimientoInventario"
+    ],
+    [
+     "V",
+     "B",
+     "UPDATE Inventario SET stock"
+    ],
+    [
+     "V",
+     "R",
+     "MovimientoOut + alerta_minimo",
+     "ret"
+    ],
+    [
+     "V",
+     "R",
+     "409 'Stock insuficiente'",
+     "ret"
+    ],
+    [
+     "R",
+     "S",
+     "201 Created · MovimientoOut",
+     "ret"
+    ],
+    [
+     "S",
+     "U",
+     "movimiento",
+     "ret"
+    ],
+    [
+     "U",
+     "A",
+     "muestra el stock actualizado",
+     "ret"
+    ],
+    [
+     "U",
+     "A",
+     "muestra alerta de stock mínimo",
+     "ret"
+    ]
+   ],
+   "marcos": [
+    [
+     "alt",
+     "[entrada, o salida con stock suficiente]",
+     8,
+     11,
+     11
+    ],
+    [
+     "opt",
+     "[stock < stock_min]",
+     15,
+     15
+    ]
+   ]
+  },
+  "CU-14": {
+   "cadena": {
+    "ui": "ReservarPrendaScreen",
+    "ruta": "POST /reservas",
+    "service_py": "reservas/service.py",
+    "tablas": "reservas, detalle_reserva, inventarios",
+    "plataforma": "movil"
+   },
+   "pasos": [
+    [
+     "A",
+     "U",
+     "reservar(variante, sucursal, cantidad)"
+    ],
+    [
+     "U",
+     "S",
+     "crearReserva(ReservaIn)"
+    ],
+    [
+     "S",
+     "R",
+     "POST /reservas"
+    ],
+    [
+     "R",
+     "R",
+     "require_roles('cliente')",
+     "self"
+    ],
+    [
+     "R",
+     "V",
+     "crear(tenant_id, data)"
+    ],
+    [
+     "V",
+     "B",
+     "SELECT Inventario (sucursal, variante)"
+    ],
+    [
+     "B",
+     "V",
+     "stock_disponible",
+     "ret"
+    ],
+    [
+     "V",
+     "B",
+     "INSERT Reserva (PENDIENTE, fecha_limite)"
+    ],
+    [
+     "V",
+     "B",
+     "INSERT DetalleReserva"
+    ],
+    [
+     "V",
+     "B",
+     "UPDATE Inventario: reservado += cant"
+    ],
+    [
+     "V",
+     "R",
+     "ReservaOut (codigo)",
+     "ret"
+    ],
+    [
+     "V",
+     "R",
+     "409 'Stock insuficiente en la sucursal'",
+     "ret"
+    ],
+    [
+     "R",
+     "S",
+     "201 Created · ReservaOut",
+     "ret"
+    ],
+    [
+     "S",
+     "U",
+     "reserva",
+     "ret"
+    ],
+    [
+     "U",
+     "A",
+     "muestra el código de la reserva",
+     "ret"
+    ]
+   ],
+   "marcos": [
+    [
+     "alt",
+     "[stock_disponible >= cantidad]",
+     8,
+     12,
+     12
+    ]
+   ]
+  },
+  "CU-16": {
+   "cadena": {
+    "ui": "CambioPrendaPage",
+    "servicio": "cambios.service",
+    "ruta": "GET /ventas/{codigo} · POST /cambios",
+    "service_py": "cambios/service.py",
+    "tablas": "ventas, detalle_venta, cambios_prenda, inventarios"
+   },
+   "pasos": [
+    [
+     "A",
+     "U",
+     "buscarVenta(codigo)"
+    ],
+    [
+     "U",
+     "S",
+     "obtenerVenta(codigo)"
+    ],
+    [
+     "S",
+     "R",
+     "GET /ventas/{codigo}"
+    ],
+    [
+     "R",
+     "V",
+     "obtener_venta(tenant_id, codigo)"
+    ],
+    [
+     "V",
+     "B",
+     "SELECT Venta + DetalleVenta WHERE codigo"
+    ],
+    [
+     "B",
+     "V",
+     "venta",
+     "ret"
+    ],
+    [
+     "V",
+     "R",
+     "VentaOut",
+     "ret"
+    ],
+    [
+     "R",
+     "S",
+     "200 OK · VentaOut",
+     "ret"
+    ],
+    [
+     "S",
+     "U",
+     "venta",
+     "ret"
+    ],
+    [
+     "A",
+     "U",
+     "cambiar(item, variante_nueva, motivo)"
+    ],
+    [
+     "U",
+     "S",
+     "registrarCambio(CambioIn)"
+    ],
+    [
+     "S",
+     "R",
+     "POST /cambios"
+    ],
+    [
+     "R",
+     "V",
+     "registrar_cambio(tenant_id, data)"
+    ],
+    [
+     "V",
+     "V",
+     "verificar_plazo(venta, plazo_dias)",
+     "self"
+    ],
+    [
+     "V",
+     "B",
+     "INSERT CambioPrenda (diferencia)"
+    ],
+    [
+     "V",
+     "B",
+     "INSERT Movimientos entrada y salida"
+    ],
+    [
+     "V",
+     "R",
+     "CambioOut",
+     "ret"
+    ],
+    [
+     "V",
+     "R",
+     "409 'Fuera de plazo' | 'Sin stock'",
+     "ret"
+    ],
+    [
+     "R",
+     "S",
+     "201 Created · CambioOut",
+     "ret"
+    ],
+    [
+     "S",
+     "U",
+     "cambio",
+     "ret"
+    ],
+    [
+     "U",
+     "A",
+     "muestra comprobante y diferencia",
+     "ret"
+    ]
+   ],
+   "marcos": [
+    [
+     "alt",
+     "[dentro del plazo y con stock]",
+     15,
+     18,
+     18
+    ]
+   ]
+  },
+  "CU-17": {
+   "cadena": {
+    "ui": "AnularOperacionDialog",
+    "servicio": "ventas.service",
+    "ruta": "POST /ventas/{id}/anular",
+    "service_py": "ventas/service.py",
+    "tablas": "ventas, inventarios, movimientos_inventario"
+   },
+   "pasos": [
+    [
+     "A",
+     "U",
+     "anular(venta_id, motivo)"
+    ],
+    [
+     "U",
+     "S",
+     "anular(id, motivo)"
+    ],
+    [
+     "S",
+     "R",
+     "POST /ventas/{id}/anular"
+    ],
+    [
+     "R",
+     "R",
+     "require_roles('encargado')",
+     "self"
+    ],
+    [
+     "R",
+     "V",
+     "anular_venta(tenant_id, id, motivo)"
+    ],
+    [
+     "V",
+     "B",
+     "SELECT Venta WHERE id AND tenant_id"
+    ],
+    [
+     "B",
+     "V",
+     "venta | None",
+     "ret"
+    ],
+    [
+     "V",
+     "B",
+     "UPDATE Venta SET estado='ANULADA'"
+    ],
+    [
+     "V",
+     "B",
+     "INSERT MovimientoInventario (reingreso)"
+    ],
+    [
+     "V",
+     "R",
+     "VentaOut",
+     "ret"
+    ],
+    [
+     "V",
+     "R",
+     "404 no existe | 409 ya anulada o con cambio",
+     "ret"
+    ],
+    [
+     "R",
+     "S",
+     "200 OK · VentaOut",
+     "ret"
+    ],
+    [
+     "S",
+     "U",
+     "venta anulada",
+     "ret"
+    ],
+    [
+     "U",
+     "A",
+     "muestra la operación ANULADA",
+     "ret"
+    ]
+   ],
+   "marcos": [
+    [
+     "alt",
+     "[existe, no anulada y sin cambios]",
+     8,
+     11,
+     11
+    ]
+   ]
+  }
+ }
+}

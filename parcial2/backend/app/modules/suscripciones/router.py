@@ -34,3 +34,13 @@ def consultar_estado(
 ):
     """CU-07: estado del plan vigente + consumo real por cada limite."""
     return service.consumo(db, scope.tenant_id)
+
+
+@router.post("/cambiar", response_model=schemas.SuscripcionOut)
+def cambiar(body: schemas.CambiarPlanIn, scope: TenantScope = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+    return service.cambiar_plan(db, scope.tenant_id, body)
+
+
+@router.post("/renovar", response_model=schemas.SuscripcionOut)
+def renovar(body: schemas.RenovarPlanIn, scope: TenantScope = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+    return service.renovar_plan(db, scope.tenant_id, body)
