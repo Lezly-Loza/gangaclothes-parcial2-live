@@ -93,7 +93,7 @@ export function menuParaRoles(roles: string[], permisos: string[] = [], esSuper 
     items: grupo.items.filter(
       (item) => {
         if (esSuper) {
-          return item.ruta === '/admin/empresas' || item.ruta === '/admin/planes';
+          return item.ruta === '/admin' || item.ruta === '/admin/empresas' || item.ruta === '/admin/planes';
         }
         if (item.ruta === '/admin/empresas' || item.ruta === '/admin/planes') {
           return false;
