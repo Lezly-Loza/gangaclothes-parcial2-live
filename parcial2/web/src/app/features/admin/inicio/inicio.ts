@@ -32,6 +32,24 @@ interface TopPrenda {
   participacion: number;
 }
 
+interface TenantItem {
+  id: number;
+  codigo: string;
+  razon_social: string;
+  nit: string;
+  plan_codigo?: string;
+  estado?: string;
+}
+
+interface PlanItem {
+  id: number;
+  codigo: string;
+  nombre: string;
+  precio_mensual: number;
+  max_sucursales: number;
+  max_usuarios: number;
+}
+
 @Component({
   selector: 'app-admin-inicio',
   standalone: true,
@@ -48,6 +66,8 @@ export class AdminInicio {
   readonly fichas = signal<Ficha[]>([]);
   readonly indicadores = signal<Indicadores | null>(null);
   readonly topPrendas = signal<TopPrenda[]>([]);
+  readonly empresas = signal<TenantItem[]>([]);
+  readonly planes = signal<PlanItem[]>([]);
   readonly cargando = signal(true);
 
   readonly tenantNombre = computed(() => {
@@ -70,13 +90,6 @@ export class AdminInicio {
     ];
   }
 
-  private recursosSuper(): Array<[string, string]> {
-    return [
-      ['Empresas', 'tenants'],
-      ['Planes',   'planes'],
-    ];
-  }
-
   constructor() {
     this.cargarDatos();
   }
@@ -85,18 +98,16 @@ export class AdminInicio {
     this.cargando.set(true);
 
     if (this.esSuper()) {
-      const recursos = this.recursosSuper();
-      forkJoin(
-        recursos.map(([, ruta]) =>
-          this.http.get<unknown>(`${API_URL}/${ruta}`).pipe(catchError(() => of(null)))
-        )
-      ).subscribe((respuestas) => {
-        this.fichas.set(
-          recursos.map(([etiqueta], i) => ({
-            etiqueta,
-            total: Array.isArray(respuestas[i]) ? (respuestas[i] as unknown[]).length : null,
-          }))
-        );
+      forkJoin({
+        tenants: this.http.get<TenantItem[]>(`${API_URL}/tenants`).pipe(catchError(() => of([]))),
+        planes: this.http.get<PlanItem[]>(`${API_URL}/planes`).pipe(catchError(() => of([]))),
+      }).subscribe(({ tenants, planes }) => {
+        this.empresas.set(tenants || []);
+        this.planes.set(planes || []);
+        this.fichas.set([
+          { etiqueta: 'Empresas Registradas', total: tenants?.length ?? 0 },
+          { etiqueta: 'Planes de Suscripción', total: planes?.length ?? 0 },
+        ]);
         this.cargando.set(false);
       });
       return;
