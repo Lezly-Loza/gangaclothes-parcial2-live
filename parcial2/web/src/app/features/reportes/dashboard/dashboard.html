@@ -25,6 +25,8 @@
   </div>
 </div>
 
+<p class="mensaje">Las ganancias y el valor a costo incluyen solo prendas con costo registrado y usan el costo actual, no histórico.</p>
+
 @if (error()) {
   <div class="mensaje error">
     <p>{{ error() }}</p>
@@ -67,7 +69,7 @@
         <div class="ceja">Descuentos otorgados</div>
         <div class="numero">Bs {{ moneda(i.descuento) }}</div>
         <div class="apoyo">
-          {{ i.promociones_vigentes }} {{ i.promociones_vigentes === 1 ? 'promocion vigente' : 'promociones vigentes' }} hoy
+          {{ i.promociones_vigentes }} {{ i.promociones_vigentes === 1 ? 'promoción vigente' : 'promociones vigentes' }} hoy
         </div>
       </div>
       <div class="ficha" [class.alerta]="i.alertas_stock > 0">
@@ -181,7 +183,7 @@
         </ul>
       </section>
       <section class="panel">
-        <div class="cabecera-panel"><h2>Reservas creadas en el periodo</h2></div>
+        <div class="cabecera-panel"><h2>Reservas por estado actual</h2></div>
         <ul class="lista-simple">
           @for (r of d.reservas_por_estado; track r.estado) {
             <li>

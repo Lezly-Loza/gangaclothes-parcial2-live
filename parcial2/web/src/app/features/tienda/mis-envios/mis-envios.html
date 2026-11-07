@@ -20,8 +20,8 @@
   } @else if (envios().length === 0) {
     <div class="mensaje vacio">
       <p>
-        Todavia no pediste ninguna compra a domicilio. En el carrito puedes elegir
-        «Delivery a domicilio» y te la llevamos.
+        Todavía no tienes pedidos a domicilio. Puedes registrar un envío de prueba desde el carrito.
+        La sucursal gestiona el despacho.
       </p>
       <a class="btn rosa" routerLink="/catalogo">Ir al catalogo</a>
     </div>
@@ -40,7 +40,7 @@
               <span class="mono">{{ envio.venta?.nro_comprobante || '#E-' + envio.id }}</span>
               <span class="ceja tipo">
                 {{ unidades(envio) }} {{ unidades(envio) === 1 ? 'prenda' : 'prendas' }} ·
-                {{ envio.distancia_km }} km
+                @if (envio.distancia_km !== null) { {{ envio.distancia_km }} km }
                 @if (envio.express) {
                   · express
                 }
@@ -108,9 +108,7 @@
           @if (envio.venta; as venta) {
             <div class="totales">
               <span>Prendas Bs {{ moneda(venta.subtotal - venta.descuento) }}</span>
-              <span [class.ahorro]="envio.costo_envio === 0">
-                Envio {{ envio.costo_envio > 0 ? 'Bs ' + moneda(envio.costo_envio) : 'gratis' }}
-              </span>
+              <span>Costo de envío: no calculado</span>
               <strong>Total Bs {{ moneda(venta.total) }}</strong>
             </div>
           }

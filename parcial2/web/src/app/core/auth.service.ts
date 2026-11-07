@@ -35,11 +35,11 @@ export class AuthService {
     return this.login(email, password);
   }
 
-  registrar(datos: { nombre: string; apellido?: string; email: string; password: string; telefono?: string }) {
+  registrar(datos: { codigo_tenant: string; documento: string; nombre: string; apellido?: string; email: string; password: string; telefono?: string }) {
     return this.http
       .post<any>(`${API_URL}/auth/register`, datos)
       .pipe(
-        map((r) => this.mapearRespuesta(r, datos.email)),
+        map((r) => this.mapearRespuesta(r, datos.email, datos.codigo_tenant)),
         tap((respuesta) => this.sesion.guardar(respuesta)),
       );
   }
@@ -69,7 +69,7 @@ export class AuthService {
   rutaInicial(): string {
     // Parcial 2: el superadministrador aterriza directo en la pantalla de empresas.
     if (this.sesion.usuario()?.kind === 'super') return '/admin/empresas';
-    return rutaInicial(this.sesion.roles());
+    return rutaInicial(this.sesion.roles(), this.sesion.permisos());
   }
 
   /**
@@ -88,7 +88,7 @@ export class AuthService {
       apellido,
       email,
       roles: traducirRoles(rolesBackend),
-      permisos: permisosPorRoles(rolesBackend),
+      permisos: Array.isArray(r.permisos) ? r.permisos : permisosPorRoles(rolesBackend),
       sucursal_id: null,
       tenant_codigo: r.tenant_codigo ?? codigoTenantFallback ?? null,
       tenant_id: r.tenant_id ?? null,
@@ -106,7 +106,7 @@ export class AuthService {
       apellido: partes.length > 1 ? partes.slice(1).join(' ') : null,
       email: me.email || '',
       roles: traducirRoles(rolesBackend),
-      permisos: permisosPorRoles(rolesBackend),
+      permisos: Array.isArray(me.permisos) ? me.permisos : permisosPorRoles(rolesBackend),
       sucursal_id: null,
       tenant_codigo: me.tenant_codigo ?? null,
       tenant_id: me.tenant_id ?? null,

@@ -1,12 +1,92 @@
 # GangaSaaS — Parcial 2 SI2 · UAGRM
 
-SaaS multitenant para tiendas de ropa. **Proyecto nuevo desde cero.**
+SaaS multitenant para tiendas de ropa. Esta carpeta reúne la interfaz del primer
+parcial con las funciones nuevas de empresas y suscripciones del segundo.
 Metodología ICONIX. Stack FastAPI + SQLAlchemy + PostgreSQL (SQLite local
 por defecto) · Angular · Flutter.
 
-Este README documenta los cimientos que ya quedan en pie: **multitenancy
-central** + los CU que lleva Ariany (CU-01, CU-02, CU-04, CU-05, CU-07).
-La compañera consume la API desde el móvil/web.
+## Estado de la integración
+
+Para trabajar en la versión integrada, inicia el backend y la web de esta
+carpeta. La aplicación original de la raíz se conserva como referencia y usa
+otra base de datos; sus datos no se han migrado automáticamente a `parcial2`.
+No borres la versión anterior hasta comprobar y migrar los datos que necesites.
+
+En el backend de `parcial2` están conectados empresas, planes y precios,
+suscripciones, usuarios sin rol o con varios roles, permisos por empresa,
+clientes, catálogos, prendas, variantes, inventario, movimientos, oferta de
+proveedores, compras, recepción de stock, reservas de sucursal, caja en
+efectivo, envíos registrados desde una venta pagada, dashboard, reportes, cambios y
+anulación. La opción de instalar como PWA está habilitada en compilación de
+producción; con `ng serve` no se instala el service worker.
+
+El cliente puede reservar desde el catálogo, consultar y cancelar sus reservas,
+agregar prendas al carrito y registrar una compra de prueba con retiro o envío.
+El pago del carrito es siempre **simulado**, sin cobro real: la prueba sí registra
+una venta, descuenta existencias y aparece en los reportes. Para un envío se pide
+la dirección y las coordenadas, y la sucursal actualiza su estado; todavía no se
+calculan distancia ni tarifa. Usa una base de prueba para ensayar estas acciones.
+
+La caja solo admite efectivo por ahora; el comprobante se
+puede imprimir desde el navegador. Para publicar oferta, el administrador debe
+vincular el usuario con su proveedor al asignarle el rol de proveedor.
+Los envíos se registran manualmente con el código de una venta pagada y las
+coordenadas del destino; este registro no cobra una tarifa ni calcula distancia.
+Los reportes incluyen solo prendas con costo registrado en los cálculos de
+ganancia y valor a costo, utilizando el costo actual y no el histórico.
+Las promociones vigentes se aplican en caja y quedan registradas en el detalle
+de la venta; para ver precios nuevos en una copia offline, vuelve a descargarla.
+La promoción ganadora es la que deja el menor precio; no se acumulan descuentos.
+
+El registro de clientes solicita código de empresa y documento. Para probar
+con la demo existente usa empresa `luna`, correo `cliente@boutique-luna.bo` y
+contraseña `Luna12345`. Al entrar abre «Catálogo sin conexión»: elige sucursal,
+categoría y temporada, y descarga la selección. La copia queda en IndexedDB,
+separada por empresa y cuenta, y muestra precios y existencias del momento de
+la descarga. Permite consultar, no comprar ni reservar sin conexión. Para abrir
+la app tras cerrar el navegador sin internet se requiere una compilación PWA
+de producción instalada y abierta previamente con conexión; `ng serve` no
+registra el service worker.
+
+En «Cambios de prendas» y «Anular operación» se puede seleccionar una venta o
+reserva reciente. El código de venta también figura en el comprobante de caja
+y en el motivo del movimiento de inventario; el de reserva aparece en su
+confirmación. Un cambio está sujeto al plazo configurado de la empresa.
+El catálogo web muestra las prendas publicadas y disponibles de la empresa
+de la sesión; es necesario iniciar sesión para identificar esa empresa.
+Los pagos en línea sin clave de Stripe se simulan; incluso
+con clave solo se acepta el modo de prueba. No son cobros reales.
+
+Los módulos elegidos en el plan son actualmente descriptivos: el acceso se
+controla por permisos del usuario y los límites de sucursales, usuarios y
+productos sí se verifican en el backend. Sucursales y ciudades se administran
+en Red de tiendas; el límite de sucursales corresponde al plan contratado.
+
+Las pruebas de interfaz `web/scripts/probar_integracion.mjs` usan una API y una
+base de demostración separadas en el puerto 8012; requieren Angular en 4200.
+No usan ni reinician la base normal de la aplicación.
+
+### Inicio rápido en PowerShell
+
+En una terminal, desde la raíz del repositorio:
+
+```powershell
+cd parcial2/backend
+.\.venv-run\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+En otra terminal:
+
+```powershell
+cd parcial2/web
+npm start
+```
+
+Abre `http://localhost:4200`. Si es una instalación nueva, consulta las
+instrucciones de instalación de la sección 4 y crea la demo con
+`python -m app.seeds.demo`. Evita volver a sembrar o borrar tu base si contiene
+datos que quieras conservar. Cierra sesión y vuelve a entrar para actualizar
+los permisos guardados por la interfaz después de una modificación de roles.
 
 ## 1. Cómo se garantiza el aislamiento entre tenants
 

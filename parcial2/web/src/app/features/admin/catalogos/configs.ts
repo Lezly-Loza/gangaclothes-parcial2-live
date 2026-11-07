@@ -88,6 +88,17 @@ export const CIUDADES: ConfigCrud = {
   ],
 };
 
+export const CLIENTES: ConfigCrud = {
+  titulo: 'Clientes', singular: 'el cliente', ruta: 'admin/clientes', archivable: true,
+  nota: 'personas registradas en esta empresa',
+  campos: [
+    { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'texto', requerido: true, marcador: 'Maria Flores' },
+    { nombre: 'documento', etiqueta: 'CI o NIT', tipo: 'texto', requerido: true, marcador: '1234567' },
+    { nombre: 'telefono', etiqueta: 'Telefono', tipo: 'texto', marcador: '70012345' },
+    { nombre: 'correo', etiqueta: 'Correo', tipo: 'texto', marcador: 'maria@correo.com' },
+  ],
+};
+
 export const PROVEEDORES: ConfigCrud = {
   titulo: 'Proveedores',
   singular: 'el proveedor',
@@ -96,7 +107,7 @@ export const PROVEEDORES: ConfigCrud = {
   nota: 'a quienes se les hacen las compras',
   campos: [
     { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'texto', requerido: true, marcador: 'Textiles Andinos SRL' },
-    { nombre: 'nit', etiqueta: 'NIT', tipo: 'texto', marcador: '1020304025' },
+    { nombre: 'nit', etiqueta: 'NIT', tipo: 'texto', requerido: true, marcador: '1020304025' },
     { nombre: 'contacto', etiqueta: 'Contacto', tipo: 'texto', marcador: 'Rosa Mamani' },
     { nombre: 'telefono', etiqueta: 'Telefono', tipo: 'texto', marcador: '70012345' },
     { nombre: 'email', etiqueta: 'Correo', tipo: 'texto', marcador: 'ventas@proveedor.bo' },
@@ -113,7 +124,7 @@ export const SUCURSALES: ConfigCrud = {
   campos: [
     { nombre: 'ciudad_id', etiqueta: 'Ciudad', tipo: 'select', requerido: true, origen: { ruta: 'admin/ciudades' } },
     { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'texto', requerido: true, marcador: 'Sucursal Central' },
-    { nombre: 'direccion', etiqueta: 'Direccion', tipo: 'texto', marcador: 'Av. Principal #123' },
+    { nombre: 'direccion', etiqueta: 'Direccion', tipo: 'texto', requerido: true, marcador: 'Av. Principal #123' },
     { nombre: 'telefono', etiqueta: 'Telefono', tipo: 'texto', marcador: '3-3456789' },
     { nombre: 'horario', etiqueta: 'Horario', tipo: 'texto', marcador: 'Lun-Sab 9:00-20:00', ancho: 'completo' },
     // CU29: el punto del mapa desde el que sale el delivery de esta sucursal.

@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { Asistente } from './shared/asistente/asistente';
 import { Avisos } from './shared/avisos/avisos';
+import { PwaService } from './core/pwa.service';
 
 @Component({
   selector: 'app-root',
@@ -15,4 +16,4 @@ import { Avisos } from './shared/avisos/avisos';
     <app-asistente />
   `,
 })
-export class App {}
+export class App { readonly pwa = inject(PwaService); }

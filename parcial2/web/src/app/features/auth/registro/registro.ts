@@ -9,7 +9,7 @@ import { contrasenaSegura, contrasenasIguales, ReglasContrasena } from '../../..
 
 const TELEFONO = /^[0-9+\-\s]{6,20}$/;
 
-type Campo = 'nombre' | 'apellido' | 'email' | 'telefono' | 'password' | 'confirmar';
+type Campo = 'codigo_tenant' | 'documento' | 'nombre' | 'apellido' | 'email' | 'telefono' | 'password' | 'confirmar';
 
 /**
  * CU20: registro de cliente. El backend crea el usuario con rol cliente y
@@ -39,6 +39,8 @@ export class Registro {
 
   readonly formulario = this.fb.nonNullable.group(
     {
+      codigo_tenant: ['', [Validators.required, Validators.pattern(/\S/)]],
+      documento: ['', [Validators.required, Validators.maxLength(60), Validators.pattern(/\S/)]],
       nombre: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/\S/)]],
       apellido: ['', Validators.maxLength(100)],
       email: ['', [Validators.required, Validators.email, Validators.maxLength(120)]],
@@ -69,6 +71,7 @@ export class Registro {
 
     const crudo = this.formulario.getRawValue();
     const datos = {
+      codigo_tenant: crudo.codigo_tenant.trim().toLowerCase(), documento: crudo.documento.trim(),
       nombre: crudo.nombre.trim(),
       apellido: crudo.apellido.trim() || undefined,
       email: crudo.email.trim(),
@@ -81,13 +84,13 @@ export class Registro {
     this.auth.registrar(datos).subscribe({
       next: (sesion) => {
         this.enviando.set(false);
-        this.avisos.ok(`Cuenta creada. Hola, ${sesion.usuario.nombre}: ya puedes reservar y comprar.`);
-        this.router.navigateByUrl(this.volverA || '/catalogo');
+        this.avisos.ok(`Cuenta creada. Hola, ${sesion.usuario.nombre}.`);
+        this.router.navigateByUrl(this.volverA || '/modo-offline');
       },
       error: (err) => {
         this.enviando.set(false);
         const mensaje = mensajeDeError(err, 'No se pudo crear la cuenta. Intenta de nuevo.');
-        this.correoRepetido.set(err.status === 400 && /correo/i.test(mensaje));
+        this.correoRepetido.set(err.status === 409 && /correo/i.test(mensaje));
         this.error.set(mensaje);
       },
     });

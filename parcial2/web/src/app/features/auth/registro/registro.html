@@ -15,6 +15,14 @@
       <h1>Crear cuenta</h1>
 
       <form [formGroup]="formulario" (ngSubmit)="enviar()" novalidate>
+        <div class="grupo"><label class="etiqueta" for="r-empresa">Código de la empresa<b class="req">*</b></label>
+          <input id="r-empresa" class="campo" formControlName="codigo_tenant" placeholder="Por ejemplo: luna" />
+          @if (invalido('codigo_tenant')) { <p class="ayuda-error">Indica el código de la tienda.</p> }
+        </div>
+        <div class="grupo"><label class="etiqueta" for="r-documento">Documento de identidad<b class="req">*</b></label>
+          <input id="r-documento" class="campo" formControlName="documento" />
+          @if (invalido('documento')) { <p class="ayuda-error">Ingresa tu documento.</p> }
+        </div>
         <div class="rejilla">
           <div class="grupo">
             <label class="etiqueta" for="r-nombre">Nombre<b class="req">*</b></label>

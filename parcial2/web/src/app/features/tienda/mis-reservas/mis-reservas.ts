@@ -14,6 +14,7 @@ type EstadoReserva = 'pendiente' | 'preparada' | 'atendida' | 'cancelada' | 'exp
 /** GET /api/reservas/mias (backend: reservas/service.py `_salida`). */
 interface ReservaCliente {
   id: number;
+  codigo: string;
   estado: EstadoReserva;
   fecha_creacion: string | null;
   fecha_hora_prueba: string;
@@ -74,7 +75,7 @@ export class MisReservas {
   cargar(): void {
     this.cargando.set(true);
     this.error.set(null);
-    this.http.get<ReservaCliente[]>(`${API_URL}/reservas/mias`).subscribe({
+    this.http.get<ReservaCliente[]>(`${API_URL}/tienda/reservas`).subscribe({
       next: (filas) => {
         this.reservas.set(filas);
         this.cargando.set(false);
@@ -98,7 +99,7 @@ export class MisReservas {
 
   cancelar(reserva: ReservaCliente): void {
     this.cancelando.set(reserva.id);
-    this.http.post<ReservaCliente>(`${API_URL}/reservas/${reserva.id}/cancelar`, {}).subscribe({
+    this.http.post<ReservaCliente>(`${API_URL}/tienda/reservas/${reserva.id}/cancelar`, {}).subscribe({
       next: (actualizada) => {
         this.cancelando.set(null);
         this.confirmando.set(null);

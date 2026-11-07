@@ -38,9 +38,10 @@ export class ContratarPlan {
         firstValueFrom(this.planesApi.listar()),
         firstValueFrom(this.suscripcionesApi.estado()).catch(() => null),
       ]);
-      this.planes.set(pl);
+      this.planes.set(pl.filter((p) => p.activo));
       this.estado.set(est);
-      if (pl.length) this.planSeleccionado.set(pl[1]?.codigo || pl[0].codigo);
+      const activos = pl.filter((p) => p.activo);
+      if (activos.length) this.planSeleccionado.set(activos[1]?.codigo || activos[0].codigo);
     } catch (e: any) { this.errorCarga.set(mensajeDeError(e, 'No se pudieron cargar los planes.')); }
     finally { this.cargando.set(false); }
   }

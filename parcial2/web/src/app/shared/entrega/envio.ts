@@ -22,7 +22,7 @@ export interface Envio {
   longitud: number;
   referencia: string | null;
   telefono_contacto: string | null;
-  distancia_km: number;
+  distancia_km: number | null;
   costo_envio: number;
   express: boolean;
   repartidor: string | null;

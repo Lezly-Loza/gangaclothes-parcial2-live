@@ -37,6 +37,9 @@
         }
       </div>
       <div class="acciones-superior">
+        @if (pwa.instalable()) {
+          <button type="button" class="btn linea" (click)="pwa.instalarApp()">Instalar aplicación</button>
+        }
         <span class="estado" [class.ok]="enLinea()" [class.bajo]="!enLinea()">
           {{ enLinea() ? 'En linea' : 'Sin conexion' }}
         </span>

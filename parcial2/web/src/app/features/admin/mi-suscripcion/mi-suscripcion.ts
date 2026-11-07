@@ -38,6 +38,7 @@ export class MiSuscripcion {
     return e.consumos.map((c) => ({
       etiqueta: c.recurso.charAt(0).toUpperCase() + c.recurso.slice(1),
       valor: c.actual,
+      maximo: c.limite,
       texto: `${c.actual} / ${c.limite}`,
       detalle: `disponible ${c.disponible}`,
       color: c.actual >= c.limite ? 'var(--alerta)' : undefined,
@@ -54,7 +55,7 @@ export class MiSuscripcion {
         firstValueFrom(this.planesApi.listar()),
       ]);
       this.estado.set(est);
-      this.planes.set(pl);
+      this.planes.set(pl.filter((p) => p.activo));
     } catch (e: any) { this.errorCarga.set(mensajeDeError(e, 'No se pudo cargar la suscripcion.')); }
     finally { this.cargando.set(false); }
   }

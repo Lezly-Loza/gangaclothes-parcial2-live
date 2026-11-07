@@ -40,6 +40,9 @@ export const erroresInterceptor: HttpInterceptorFn = (req, next) => {
         router.navigate(['/login'], { queryParams: { volverA: router.url } });
       } else if (error.status === 403) {
         avisos.error(mensajeDeError(error, 'No tienes permisos para realizar esta operacion.'));
+      } else if (error.status === 404) {
+        // 404 silencioso: los endpoints opcionales del parcial 1 todavia no estan
+        // en el backend parcial 2. La feature decide que mostrar al usuario.
       } else if (error.status >= 500) {
         avisos.error('Error interno del servidor. Intenta de nuevo en un momento.');
       }

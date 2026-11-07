@@ -2,7 +2,7 @@
   <div>
     <div class="ceja">Plataforma</div>
     <h1>Planes y precios</h1>
-    <p class="sub">Define que ofrece cada plan: precio, limites y modulos habilitados.</p>
+    <p class="sub">Define precio, limites y módulos incluidos. Los límites de recursos se verifican; la lista de módulos es informativa y no bloquea funciones por sí sola.</p>
   </div>
   <button type="button" class="btn rosa" (click)="abrirNuevo()">+ Nuevo plan</button>
 </div>
@@ -42,7 +42,11 @@
         <footer>
           <button class="enlace" (click)="abrirEdicion(p)">Editar</button>
           <span class="separador">·</span>
-          <button class="enlace peligro" (click)="desactivar(p)" [disabled]="!p.activo">Desactivar</button>
+          @if (p.activo) {
+            <button class="enlace peligro" (click)="desactivar(p)">Desactivar</button>
+          } @else {
+            <button class="enlace" (click)="reactivar(p)">Reactivar</button>
+          }
         </footer>
       </article>
     }

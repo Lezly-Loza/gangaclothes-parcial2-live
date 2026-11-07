@@ -1,4 +1,5 @@
 import { Rol } from '../../core/modelos';
+import { PERMISO_POR_RUTA } from '../../core/permisos-rutas';
 
 export interface ItemMenu {
   etiqueta: string;
@@ -94,8 +95,10 @@ export const MENU: GrupoMenu[] = [
     items: [
       { etiqueta: 'Inventario', ruta: '/admin/inventario', roles: ['administrador', 'encargado'], disponible: true },
       { etiqueta: 'Movimientos', ruta: '/admin/movimientos', roles: ['administrador', 'encargado'], disponible: true },
+      { etiqueta: 'Catálogo sin conexión', ruta: '/modo-offline', roles: ['administrador', 'cajero'], disponible: true },
       { etiqueta: 'Compras', ruta: '/admin/compras', roles: ['administrador', 'encargado'], disponible: true },
       { etiqueta: 'Proveedores', ruta: '/admin/proveedores', roles: ['administrador', 'encargado'], disponible: true },
+      { etiqueta: 'Clientes', ruta: '/admin/clientes', roles: ['administrador', 'cajero'], disponible: true },
       {
         etiqueta: 'Oferta de proveedores',
         ruta: '/admin/oferta-proveedores',
@@ -104,6 +107,8 @@ export const MENU: GrupoMenu[] = [
         disponible: true,
       },
       { etiqueta: 'Reservas', ruta: '/admin/reservas', roles: ['administrador', 'encargado'], disponible: true },
+      { etiqueta: 'Cambios de prendas', ruta: '/admin/cambios', roles: ['administrador', 'cajero'], disponible: true },
+      { etiqueta: 'Anular operación', ruta: '/admin/anular', roles: ['administrador', 'encargado'], disponible: true },
       {
         etiqueta: 'Envios a domicilio',
         ruta: '/admin/envios',
@@ -121,11 +126,16 @@ export const MENU: GrupoMenu[] = [
 ];
 
 /** Deja solo los grupos e items que el rol (y, si el item lo pide, el permiso) del usuario puede ver. */
-export function menuParaRoles(roles: string[], permisos: string[] = []): GrupoMenu[] {
+export function menuParaRoles(roles: string[], permisos: string[] = [], esSuper = false): GrupoMenu[] {
   return MENU.map((grupo) => ({
     ...grupo,
     items: grupo.items.filter(
-      (item) => item.roles.some((r) => roles.includes(r)) && (!item.permiso || permisos.includes(item.permiso)),
+      (item) => {
+        if (esSuper ? grupo.titulo !== 'Plataforma' : grupo.titulo === 'Plataforma') return false;
+        if (item.ruta === '/admin/anular') return permisos.includes('ventas:anular') || permisos.includes('reservas:anular');
+        const permiso = item.permiso || PERMISO_POR_RUTA[item.ruta];
+        return permiso ? permisos.includes(permiso) : item.roles.some((r) => roles.includes(r));
+      },
     ),
   })).filter((grupo) => grupo.items.length > 0);
 }

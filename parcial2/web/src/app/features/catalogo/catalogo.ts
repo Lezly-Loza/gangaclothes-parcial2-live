@@ -1,11 +1,11 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { catchError, forkJoin, Observable, of, switchMap, throwError } from 'rxjs';
+import { catchError, Observable, of, switchMap, throwError } from 'rxjs';
 
 import { API_URL } from '../../core/api';
 import { mensajeDeError } from '../../core/errores.interceptor';
-import { Registro, RecursoService } from '../../core/recurso.service';
+import { Registro } from '../../core/recurso.service';
 import { SesionStore } from '../../core/sesion';
 import { fechaSinZona, moneda, paraCampoFechaHora } from '../../shared/formato';
 import { BarraTienda } from '../../shared/tienda/barra-tienda';
@@ -60,6 +60,7 @@ interface CarritoResumen {
 
 interface Reserva {
   id: number;
+  codigo: string;
   sucursal: string;
   fecha_hora_prueba: string;
 }
@@ -91,7 +92,6 @@ function sucursalGuardada(): number | null {
 })
 export class Catalogo {
   private http = inject(HttpClient);
-  private recursos = inject(RecursoService);
   readonly sesion = inject(SesionStore);
   readonly moneda = moneda;
 
@@ -217,13 +217,7 @@ export class Catalogo {
   }
 
   private cargarOpciones(): void {
-    forkJoin({
-      temporadas: this.recursos.listar('admin/temporadas'),
-      categorias: this.recursos.listar('admin/categorias'),
-      tallas: this.recursos.listar('admin/tallas'),
-      colores: this.recursos.listar('admin/colores'),
-      sucursales: this.recursos.listar('admin/sucursales'),
-    }).subscribe({
+    this.http.get<{ temporadas: Registro[]; categorias: Registro[]; tallas: Registro[]; colores: Registro[]; sucursales: Registro[] }>(`${API_URL}/catalogo/opciones`).subscribe({
       next: (r) => {
         const activas = r.sucursales.filter((s) => s['activo'] !== false);
         this.temporadas.set(r.temporadas.filter((t) => t['activo'] !== false));
@@ -450,13 +444,13 @@ export class Catalogo {
       notas: this.notas().trim() || null,
       detalle: [{ variante_id: variante.id, cantidad: this.cantidad() }],
     };
-    this.http.post<Reserva>(`${API_URL}/reservas`, datos).subscribe({
+    this.http.post<Reserva>(`${API_URL}/tienda/reservas`, datos).subscribe({
       next: (reserva) => {
         this.enviando.set(false);
         this.paso.set('elegir');
         this.exito.set({
           tipo: 'reserva',
-          texto: `Reserva #R-${reserva.id} confirmada en ${reserva.sucursal} para el ${fechaSinZona(reserva.fecha_hora_prueba)}.`,
+          texto: `Reserva ${reserva.codigo} confirmada en ${reserva.sucursal} para el ${fechaSinZona(reserva.fecha_hora_prueba)}.`,
         });
         this.recargar();
       },
@@ -477,7 +471,7 @@ export class Catalogo {
     this.enviando.set(true);
     this.errorAccion.set(null);
     const actual: Observable<CarritoResumen | null> = this.http
-      .get<CarritoResumen>(`${API_URL}/ventas/carrito`)
+      .get<CarritoResumen>(`${API_URL}/tienda/carrito`)
       .pipe(catchError((err: HttpErrorResponse) => (err.status === 404 ? of(null) : throwError(() => err))));
 
     actual
@@ -491,10 +485,10 @@ export class Catalogo {
           const abrir =
             carrito && carrito.sucursal_id === sucursalId
               ? of(carrito)
-              : this.http.post<CarritoResumen>(`${API_URL}/ventas/carrito`, { sucursal_id: sucursalId });
+              : this.http.post<CarritoResumen>(`${API_URL}/tienda/carrito`, { sucursal_id: sucursalId });
           return abrir.pipe(
             switchMap(() =>
-              this.http.post<CarritoResumen>(`${API_URL}/ventas/carrito/items`, {
+              this.http.post<CarritoResumen>(`${API_URL}/tienda/carrito/items`, {
                 variante_id: variante.id,
                 cantidad: this.cantidad(),
               }),

@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
+import { PwaService } from '../../core/pwa.service';
 import { menuParaRoles } from './menu';
 
 @Component({
@@ -13,7 +14,8 @@ import { menuParaRoles } from './menu';
 export class AdminShell {
   private auth = inject(AuthService);
   readonly sesion = this.auth.sesion;
-  readonly menu = computed(() => menuParaRoles(this.sesion.roles(), this.sesion.permisos()));
+  readonly pwa = inject(PwaService);
+  readonly menu = computed(() => menuParaRoles(this.sesion.roles(), this.sesion.permisos(), this.sesion.esSuper()));
   /** El proveedor usa el mismo marco, pero no es personal de la tienda. */
   readonly subtitulo = computed(() => {
     if (this.sesion.esSuper()) return 'plataforma';

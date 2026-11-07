@@ -70,7 +70,7 @@
               <span>Descuento −Bs {{ moneda(compra.descuento) }}</span>
             }
             @if (compra.tipo_entrega === 'delivery') {
-              <span>Envio {{ compra.costo_envio > 0 ? 'Bs ' + moneda(compra.costo_envio) : 'gratis' }}</span>
+              <span>Costo de envío: no calculado</span>
             }
             <strong>Total Bs {{ moneda(compra.total) }}</strong>
           </div>

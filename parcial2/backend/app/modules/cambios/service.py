@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from ...models import (CambioPrenda, DetalleVenta, Inventario, MovimientoInventario,
                        Tenant, Variante, Venta)
 from . import schemas
+from ..productos.promociones import precio_promocional
 
 
 def obtener_venta(db: Session, tenant_id: int, codigo: str):
@@ -28,11 +29,18 @@ def registrar_cambio(db: Session, tenant_id: int, data: schemas.CambioIn):
         raise HTTPException(409, "Venta anulada")
     tenant = db.query(Tenant).filter_by(id=tenant_id).first()
     verificar_plazo(venta, tenant.plazo_cambio_dias)
-    item = db.query(DetalleVenta).filter_by(tenant_id=tenant_id, venta_id=venta.id,
-                                            variante_id=data.variante_devuelta_id).first()
-    nueva = db.query(Variante).filter_by(tenant_id=tenant_id, id=data.variante_nueva_id).first()
+    if data.variante_devuelta_id == data.variante_nueva_id:
+        raise HTTPException(422, "Seleccione una variante diferente")
+    items = db.query(DetalleVenta).filter_by(tenant_id=tenant_id, venta_id=venta.id,
+                                             variante_id=data.variante_devuelta_id).all()
+    item = items[0] if items else None
+    nueva = db.query(Variante).filter_by(tenant_id=tenant_id, id=data.variante_nueva_id, activo=True).first()
     if not item or not nueva:
         raise HTTPException(404, "Variante no encontrada en venta o catálogo")
+    ya_cambiadas = db.query(CambioPrenda).filter_by(tenant_id=tenant_id, venta_id=venta.id,
+                                                    variante_devuelta_id=data.variante_devuelta_id).count()
+    if ya_cambiadas >= sum(detalle.cantidad for detalle in items):
+        raise HTTPException(409, "Ya se cambiaron todas las unidades de esta variante")
     inv_vieja = db.query(Inventario).filter_by(tenant_id=tenant_id, sucursal_id=venta.sucursal_id,
                                                variante_id=data.variante_devuelta_id).first()
     inv_nueva = db.query(Inventario).filter_by(tenant_id=tenant_id, sucursal_id=venta.sucursal_id,
@@ -43,10 +51,11 @@ def registrar_cambio(db: Session, tenant_id: int, data: schemas.CambioIn):
         inv_vieja = Inventario(tenant_id=tenant_id, sucursal_id=venta.sucursal_id,
                                variante_id=data.variante_devuelta_id, stock=0, reservado=0, stock_min=0, stock_max=100)
         db.add(inv_vieja)
+    precio_nuevo, _ = precio_promocional(db, tenant_id, nueva.producto_id, nueva.precio)
     cambio = CambioPrenda(tenant_id=tenant_id, venta_id=venta.id,
                           variante_devuelta_id=data.variante_devuelta_id,
                           variante_nueva_id=data.variante_nueva_id,
-                          diferencia=nueva.precio - item.precio_unitario, motivo=data.motivo)
+                          diferencia=precio_nuevo - item.precio_unitario, motivo=data.motivo)
     cambio.verificarPlazoYGuardar(db, venta, tenant.plazo_cambio_dias)
     inv_vieja.validarStockYGuardar(db, "DEVOLUCION", 1)
     inv_nueva.validarStockYGuardar(db, "SALIDA", 1)

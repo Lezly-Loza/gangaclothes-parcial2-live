@@ -185,7 +185,7 @@
           </div>
 
           <div class="grupo completo">
-            <label class="etiqueta">Roles<b class="req">*</b></label>
+            <label class="etiqueta">Roles</label>
             <div>
               @for (rol of roles(); track rol) {
                 <button
@@ -202,7 +202,7 @@
             @if (errorRoles()) {
               <p class="ayuda-error">Elegi al menos un rol.</p>
             } @else {
-              <p class="ayuda">Se puede asignar mas de uno.</p>
+              <p class="ayuda">Puedes asignar roles ahora o después. Sin roles, el usuario no tendrá permisos de administración.</p>
             }
           </div>
 

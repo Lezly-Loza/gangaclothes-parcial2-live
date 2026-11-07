@@ -5,6 +5,12 @@ from .user import User
 from .superadmin import SuperAdmin
 from .sucursal import Sucursal
 from .operacion import OperacionLog
+from .seguridad import Rol, UsuarioRol, PerfilUsuario, Bitacora
+from .catalogos_compatibles import RegistroComplementario, DatosComplementarios
+from .compras import ProductoProveedor, Compra, DetalleCompra
+from .envio import Envio
+from .promocion import Promocion, DescuentoVenta
+from .tienda import CarritoCliente, CitaReserva
 from .negocio import (Categoria, Talla, Color, Temporada, Producto, Variante, Proveedor,
                       Cliente, Inventario, MovimientoInventario, Reserva, DetalleReserva,
                       Venta, DetalleVenta, Pago, CambioPrenda)
@@ -17,6 +23,9 @@ __all__ = [
     "SuperAdmin",
     "Sucursal",
     "OperacionLog",
+    "Rol", "UsuarioRol", "PerfilUsuario", "Bitacora",
+    "RegistroComplementario", "DatosComplementarios",
+    "ProductoProveedor", "Compra", "DetalleCompra", "Envio", "Promocion", "DescuentoVenta",
     "Categoria", "Talla", "Color", "Temporada", "Producto", "Variante", "Proveedor",
     "Cliente", "Inventario", "MovimientoInventario", "Reserva", "DetalleReserva",
     "Venta", "DetalleVenta", "Pago", "CambioPrenda",

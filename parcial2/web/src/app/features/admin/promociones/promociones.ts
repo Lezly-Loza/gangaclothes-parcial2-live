@@ -332,7 +332,7 @@ export class Promociones {
         } ${guardada.prendas.length === 1 ? 'prenda' : 'prendas'}.`;
         this.avisos.ok(
           guardada.estado === 'vigente'
-            ? `${texto} Ya rige en el catalogo, el carrito y la caja.`
+            ? `${texto} Ya rige en caja y en nuevas descargas del catálogo sin conexión.`
             : `${texto} Queda ${guardada.estado}.`,
         );
         this.avisarCruces(guardada);

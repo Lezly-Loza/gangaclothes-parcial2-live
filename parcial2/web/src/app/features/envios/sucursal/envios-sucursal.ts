@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
 import { API_URL } from '../../../core/api';
 import { mensajeDeError } from '../../../core/errores.interceptor';
@@ -42,7 +43,7 @@ const ACTIVOS: EstadoEnvio[] = ['pendiente', 'asignado', 'en_camino'];
  */
 @Component({
   selector: 'app-envios-sucursal',
-  imports: [SelectorEstado, SelectorSucursal, Mapa],
+  imports: [SelectorEstado, SelectorSucursal, Mapa, FormsModule],
   templateUrl: './envios-sucursal.html',
   styleUrl: './envios-sucursal.css',
   host: { '(document:keydown.escape)': 'cerrarModal()' },
@@ -75,6 +76,10 @@ export class EnviosSucursal {
   readonly errorModal = signal<string | null>(null);
 
   readonly puedeEditar = computed(() => this.sesion.permisos().includes('envios:editar'));
+  readonly puedeCrear = computed(() => this.sesion.permisos().includes('envios:crear'));
+  readonly creando = signal(false);
+  readonly guardando = signal(false);
+  codigoVenta = ''; direccion = ''; latitud = ''; longitud = ''; referencia = ''; telefono = '';
 
   readonly opciones = computed<OpcionFiltro<FiltroEnvio>[]>(() =>
     FILTROS.map((f) => ({ ...f, etiqueta: `${f.etiqueta} (${this.enFiltro(f.valor).length})` })),
@@ -109,7 +114,7 @@ export class EnviosSucursal {
         tipo: 'pendiente',
         titulo: envio.direccion,
         detalle:
-          `${envio.etiqueta_estado} · ${envio.distancia_km} km` +
+          `${envio.etiqueta_estado}${envio.distancia_km === null ? '' : ' · ' + envio.distancia_km + ' km'}` +
           (envio.repartidor ? ` · ${envio.repartidor}` : ''),
       });
     }
@@ -167,6 +172,21 @@ export class EnviosSucursal {
   }
 
   // --------------------------------------------------------------- acciones
+  crearEnvio(): void {
+    const lat = Number(this.latitud), lng = Number(this.longitud);
+    if (!this.codigoVenta.trim() || !this.direccion.trim() || !this.latitud.trim() || !this.longitud.trim() ||
+        !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      this.errorModal.set('Indica el código, la dirección y las coordenadas reales del destino.'); return;
+    }
+    this.guardando.set(true); this.errorModal.set(null);
+    this.http.post<Envio>(`${API_URL}/envios`, { codigo_venta: this.codigoVenta.trim(), sucursal_id: this.sucursal.id(), direccion: this.direccion.trim(),
+      latitud: lat, longitud: lng, referencia: this.referencia.trim() || null, telefono_contacto: this.telefono.trim() || null }).subscribe({
+      next: envio => { this.guardando.set(false); this.creando.set(false); this.codigoVenta = ''; this.direccion = '';
+        this.latitud = ''; this.longitud = ''; this.referencia = ''; this.telefono = '';
+        this.avisos.ok(`Envío #${envio.id} registrado.`); this.recargar(); },
+      error: err => { this.guardando.set(false); this.errorModal.set(mensajeDeError(err, 'No se pudo registrar el envío.')); },
+    });
+  }
   pedirAsignar(envio: Envio): void {
     this.errorModal.set(null);
     this.repartidor.set(envio.repartidor ?? '');
@@ -249,6 +269,7 @@ export class EnviosSucursal {
     if (this.enProceso() !== null) return;
     this.aAsignar.set(null);
     this.aCancelar.set(null);
+    this.creando.set(false);
     this.errorModal.set(null);
   }
 

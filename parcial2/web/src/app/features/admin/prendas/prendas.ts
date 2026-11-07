@@ -371,7 +371,7 @@ export class Prendas {
           this.avisos.ok(
             confirmarSinStock
               ? `«${actualizada['nombre']}» esta publicada, pero se vera agotada hasta que tenga stock.`
-              : `«${actualizada['nombre']}» ya se ve en la tienda con ${actualizada['disponible_total']} unidades disponibles.`,
+              : `«${actualizada['nombre']}» quedo marcada como publicada con ${actualizada['disponible_total']} unidades disponibles.`,
           );
           this.cargar();
         },

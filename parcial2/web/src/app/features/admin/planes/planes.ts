@@ -7,7 +7,8 @@ import { Notificaciones } from '../../../core/notificaciones';
 import { mensajeDeError } from '../../../core/errores.interceptor';
 
 const MODULOS_SUGERIDOS = [
-  'ventas', 'inventario', 'reportes', 'promociones', 'ia', 'sincronizacion_offline', 'envios',
+  'ventas', 'inventario', 'compras', 'proveedores', 'clientes', 'reservas', 'cambios',
+  'envios', 'reportes', 'promociones', 'red_de_tiendas', 'ia', 'sincronizacion_offline',
 ];
 
 @Component({
@@ -125,5 +126,13 @@ export class Planes {
       this.avisos.ok(`Plan "${p.nombre}" desactivado.`);
       await this.cargar();
     } catch (e: any) { this.avisos.error(mensajeDeError(e, 'No se pudo desactivar.')); }
+  }
+
+  async reactivar(p: Plan) {
+    try {
+      await firstValueFrom(this.api.actualizar(p.id, { activo: true }));
+      this.avisos.ok(`Plan "${p.nombre}" reactivado.`);
+      await this.cargar();
+    } catch (e: any) { this.avisos.error(mensajeDeError(e, 'No se pudo reactivar.')); }
   }
 }

@@ -17,6 +17,7 @@ import { SesionStore } from '../../core/sesion';
       <nav class="secciones">
         <a routerLink="/catalogo" routerLinkActive="on">Catalogo</a>
         @if (esCliente()) {
+          <a routerLink="/modo-offline" routerLinkActive="on">Catálogo sin conexión</a>
           <a routerLink="/mis-reservas" routerLinkActive="on">Mis reservas</a>
           <a routerLink="/mis-compras" routerLinkActive="on">Mis compras</a>
           <a routerLink="/mis-envios" routerLinkActive="on">Mis pedidos</a>

@@ -227,15 +227,8 @@
           }
         </div>
         <div class="acciones-comprobante">
-          <button type="button" class="btn rosa" (click)="comprobantes.imprimir(c.comprobante.venta_id)">
+          <button type="button" class="btn rosa" (click)="imprimirComprobante()">
             Imprimir comprobante
-          </button>
-          <button
-            type="button"
-            class="btn linea"
-            (click)="comprobantes.descargar(c.comprobante.venta_id, c.comprobante.nro_comprobante)"
-          >
-            Descargar PDF
           </button>
         </div>
         <button type="button" class="btn linea bloque" (click)="nuevaVenta()">Nueva venta</button>

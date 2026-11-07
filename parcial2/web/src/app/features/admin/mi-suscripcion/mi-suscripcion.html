@@ -45,11 +45,13 @@
     <div class="ficha destacada">
       <div class="ceja">Modulos habilitados</div>
       <div class="apoyo lista">{{ estado()!.modulos_habilitados.join(' · ') }}</div>
+      <div class="apoyo">Esta lista describe el plan; el acceso también depende de los permisos y de que cada función esté conectada.</div>
     </div>
   </div>
 
   <section class="panel">
     <div class="cabecera-panel"><h2>Consumo por recurso</h2></div>
+    <p class="sub">Cada barra compara el uso con el límite de ese recurso. Las sucursales y ciudades se administran en Red de tiendas.</p>
     <app-barras-h [filas]="filas()" />
   </section>
 }

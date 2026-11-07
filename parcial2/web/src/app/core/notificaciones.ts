@@ -11,6 +11,7 @@ export interface Aviso {
 @Injectable({ providedIn: 'root' })
 export class Notificaciones {
   private siguienteId = 1;
+  private readonly recientes = new Map<string, number>();
   readonly avisos = signal<Aviso[]>([]);
 
   error(texto: string): void {
@@ -26,6 +27,14 @@ export class Notificaciones {
   }
 
   private mostrar(tipo: TipoAviso, texto: string): void {
+    // Dedupe: si el mismo mensaje se repitio hace menos de 3s, se ignora
+    // para que un panel que dispara 7 endpoints en paralelo no muestre 7 toasts iguales.
+    const clave = `${tipo}:${texto}`;
+    const ahora = Date.now();
+    const anterior = this.recientes.get(clave);
+    if (anterior && ahora - anterior < 3000) return;
+    this.recientes.set(clave, ahora);
+
     const aviso: Aviso = { id: this.siguienteId++, tipo, texto };
     this.avisos.update((lista) => [...lista, aviso]);
     setTimeout(() => this.cerrar(aviso.id), 5000);

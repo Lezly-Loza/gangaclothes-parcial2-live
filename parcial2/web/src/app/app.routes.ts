@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { authGuard, invitadoGuard, permisoGuard, rolGuard } from './core/auth.guard';
 import {
   CATEGORIAS,
+  CLIENTES,
   CIUDADES,
   COLECCIONES,
   COLORES,
@@ -50,7 +51,13 @@ export const routes: Routes = [
   },
   {
     path: 'catalogo',
+    canActivate: [authGuard],
     loadComponent: () => import('./features/catalogo/catalogo').then((m) => m.Catalogo),
+  },
+  {
+    path: 'modo-offline', canActivate: [authGuard, rolGuard],
+    data: { roles: ['cliente', 'administrador', 'cajero'] },
+    loadComponent: () => import('./features/offline/modo-offline').then((m) => m.ModoOfflinePage),
   },
   {
     path: 'mis-reservas',
@@ -155,6 +162,7 @@ export const routes: Routes = [
         loadComponent: () => import('./features/inventario/compras/compras').then((m) => m.Compras),
       },
       rutaCrud('proveedores', PROVEEDORES, OPERACION_SUCURSAL),
+      rutaCrud('clientes', CLIENTES, { roles: ['administrador', 'cajero'] }),
       {
         // CU9/CU10: a que prenda del catalogo corresponde cada producto que ofrecen los proveedores.
         path: 'oferta-proveedores',
@@ -182,6 +190,14 @@ export const routes: Routes = [
         canActivate: [rolGuard],
         data: { roles: ['administrador', 'cajero'] },
         loadComponent: () => import('./features/caja/caja').then((m) => m.Caja),
+      },
+      {
+        path: 'cambios', canActivate: [rolGuard], data: { roles: ['administrador', 'cajero'] },
+        loadComponent: () => import('./features/admin/cambios/cambios').then((m) => m.CambioPrendaPage),
+      },
+      {
+        path: 'anular', canActivate: [rolGuard], data: { roles: ['administrador', 'encargado'] },
+        loadComponent: () => import('./features/admin/anular/anular').then((m) => m.AnularOperacionDialog),
       },
       // Parcial 2 — CU-01 / CU-05 / CU-06 / CU-07 (suscripciones y plataforma)
       {

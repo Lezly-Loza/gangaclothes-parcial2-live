@@ -259,6 +259,7 @@
         } @else if (!esCliente()) {
           <p class="nota">Las reservas y compras en linea son para cuentas de cliente. El personal vende desde Caja.</p>
         } @else {
+          <p class="nota">Elige una prenda para reservarla o agregarla al carrito.</p>
           @if (sucursalesConStock().length > 0) {
             <div class="fila-accion">
               <label class="grupo">

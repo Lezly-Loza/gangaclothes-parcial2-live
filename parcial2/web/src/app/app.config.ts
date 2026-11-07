@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ApplicationConfig } from '@angular/core';
+import { isDevMode } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 
@@ -13,7 +14,7 @@ export const appConfig: ApplicationConfig = {
     // El orden importa: jwt agrega el token, errores traduce la respuesta.
     provideHttpClient(withInterceptors([jwtInterceptor, erroresInterceptor])),
     provideServiceWorker('ngsw-worker.js', {
-      enabled: false, // En dev lo dejamos apagado para evitar cache de SW.
+      enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',
     }),
   ],

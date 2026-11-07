@@ -10,6 +10,7 @@
     <span class="ceja">compras pagadas que hay que llevar · las pendientes primero</span>
   </div>
   <app-selector-sucursal />
+  @if (puedeCrear()) { <button type="button" class="btn rosa" (click)="errorModal.set(null); creando.set(true)">+ Registrar envío</button> }
   <button type="button" class="btn linea" [disabled]="cargando()" (click)="recargar()">Actualizar</button>
 </div>
 
@@ -35,8 +36,7 @@
 } @else if (envios().length === 0) {
   <div class="mensaje vacio">
     <p>
-      Esta sucursal todavia no despacho ningun pedido a domicilio. Aparecen aqui apenas
-      un cliente paga una compra con delivery.
+      No hay envíos registrados para esta sucursal. Puedes registrar un envío para una venta pagada.
     </p>
   </div>
 } @else {
@@ -80,7 +80,7 @@
                 <span class="secundario">{{ fecha(envio.fecha_creacion) }}</span>
                 <span class="secundario">
                   Bs {{ moneda(envio.venta?.total) }} · envio
-                  {{ envio.costo_envio > 0 ? 'Bs ' + moneda(envio.costo_envio) : 'gratis' }}
+                  {{ envio.costo_envio > 0 ? 'Bs ' + moneda(envio.costo_envio) : 'sin cargo registrado' }}
                 </span>
                 <!-- Ya esta cobrado: el repartidor no cobra nada en la puerta. -->
                 <span class="secundario">Pagado con {{ envio.pago?.etiqueta || 'no informado' }}</span>
@@ -95,7 +95,7 @@
                   <span class="secundario">{{ envio.referencia }}</span>
                 }
                 <span class="secundario">
-                  {{ envio.distancia_km }} km
+                  @if (envio.distancia_km !== null) { {{ envio.distancia_km }} km }
                   @if (envio.express) {
                     · <span class="estado rosa">Express</span>
                   }
@@ -185,7 +185,7 @@
       <div class="ceja">Asignar repartidor</div>
       <h2>Pedido {{ envio.venta?.nro_comprobante || '#E-' + envio.id }}</h2>
       <p class="advertencia">
-        Va a <b>{{ envio.direccion }}</b>, a {{ envio.distancia_km }} km de {{ envio.sucursal?.nombre }}.
+        Va a <b>{{ envio.direccion }}</b> desde {{ envio.sucursal?.nombre }}.
         @if (envio.express) {
           Es una <b>entrega express</b>: sale primero.
         }
@@ -214,6 +214,24 @@
           {{ enProceso() !== null ? 'Asignando…' : 'Asignar' }}
         </button>
       </div>
+    </div>
+  </div>
+}
+
+@if (creando()) {
+  <div class="fondo" (click)="cerrarModal()">
+    <div class="modal angosto" (click)="$event.stopPropagation()">
+      <h2>Registrar envío</h2>
+      <p class="advertencia">Ingresa el código de una venta pagada y las coordenadas del destino. El registro no cobra una tarifa de envío.</p>
+      <label class="etiqueta" for="envio-codigo">Código de venta</label><input id="envio-codigo" class="campo" [(ngModel)]="codigoVenta">
+      <label class="etiqueta" for="envio-direccion">Dirección</label><input id="envio-direccion" class="campo" [(ngModel)]="direccion">
+      <label class="etiqueta" for="envio-lat">Latitud</label><input id="envio-lat" class="campo" inputmode="decimal" [(ngModel)]="latitud">
+      <label class="etiqueta" for="envio-lng">Longitud</label><input id="envio-lng" class="campo" inputmode="decimal" [(ngModel)]="longitud">
+      <label class="etiqueta" for="envio-telefono">Teléfono</label><input id="envio-telefono" class="campo" [(ngModel)]="telefono">
+      <label class="etiqueta" for="envio-referencia">Referencia</label><input id="envio-referencia" class="campo" [(ngModel)]="referencia">
+      @if (errorModal()) { <p class="error-servidor" role="alert">{{ errorModal() }}</p> }
+      <div class="acciones"><button type="button" class="btn linea" (click)="cerrarModal()" [disabled]="guardando()">Cancelar</button>
+      <button type="button" class="btn rosa" (click)="crearEnvio()" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : 'Guardar envío' }}</button></div>
     </div>
   </div>
 }

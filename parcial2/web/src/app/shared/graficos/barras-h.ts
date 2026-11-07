@@ -3,6 +3,8 @@ import { Component, computed, input } from '@angular/core';
 export interface FilaBarra {
   etiqueta: string;
   valor: number;
+  /** Límite propio de la fila; si se omite se compara con el mayor valor. */
+  maximo?: number;
   /** Texto del valor ya formateado ("Bs 1.234,50"). */
   texto: string;
   /** Dato secundario a la derecha ("38% · 12 ventas"). */
@@ -92,6 +94,9 @@ export class BarrasH {
 
   readonly medidas = computed(() => {
     const maximo = Math.max(0, ...this.filas().map((f) => f.valor));
-    return this.filas().map((f) => ({ ...f, ancho: maximo > 0 ? Math.max(0, (f.valor / maximo) * 100) : 0 }));
+    return this.filas().map((f) => {
+      const referencia = f.maximo ?? maximo;
+      return { ...f, ancho: referencia > 0 ? Math.min(100, Math.max(0, (f.valor / referencia) * 100)) : 0 };
+    });
   });
 }

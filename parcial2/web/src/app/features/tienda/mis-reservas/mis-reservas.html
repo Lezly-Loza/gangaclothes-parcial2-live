@@ -32,7 +32,7 @@
       @for (r of visibles(); track r.id) {
         <article class="reserva" [class.inactiva]="!activa(r)">
           <header>
-            <span class="mono">#R-{{ r.id }}</span>
+            <span class="mono">{{ r.codigo }}</span>
             <span
               class="estado"
               [class.ok]="r.estado === 'preparada' || r.estado === 'atendida'"

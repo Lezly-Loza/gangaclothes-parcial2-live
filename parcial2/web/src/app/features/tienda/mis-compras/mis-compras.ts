@@ -67,7 +67,7 @@ export class MisCompras {
   cargar(): void {
     this.cargando.set(true);
     this.error.set(null);
-    this.http.get<CompraCliente[]>(`${API_URL}/ventas/mias`).subscribe({
+    this.http.get<CompraCliente[]>(`${API_URL}/tienda/compras`).subscribe({
       next: (compras) => {
         this.compras.set(compras);
         this.cargando.set(false);

@@ -47,7 +47,8 @@ export function traducirRoles(rolesBackend: string[]): string[] {
  * Admin / superadmin reciben todo; encargado y vendedor un subconjunto.
  */
 export function permisosPorRoles(rolesBackend: string[]): string[] {
-  const esAdmin = rolesBackend.some((r) => r === 'admin' || r === 'superadmin');
+  const esSuper = rolesBackend.includes('superadmin');
+  const esAdmin = rolesBackend.includes('admin');
   const esEncargado = rolesBackend.includes('encargado');
   const esVendedor = rolesBackend.includes('vendedor');
   const base: string[] = [];
@@ -61,9 +62,8 @@ export function permisosPorRoles(rolesBackend: string[]): string[] {
     'reservas:crear', 'reservas:anular',
     'cambios:crear',
     'suscripcion:gestionar',
-    'tenants:gestionar',
-    'planes:gestionar',
   ];
+  if (esSuper) return ['tenants:gestionar', 'planes:gestionar'];
   if (esAdmin) return TODOS;
   if (esEncargado) base.push('reportes:ver', 'inventario:ver', 'inventario:editar', 'envios:ver', 'reservas:crear', 'reservas:anular');
   if (esVendedor) base.push('ventas:crear', 'cambios:crear', 'envios:ver');

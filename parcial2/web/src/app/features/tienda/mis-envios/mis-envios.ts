@@ -55,7 +55,7 @@ export class MisEnvios {
   cargar(silencioso = false): void {
     if (!silencioso) this.cargando.set(true);
     this.error.set(null);
-    this.http.get<Envio[]>(`${API_URL}/envios/mios`).subscribe({
+    this.http.get<Envio[]>(`${API_URL}/tienda/pedidos`).subscribe({
       next: (envios) => {
         this.envios.set(envios);
         this.cargando.set(false);

@@ -132,6 +132,9 @@ def _ensure_empresa(db: Session, data: dict, planes: dict[str, Plan]) -> Tenant:
         db.add(tenant)
         db.flush()
 
+    from ..modules.seguridad.service import asegurar_roles
+    asegurar_roles(db, tenant.id)
+
     if not db.query(User).filter(User.tenant_id == tenant.id, User.email == data["admin"]["email"]).first():
         db.add(User(
             tenant_id=tenant.id,
@@ -195,6 +198,10 @@ def run() -> None:
         _ensure_super(db)
         for empresa in EMPRESAS:
             _ensure_empresa(db, empresa, planes)
+        db.commit()
+        from ..modules.catalogos.compatibilidad import asegurar_ciudades
+        for tenant in db.query(Tenant).all():
+            asegurar_ciudades(db, tenant.id)
         db.commit()
         _ensure_negocio(db)
         print("Semillas aplicadas:")

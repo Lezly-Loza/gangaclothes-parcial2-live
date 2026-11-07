@@ -1,13 +1,11 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { Observable, catchError, of, switchMap } from 'rxjs';
 
 import { API_URL } from '../../core/api';
 import { mensajeDeError } from '../../core/errores.interceptor';
 import { Notificaciones } from '../../core/notificaciones';
 import { SesionStore } from '../../core/sesion';
 import { SucursalActual } from '../../core/sucursal-actual';
-import { Comprobantes } from '../../shared/comprobante';
 import { OpcionFiltro, SelectorEstado } from '../../shared/estado/selector-estado';
 import { fechaLocal, fechaSinZona, moneda } from '../../shared/formato';
 import { SelectorSucursal } from '../../shared/sucursal/selector-sucursal';
@@ -28,6 +26,9 @@ interface PrendaCatalogo {
   variantes: {
     id: number;
     sku: string;
+    precio: number;
+    precio_lista: number;
+    promocion: { nombre: string; etiqueta: string } | null;
     talla: string | null;
     color: string | null;
     disponibilidad: { sucursal_id: number; disponible: number }[];
@@ -126,8 +127,6 @@ interface Cobro {
 
 const METODOS: OpcionFiltro<Metodo>[] = [
   { valor: 'efectivo', etiqueta: 'Efectivo' },
-  { valor: 'tarjeta', etiqueta: 'Tarjeta' },
-  { valor: 'qr', etiqueta: 'QR' },
 ];
 
 const MONTO = /^\d+([.,]\d{1,2})?$/;
@@ -149,7 +148,6 @@ export class Caja {
   private http = inject(HttpClient);
   private avisos = inject(Notificaciones);
   readonly sesion = inject(SesionStore);
-  readonly comprobantes = inject(Comprobantes);
   readonly sucursal = inject(SucursalActual);
 
   readonly metodos = METODOS;
@@ -175,7 +173,7 @@ export class Caja {
   readonly cobrando = signal(false);
   readonly errorCobro = signal<{ titulo: string; detalle: string } | null>(null);
   readonly cobro = signal<Cobro | null>(null);
-  private ventaPendiente: { firma: string; venta: VentaCaja } | null = null;
+  private operacionCaja: { firma: string; uuid: string } | null = null;
 
   readonly resultados = computed(() => {
     const texto = this.busqueda().trim().toLowerCase();
@@ -248,9 +246,9 @@ export class Caja {
             prenda: p.nombre,
             talla: v.talla ?? '—',
             color: v.color ?? '—',
-            precio: Number(p.precio_final ?? p.precio_venta),
-            precioLista: Number(p.precio_venta),
-            promocion: p.promocion ?? null,
+            precio: Number(v.precio ?? p.precio_final ?? p.precio_venta),
+            precioLista: Number(v.precio_lista ?? p.precio_venta),
+            promocion: v.promocion ?? null,
             disponibilidad: v.disponibilidad,
           })),
         );
@@ -348,65 +346,46 @@ export class Caja {
     const sucursalId = this.sucursal.id();
     if (this.bloqueo() || this.cobrando() || sucursalId === null) return;
 
-    const firma = this.firma();
-    const metodo = this.metodo();
     const recibido = this.montoRecibido();
     const nombreSucursal = this.sucursal.actual()?.nombre ?? 'la sucursal';
     this.cobrando.set(true);
     this.errorCobro.set(null);
-
-    const venta$: Observable<VentaCaja> =
-      this.ventaPendiente?.firma === firma
-        ? of(this.ventaPendiente.venta)
-        : this.http.post<VentaCaja>(`${API_URL}/ventas/presencial`, {
-            sucursal_id: sucursalId,
-            reserva_id: this.reservaCargada()?.id ?? null,
-            detalle: this.lineas().map((l) => ({ variante_id: l.variante.id, cantidad: l.cantidad })),
-          });
-
-    let resultado: ResultadoPago;
-    venta$
-      .pipe(
-        switchMap((venta) => {
-          this.ventaPendiente = { firma, venta };
-          // En tarjeta y QR se cobra el total de la venta que armo el backend.
-          const monto = metodo === 'efectivo' ? recibido : venta.total;
-          return this.http.post<ResultadoPago>(`${API_URL}/pagos`, { venta_id: venta.id, metodo, monto });
-        }),
-        switchMap((r) => {
-          resultado = r;
-          // El cobro ya se hizo: si el ticket no llega, se arma con la respuesta del pago.
-          return this.http
-            .get<Comprobante>(`${API_URL}/ventas/${r.venta.id}/comprobante`)
-            .pipe(catchError(() => of(null)));
-        }),
-      )
-      .subscribe({
-        next: (comprobante) => {
-          this.cobrando.set(false);
-          this.ventaPendiente = null;
-          const unidades = resultado.movimientos.reduce((s, m) => s + m.cantidad, 0);
-          this.cobro.set({
-            comprobante: comprobante ?? this.comprobanteDesde(resultado, metodo, recibido),
-            unidades,
-            reservaAtendida: resultado.reserva_atendida ? resultado.venta.reserva_id : null,
-          });
-          this.avisos.ok(
-            `Cobro registrado · comprobante ${resultado.nro_comprobante}. ` +
-              (unidades === 1 ? 'Se desconto 1 unidad' : `Se descontaron ${unidades} unidades`) +
-              ` del inventario de ${nombreSucursal}.`,
-          );
-          this.cargarCatalogo();
-          this.cargarReservas();
-        },
-        error: (err: HttpErrorResponse) => {
-          this.cobrando.set(false);
-          const detalle = mensajeDeError(err, 'No se pudo completar el cobro.');
-          this.errorCobro.set({ titulo: this.tituloError(detalle), detalle });
-          if (/ya esta pagada/i.test(detalle)) this.ventaPendiente = null;
-          if (/stock|unidades libres/i.test(detalle)) this.cargarCatalogo();
-        },
-      });
+    const firma = this.firma();
+    if (!this.operacionCaja || this.operacionCaja.firma !== firma) {
+      this.operacionCaja = { firma, uuid: crypto.randomUUID() };
+    }
+    const reserva = this.reservaCargada();
+    const lineas = this.lineas().map(l => ({ ...l }));
+    this.http.post<{ id: number; codigo: string; total: number; items: { variante_id: number; precio_unitario: number; precio_lista: number; descuento: number; subtotal: number; promocion: string | null }[] }>(`${API_URL}/ventas`, {
+      sucursal_id: sucursalId, reserva_id: reserva?.id ?? null, forma_pago: 'EFECTIVO', monto_recibido: recibido,
+      uuid_operacion: this.operacionCaja.uuid, items: lineas.map(l => ({ variante_id: l.variante.id, cantidad: l.cantidad })),
+    }).subscribe({
+      next: venta => {
+        this.cobrando.set(false); this.operacionCaja = null;
+        const unidades = lineas.reduce((s, l) => s + l.cantidad, 0);
+        const total = Number(venta.total);
+        this.cobro.set({ unidades, reservaAtendida: reserva?.id ?? null, comprobante: {
+          nro_comprobante: venta.codigo, fecha: new Date().toISOString(),
+          sucursal: { nombre: nombreSucursal, direccion: null }, venta_id: venta.id, reserva_id: reserva?.id ?? null,
+          cajero: { nombre: this.sesion.nombreCompleto() }, cliente: null,
+          items: lineas.map(l => { const item = venta.items.find(i => i.variante_id === l.variante.id); return {
+            descripcion: `${l.variante.prenda} ${l.variante.talla}/${l.variante.color}`,
+            sku: l.variante.sku, cantidad: l.cantidad, precio_unitario: item?.precio_lista ?? l.variante.precioLista,
+            descuento: item?.descuento ?? 0, promocion: item?.promocion ?? null, subtotal: item?.subtotal ?? this.subtotal(l) }; }),
+          subtotal: total + venta.items.reduce((s, i) => s + i.descuento, 0),
+          descuento: venta.items.reduce((s, i) => s + i.descuento, 0), total,
+          pago: { metodo: 'efectivo', recibido: recibido ?? total, cambio: centavos((recibido ?? total) - total) },
+        }});
+        this.avisos.ok(`Cobro registrado · comprobante ${venta.codigo}. Se descontaron ${unidades} unidades del inventario.`);
+        this.cargarCatalogo(); this.cargarReservas();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.cobrando.set(false);
+        const detalle = mensajeDeError(err, 'No se pudo completar el cobro.');
+        this.errorCobro.set({ titulo: this.tituloError(detalle), detalle });
+        if (/stock|unidades libres/i.test(detalle)) this.cargarCatalogo();
+      },
+    });
   }
 
   nuevaVenta(): void {
@@ -417,8 +396,10 @@ export class Caja {
     this.recibido.set('');
     this.errorCobro.set(null);
     this.cobro.set(null);
-    this.ventaPendiente = null;
+    this.operacionCaja = null;
   }
+
+  imprimirComprobante(): void { window.print(); }
 
   /** Identifica la venta armada: si no cambio, se reintenta el pago sobre la misma venta. */
   private firma(): string {

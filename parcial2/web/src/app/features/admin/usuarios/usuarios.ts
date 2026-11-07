@@ -125,7 +125,7 @@ export class Usuarios {
     this.editando.set(null);
     this.errorFormulario.set(null);
     this.errorRoles.set(false);
-    this.rolesElegidos.set(['cliente']);
+    this.rolesElegidos.set([]);
     this.proveedorElegido.set(null);
     this.errorProveedor.set(false);
     this.formulario = this.fb.group({
@@ -173,12 +173,10 @@ export class Usuarios {
   }
 
   guardar(): void {
-    // Sin rol el usuario entraria al sistema sin poder hacer nada.
-    if (this.rolesElegidos().length === 0) this.errorRoles.set(true);
     if (this.formulario.invalid) this.formulario.markAllAsTouched();
     const esProveedor = this.rolesElegidos().includes('proveedor');
     this.errorProveedor.set(esProveedor && this.proveedorElegido() === null);
-    if (this.formulario.invalid || this.rolesElegidos().length === 0 || this.errorProveedor()) return;
+    if (this.formulario.invalid || this.errorProveedor()) return;
     const proveedor_id = esProveedor ? this.proveedorElegido() : null;
 
     this.errorFormulario.set(null);
