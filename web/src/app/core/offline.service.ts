@@ -59,7 +59,7 @@ export class OfflineService {
 
     window.addEventListener('offline', () => {
       this.enLinea.set(false);
-      this.avisos.alerta('Modo sin conexión activado. Las operaciones se guardarán localmente.');
+      this.avisos.ok('Modo sin conexión activado. Las operaciones se guardarán localmente.');
     });
 
     this.initDB().then(() => {
