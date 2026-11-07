@@ -13,6 +13,7 @@ La compañera consume la API desde el móvil/web.
 Esquema compartido con discriminador `tenant_id`. El aislamiento se aplica
 **en el motor del ORM**, no en cada consulta:
 
+
 - `TenantMixin` ([backend/app/core/database.py:22](backend/app/core/database.py#L22))
   marca los modelos que tienen `tenant_id`. Lo heredan: `User`, `Sucursal`,
   `Suscripcion`, `OperacionLog`.
