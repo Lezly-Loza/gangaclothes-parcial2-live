@@ -19,105 +19,70 @@ export interface GrupoMenu {
 const ADMIN: Rol[] = ['administrador'];
 
 export const MENU: GrupoMenu[] = [
-  // Parcial 2: plataforma solo visible al superadministrador
-  // (el super tambien hereda el rol 'administrador' por la traduccion en modelos.ts).
-  {
-    titulo: 'Plataforma',
-    items: [
-      { etiqueta: 'Empresas',          ruta: '/admin/empresas',       roles: ADMIN, permiso: 'tenants:gestionar', disponible: true },
-      { etiqueta: 'Planes y precios',  ruta: '/admin/planes',         roles: ADMIN, permiso: 'planes:gestionar',  disponible: true },
-    ],
-  },
-  {
-    titulo: 'Suscripcion',
-    items: [
-      { etiqueta: 'Mi suscripcion',    ruta: '/admin/mi-suscripcion', roles: ADMIN, permiso: 'suscripcion:gestionar', disponible: true },
-      { etiqueta: 'Contratar plan',    ruta: '/admin/contratar-plan', roles: ADMIN, permiso: 'suscripcion:gestionar', disponible: true },
-    ],
-  },
   {
     titulo: 'General',
     items: [
-      { etiqueta: 'Panel', ruta: '/admin', roles: ['administrador', 'encargado', 'cajero'], disponible: true },
-      { etiqueta: 'Dashboard & IA', ruta: '/admin/dashboard', roles: ['administrador', 'encargado'], permiso: 'reportes:ver', disponible: true },
+      { etiqueta: 'Panel de Control', ruta: '/admin', roles: ['administrador', 'encargado', 'cajero'], disponible: true },
     ],
   },
   {
-    titulo: 'Analisis',
+    titulo: 'P1. Plataforma y suscripciones',
     items: [
-      {
-        etiqueta: 'Reportes',
-        ruta: '/admin/reportes',
-        roles: ['administrador', 'encargado'],
-        permiso: 'reportes:ver',
-        disponible: true,
-      },
+      { etiqueta: 'CU-01 Empresas (Tenants)', ruta: '/admin/empresas', roles: ADMIN, permiso: 'tenants:gestionar', disponible: true },
+      { etiqueta: 'CU-05 Planes y precios', ruta: '/admin/planes', roles: ADMIN, permiso: 'planes:gestionar', disponible: true },
+      { etiqueta: 'CU-06 Contratar plan', ruta: '/admin/contratar-plan', roles: ADMIN, permiso: 'suscripcion:gestionar', disponible: true },
+      { etiqueta: 'CU-07 Mi suscripción', ruta: '/admin/mi-suscripcion', roles: ADMIN, permiso: 'suscripcion:gestionar', disponible: true },
     ],
   },
   {
-    titulo: 'Seguridad',
+    titulo: 'P2. Seguridad y administración',
     items: [
-      { etiqueta: 'Usuarios', ruta: '/admin/usuarios', roles: ADMIN, disponible: true },
-      { etiqueta: 'Roles y permisos', ruta: '/admin/roles', roles: ADMIN, disponible: true },
-      { etiqueta: 'Bitacora', ruta: '/admin/bitacora', roles: ADMIN, disponible: true },
+      { etiqueta: 'CU-02 / CU-03 Usuarios', ruta: '/admin/usuarios', roles: ADMIN, disponible: true },
+      { etiqueta: 'CU-03 Roles y permisos', ruta: '/admin/roles', roles: ADMIN, disponible: true },
+      { etiqueta: 'CU-04 Bitácora de auditoría', ruta: '/admin/bitacora', roles: ADMIN, disponible: true },
     ],
   },
   {
-    titulo: 'Catalogos base',
+    titulo: 'P3. Catálogo, clientes e inventario',
     items: [
-      { etiqueta: 'Categorias', ruta: '/admin/categorias', roles: ADMIN, disponible: true },
-      { etiqueta: 'Tallas', ruta: '/admin/tallas', roles: ADMIN, disponible: true },
-      { etiqueta: 'Colores', ruta: '/admin/colores', roles: ADMIN, disponible: true },
-      { etiqueta: 'Temporadas', ruta: '/admin/temporadas', roles: ADMIN, disponible: true },
-      { etiqueta: 'Colecciones', ruta: '/admin/colecciones', roles: ADMIN, disponible: true },
+      { etiqueta: 'CU-08 Catálogos base', ruta: '/admin/categorias', roles: ADMIN, disponible: true },
+      { etiqueta: 'CU-08 Prendas y variantes', ruta: '/admin/prendas', roles: ADMIN, disponible: true },
+      { etiqueta: 'CU-09 Sucursales y tiendas', ruta: '/admin/sucursales', roles: ADMIN, disponible: true },
+      { etiqueta: 'CU-10 Proveedores', ruta: '/admin/proveedores', roles: ['administrador', 'encargado'], disponible: true },
+      { etiqueta: 'CU-11 Clientes', ruta: '/admin/clientes', roles: ['administrador', 'cajero'], disponible: true },
+      { etiqueta: 'CU-12 Inventario por sucursal', ruta: '/admin/inventario', roles: ['administrador', 'encargado'], disponible: true },
     ],
   },
   {
-    titulo: 'Red de tiendas',
+    titulo: 'P4. Ventas y reservas en línea',
     items: [
-      { etiqueta: 'Ciudades', ruta: '/admin/ciudades', roles: ADMIN, disponible: true },
-      { etiqueta: 'Sucursales', ruta: '/admin/sucursales', roles: ADMIN, disponible: true },
+      { etiqueta: 'CU-14 Reservas en línea', ruta: '/admin/reservas', roles: ['administrador', 'encargado'], disponible: true },
+      { etiqueta: 'CU-15 Caja y ventas', ruta: '/admin/caja', roles: ['administrador', 'cajero'], disponible: true },
+      { etiqueta: 'CU-16 Cambios de prendas', ruta: '/admin/cambios', roles: ['administrador', 'cajero'], disponible: true },
+      { etiqueta: 'CU-17 Anular venta o reserva', ruta: '/admin/anular', roles: ['administrador', 'encargado'], disponible: true },
     ],
   },
   {
-    titulo: 'Productos',
+    titulo: 'P5. Operación offline y sincronización',
     items: [
-      { etiqueta: 'Prendas y variantes', ruta: '/admin/prendas', roles: ADMIN, disponible: true },
-      { etiqueta: 'Promociones', ruta: '/admin/promociones', roles: ADMIN, permiso: 'promociones:ver', disponible: true },
+      { etiqueta: 'CU-13 Movimientos y ajustes', ruta: '/admin/movimientos', roles: ['administrador', 'encargado'], disponible: true },
+      { etiqueta: 'CU-18 Envíos a domicilio', ruta: '/admin/envios', roles: ['administrador', 'encargado', 'cajero'], permiso: 'envios:ver', disponible: true },
+      { etiqueta: 'CU-19 / CU-20 Catálogo offline', ruta: '/modo-offline', roles: ['administrador', 'cajero'], disponible: true },
     ],
   },
   {
-    titulo: 'Operacion',
+    titulo: 'P6. Reportes e Inteligencia Artificial',
     items: [
-      { etiqueta: 'Inventario', ruta: '/admin/inventario', roles: ['administrador', 'encargado'], disponible: true },
-      { etiqueta: 'Movimientos', ruta: '/admin/movimientos', roles: ['administrador', 'encargado'], disponible: true },
-      { etiqueta: 'Catálogo sin conexión', ruta: '/modo-offline', roles: ['administrador', 'cajero'], disponible: true },
-      { etiqueta: 'Compras', ruta: '/admin/compras', roles: ['administrador', 'encargado'], disponible: true },
-      { etiqueta: 'Proveedores', ruta: '/admin/proveedores', roles: ['administrador', 'encargado'], disponible: true },
-      { etiqueta: 'Clientes', ruta: '/admin/clientes', roles: ['administrador', 'cajero'], disponible: true },
-      {
-        etiqueta: 'Oferta de proveedores',
-        ruta: '/admin/oferta-proveedores',
-        roles: ['administrador', 'encargado'],
-        permiso: 'inventario:crear',
-        disponible: true,
-      },
-      { etiqueta: 'Reservas', ruta: '/admin/reservas', roles: ['administrador', 'encargado'], disponible: true },
-      { etiqueta: 'Cambios de prendas', ruta: '/admin/cambios', roles: ['administrador', 'cajero'], disponible: true },
-      { etiqueta: 'Anular operación', ruta: '/admin/anular', roles: ['administrador', 'encargado'], disponible: true },
-      {
-        etiqueta: 'Envios a domicilio',
-        ruta: '/admin/envios',
-        roles: ['administrador', 'encargado', 'cajero'],
-        permiso: 'envios:ver',
-        disponible: true,
-      },
-      { etiqueta: 'Caja', ruta: '/admin/caja', roles: ['administrador', 'cajero'], disponible: true },
+      { etiqueta: 'CU-24 Reportes (Excel / PDF)', ruta: '/admin/reportes', roles: ['administrador', 'encargado'], permiso: 'reportes:ver', disponible: true },
+      { etiqueta: 'CU-25 Promociones y descuentos', ruta: '/admin/promociones', roles: ADMIN, permiso: 'promociones:ver', disponible: true },
+      { etiqueta: 'CU-26 Dashboard & IA (ML)', ruta: '/admin/dashboard', roles: ['administrador', 'encargado'], permiso: 'reportes:ver', disponible: true },
     ],
   },
   {
     titulo: 'Portal del proveedor',
-    items: [{ etiqueta: 'Mi oferta', ruta: '/proveedor', roles: ['proveedor'], permiso: 'oferta:ver', disponible: true }],
+    items: [
+      { etiqueta: 'Mi oferta de telas y prendas', ruta: '/proveedor', roles: ['proveedor'], permiso: 'oferta:ver', disponible: true },
+    ],
   },
 ];
 
@@ -127,8 +92,15 @@ export function menuParaRoles(roles: string[], permisos: string[] = [], esSuper 
     ...grupo,
     items: grupo.items.filter(
       (item) => {
-        if (esSuper ? grupo.titulo !== 'Plataforma' : grupo.titulo === 'Plataforma') return false;
-        if (item.ruta === '/admin/anular') return permisos.includes('ventas:anular') || permisos.includes('reservas:anular');
+        if (esSuper) {
+          return item.ruta === '/admin/empresas' || item.ruta === '/admin/planes';
+        }
+        if (item.ruta === '/admin/empresas' || item.ruta === '/admin/planes') {
+          return false;
+        }
+        if (item.ruta === '/admin/anular') {
+          return permisos.includes('ventas:anular') || permisos.includes('reservas:anular');
+        }
         const permiso = item.permiso || PERMISO_POR_RUTA[item.ruta];
         return permiso ? permisos.includes(permiso) : item.roles.some((r) => roles.includes(r));
       },
