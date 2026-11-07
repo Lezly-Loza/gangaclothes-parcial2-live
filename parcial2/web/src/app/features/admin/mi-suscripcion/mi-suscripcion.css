@@ -1,0 +1,17 @@
+.cabecera { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+.cabecera h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+.botones { display: flex; gap: 8px; }
+.sub { color: var(--gris); font-size: 12.5px; }
+h2 { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; margin: 3px 0 10px; }
+
+.fichas { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.ficha { background: #fff; border: 1.5px solid var(--linea); border-radius: 13px; padding: 14px 16px; }
+.ficha .numero { font-family: var(--mono); font-size: 23px; font-weight: 700; line-height: 1.15; margin: 6px 0 5px; letter-spacing: -0.02em; }
+.ficha .apoyo { font-size: 11.5px; color: var(--gris); line-height: 1.4; }
+.ficha .apoyo.lista { font-size: 12.5px; color: #fff; }
+.ficha.destacada { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+.ficha.destacada .ceja { color: #c9cbd0; }
+
+.panel { background: #fff; border: 1.5px solid var(--linea); border-radius: 13px; padding: 16px 18px 18px; }
+.cabecera-panel { margin-bottom: 12px; }
+.panel h2 { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }

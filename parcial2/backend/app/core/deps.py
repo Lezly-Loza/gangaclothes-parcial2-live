@@ -62,6 +62,15 @@ def get_scope(
     """
     scope = _scope_from_token(token)
     attach_scope(db, scope)
+    if not scope.is_super:
+        from ..models import User
+        from ..modules.seguridad.service import permisos_usuario, roles_usuario
+        usuario = db.query(User).filter_by(id=scope.user_id, tenant_id=scope.tenant_id, activo=True).first()
+        if usuario is None:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Usuario inactivo o inexistente")
+        nombres = [r.nombre for r in roles_usuario(db, usuario)]
+        scope.roles = ["admin" if r == "administrador" else r for r in nombres]
+        scope.permisos = permisos_usuario(db, usuario)
     return scope
 
 
@@ -83,4 +92,12 @@ def require_roles(*roles: str):
             raise HTTPException(status.HTTP_403_FORBIDDEN, f"Requiere rol: {roles}")
         return scope
 
+    return _dep
+
+
+def require_permiso(permiso: str):
+    def _dep(scope: TenantScope = Depends(require_tenant)) -> TenantScope:
+        if permiso not in scope.permisos:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, f"Requiere permiso: {permiso}")
+        return scope
     return _dep

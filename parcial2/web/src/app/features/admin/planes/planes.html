@@ -1,0 +1,109 @@
+<div class="cabecera">
+  <div>
+    <div class="ceja">Plataforma</div>
+    <h1>Planes y precios</h1>
+    <p class="sub">Define precio, limites y módulos incluidos. Los límites de recursos se verifican; la lista de módulos es informativa y no bloquea funciones por sí sola.</p>
+  </div>
+  <button type="button" class="btn rosa" (click)="abrirNuevo()">+ Nuevo plan</button>
+</div>
+
+@if (cargando()) {
+  <p class="mensaje">Cargando planes…</p>
+} @else if (errorCarga()) {
+  <div class="mensaje error">
+    <p>{{ errorCarga() }}</p>
+    <button class="btn linea" (click)="cargar()">Reintentar</button>
+  </div>
+} @else if (planes().length === 0) {
+  <div class="mensaje vacio">
+    <h2>No hay planes configurados</h2>
+    <p>Crea el primer plan para que las empresas puedan contratarlo.</p>
+    <button class="btn rosa" (click)="abrirNuevo()">+ Nuevo plan</button>
+  </div>
+} @else {
+  <div class="tarjetas">
+    @for (p of planes(); track p.id) {
+      <article class="tarjeta" [class.inactiva]="!p.activo">
+        <header>
+          <div class="ceja">{{ p.codigo }}</div>
+          <h3>{{ p.nombre }}</h3>
+          @if (p.descripcion) { <p class="sub">{{ p.descripcion }}</p> }
+        </header>
+        <div class="precio"><span class="bs">Bs</span> {{ p.precio_mensual }}<small>/mes</small></div>
+        <ul class="limites">
+          <li><b>{{ p.max_sucursales }}</b> sucursales</li>
+          <li><b>{{ p.max_usuarios }}</b> usuarios</li>
+          <li><b>{{ p.max_productos | number }}</b> productos</li>
+        </ul>
+        <div class="modulos">
+          @for (m of p.modulos; track m) { <span class="chip on">{{ m }}</span> }
+          @if (!p.modulos?.length) { <span class="mensaje">Sin modulos extra.</span> }
+        </div>
+        <footer>
+          <button class="enlace" (click)="abrirEdicion(p)">Editar</button>
+          <span class="separador">·</span>
+          @if (p.activo) {
+            <button class="enlace peligro" (click)="desactivar(p)">Desactivar</button>
+          } @else {
+            <button class="enlace" (click)="reactivar(p)">Reactivar</button>
+          }
+        </footer>
+      </article>
+    }
+  </div>
+}
+
+@if (modalAbierto()) {
+  <div class="fondo" (click)="cerrarModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>{{ editando() ? 'Editar plan' : 'Nuevo plan' }}</h2>
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        <div class="rejilla">
+          <div class="grupo">
+            <label class="etiqueta">Codigo <span class="req">*</span></label>
+            <input class="campo" formControlName="codigo" placeholder="basico" [attr.disabled]="editando() ? true : null">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Nombre <span class="req">*</span></label>
+            <input class="campo" formControlName="nombre">
+          </div>
+          <div class="grupo completo">
+            <label class="etiqueta">Descripcion</label>
+            <input class="campo" formControlName="descripcion">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Precio mensual (Bs) <span class="req">*</span></label>
+            <input type="number" min="0" step="0.5" class="campo" formControlName="precio_mensual">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Sucursales maximas <span class="req">*</span></label>
+            <input type="number" min="1" class="campo" formControlName="max_sucursales">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Usuarios maximos <span class="req">*</span></label>
+            <input type="number" min="1" class="campo" formControlName="max_usuarios">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Productos maximos <span class="req">*</span></label>
+            <input type="number" min="1" class="campo" formControlName="max_productos">
+          </div>
+          <div class="grupo completo">
+            <label class="etiqueta">Modulos habilitados</label>
+            <div class="chips">
+              @for (m of modulosDisponibles; track m) {
+                <button type="button" class="chip" [class.on]="tieneModulo(m)" (click)="toggleModulo(m)">{{ m }}</button>
+              }
+            </div>
+          </div>
+        </div>
+        @if (errorFormulario()) { <p class="error-servidor">{{ errorFormulario() }}</p> }
+        <div class="acciones">
+          <button type="button" class="btn linea" (click)="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn rosa" [disabled]="guardando()">
+            {{ guardando() ? 'Guardando…' : (editando() ? 'Guardar cambios' : 'Crear plan') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

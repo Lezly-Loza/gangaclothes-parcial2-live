@@ -10,6 +10,11 @@ from . import schemas, service
 router = APIRouter(prefix="/auth", tags=["CU-02 Autenticacion"])
 
 
+@router.post("/register", response_model=schemas.TokenOut, status_code=201)
+def registrar_cliente(body: schemas.RegistroClienteIn, db: Session = Depends(get_db)):
+    return service.registrar_cliente(db, body)
+
+
 @router.post("/login", response_model=schemas.TokenOut)
 def login(body: schemas.LoginIn, db: Session = Depends(get_db)):
     """CU-02: login de un usuario con contexto de tenant.
@@ -36,6 +41,7 @@ def quien_soy(scope: TenantScope = Depends(get_scope), db: Session = Depends(get
             nombre=sa.nombre,
             email=sa.email,
             roles=["superadmin"],
+            permisos=["tenants:gestionar", "planes:gestionar"],
         )
 
     user = db.query(User).filter(User.id == scope.user_id).first()
@@ -47,7 +53,8 @@ def quien_soy(scope: TenantScope = Depends(get_scope), db: Session = Depends(get
         user_id=user.id,
         nombre=user.nombre,
         email=user.email,
-        roles=[user.rol],
+        roles=scope.roles,
+        permisos=scope.permisos,
         tenant_id=user.tenant_id,
         tenant_codigo=tenant.codigo if tenant else None,
         tenant_razon_social=tenant.razon_social if tenant else None,

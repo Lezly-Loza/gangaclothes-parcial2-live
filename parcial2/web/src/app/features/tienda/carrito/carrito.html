@@ -1,0 +1,30 @@
+﻿<app-barra-tienda />
+<main class="pagina">
+  <div class="encabezado"><h1>Carrito</h1><p class="nota">Revisa tus prendas y la sucursal antes de confirmar.</p></div>
+  @if (compra(); as c) {
+    <section class="ticket"><h2>Compra de prueba registrada</h2><p>Código: <b>{{ c.codigo }}</b> · Total: Bs {{ moneda(c.total) }}</p><p>No se cobró dinero real. Conserva el código para consultar la operación.</p><p><a routerLink="/mis-compras">Ver mis compras</a> · <a routerLink="/mis-envios">Ver mis pedidos</a> · <a routerLink="/catalogo">Seguir comprando</a></p></section>
+  } @else if (cargando()) { <p>Cargando…</p> }
+  @else if (!carrito()?.detalle?.length) { <section class="ticket"><p>Tu carrito está vacío.</p><a routerLink="/catalogo">Elegir prendas del catálogo</a></section> }
+  @else { @if (carrito(); as c) {
+    <div class="columnas"><section class="ticket"><h2>Prendas · {{ c.sucursal }}</h2>
+      @for (l of c.detalle; track l.id) {
+        <div class="fila"><span><b>{{ l.prenda }}</b><br>{{ l.talla }} · {{ l.color }}<br>Bs {{ moneda(l.precio_final) }} por unidad @if (!l.alcanza) { <strong> · Stock insuficiente o prenda no disponible</strong> }</span>
+          <span><button type="button" [disabled]="ocupado() || l.cantidad <= 1" (click)="cantidad(l, l.cantidad - 1)">−</button> {{ l.cantidad }} <button type="button" [disabled]="ocupado()" (click)="cantidad(l, l.cantidad + 1)">+</button> <button type="button" [disabled]="ocupado()" (click)="quitar(l)">Quitar</button><br>Bs {{ moneda(l.subtotal) }}</span></div>
+      }
+      <a routerLink="/catalogo">← Seguir comprando</a></section>
+      <aside class="resumen"><h2>Entrega</h2><label><input type="radio" name="entrega" [checked]="!delivery()" (change)="delivery.set(false)" /> Retiro en sucursal</label><br><label><input type="radio" name="entrega" [checked]="delivery()" (change)="delivery.set(true)" /> Envío a domicilio</label>
+      @if (delivery()) {
+        <p class="nota">Envío de prueba: la sucursal gestionará el pedido. El costo de envío todavía no se calcula.</p>
+        <label>Dirección<input class="campo" [value]="direccion()" (input)="direccion.set($any($event.target).value)" /></label>
+        <label>Referencia<input class="campo" [value]="referencia()" (input)="referencia.set($any($event.target).value)" /></label>
+        <label>Teléfono<input class="campo" [value]="telefono()" (input)="telefono.set($any($event.target).value)" /></label>
+        <button type="button" class="btn linea" (click)="ubicar()">Usar mi ubicación</button>
+        <label>Latitud<input class="campo" type="number" [value]="latitud()" (input)="latitud.set($any($event.target).value)" /></label>
+        <label>Longitud<input class="campo" type="number" [value]="longitud()" (input)="longitud.set($any($event.target).value)" /></label>
+      }
+      <div class="fila total"><span>Total de prendas</span><b>Bs {{ moneda(c.total) }}</b></div>
+      <p class="nota">Pago simulado para pruebas: no ingreses datos de tarjeta y no se cobrará dinero real. Al confirmar se descontará el stock.</p>
+      <button class="btn rosa bloque" type="button" [disabled]="ocupado()" (click)="comprar()">{{ ocupado() ? 'Registrando…' : 'Confirmar compra de prueba' }}</button></aside></div>
+  } }
+  @if (error()) { <p class="error-servidor">{{ error() }}</p> }
+</main>

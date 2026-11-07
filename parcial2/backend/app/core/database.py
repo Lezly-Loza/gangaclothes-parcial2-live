@@ -49,6 +49,7 @@ class TenantScope:
     user_id: int | None = None
     tenant_id: int | None = None
     roles: list[str] = field(default_factory=list)
+    permisos: list[str] = field(default_factory=list)
     is_super: bool = False
 
     @property
@@ -109,3 +110,13 @@ def init_db() -> None:
     from ..models import tenant, plan, suscripcion, user, superadmin, sucursal, operacion, negocio  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    # Las bases existentes reciben las tablas nuevas sin borrar datos. Los
+    # roles iniciales se crean por tenant y no se duplican en siguientes arranques.
+    from ..models import Tenant
+    from ..modules.seguridad.service import asegurar_roles
+    from ..modules.catalogos.compatibilidad import asegurar_ciudades
+    with SessionLocal() as db:
+        for tenant in db.query(Tenant).all():
+            asegurar_roles(db, tenant.id)
+            asegurar_ciudades(db, tenant.id)
+        db.commit()

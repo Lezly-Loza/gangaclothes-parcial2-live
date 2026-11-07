@@ -1,0 +1,71 @@
+import { Injectable, computed, signal } from '@angular/core';
+
+import { Rol, SesionRespuesta, Usuario } from './modelos';
+
+const CLAVE_TOKEN = 'gc_token';
+const CLAVE_USUARIO = 'gc_usuario';
+
+/**
+ * Guarda el token y el usuario en localStorage y los expone como signals.
+ * No depende de HttpClient a proposito: los interceptores lo inyectan y
+ * hacerlo al reves crearia una dependencia circular con HttpClient.
+ */
+@Injectable({ providedIn: 'root' })
+export class SesionStore {
+  private readonly _usuario = signal<Usuario | null>(this.leerUsuario());
+
+  readonly usuario = this._usuario.asReadonly();
+  readonly autenticado = computed(() => this._usuario() !== null);
+  readonly roles = computed<string[]>(() => this._usuario()?.roles ?? []);
+  /** Permisos efectivos que devolvio el backend al iniciar sesion. */
+  readonly permisos = computed<string[]>(() => this._usuario()?.permisos ?? []);
+  readonly nombreCompleto = computed(() => {
+    const u = this._usuario();
+    return u ? [u.nombre, u.apellido].filter(Boolean).join(' ') : '';
+  });
+  /** Parcial 2: codigo del tenant (null si es super). */
+  readonly tenantCodigo = computed(() => this._usuario()?.tenant_codigo ?? null);
+  /** Parcial 2: tipo de sesion ('super' o 'tenant'). */
+  readonly esSuper = computed(() => this._usuario()?.kind === 'super');
+  /** El rol de mayor jerarquia, para mostrarlo en la barra superior. */
+  readonly rolPrincipal = computed<Rol | null>(() => {
+    const jerarquia: Rol[] = ['administrador', 'encargado', 'cajero', 'proveedor', 'cliente'];
+    return jerarquia.find((r) => this.roles().includes(r)) ?? null;
+  });
+
+  get token(): string | null {
+    return localStorage.getItem(CLAVE_TOKEN);
+  }
+
+  guardar(sesion: SesionRespuesta): void {
+    localStorage.setItem(CLAVE_TOKEN, sesion.access_token);
+    localStorage.setItem(CLAVE_USUARIO, JSON.stringify(sesion.usuario));
+    this._usuario.set(sesion.usuario);
+  }
+
+  limpiar(): void {
+    localStorage.removeItem(CLAVE_TOKEN);
+    localStorage.removeItem(CLAVE_USUARIO);
+    this._usuario.set(null);
+  }
+
+  tieneAlgunRol(...roles: string[]): boolean {
+    return roles.some((r) => this.roles().includes(r));
+  }
+
+  tienePermiso(codigo: string): boolean {
+    return this.permisos().includes(codigo);
+  }
+
+  private leerUsuario(): Usuario | null {
+    const crudo = localStorage.getItem(CLAVE_USUARIO);
+    if (!crudo || !localStorage.getItem(CLAVE_TOKEN)) return null;
+    try {
+      return JSON.parse(crudo) as Usuario;
+    } catch {
+      // localStorage corrupto: se descarta la sesion en lugar de romper el arranque.
+      localStorage.removeItem(CLAVE_USUARIO);
+      return null;
+    }
+  }
+}

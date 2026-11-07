@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
+from decimal import Decimal
 
 
 class ItemVentaIn(BaseModel):
@@ -12,6 +13,8 @@ class VentaIn(BaseModel):
     forma_pago: str
     items: list[ItemVentaIn] = Field(min_length=1)
     uuid_operacion: str | None = None
+    reserva_id: int | None = None
+    monto_recibido: Decimal | None = Field(default=None, ge=0)
 
 
 class VentaOut(BaseModel):
@@ -21,6 +24,7 @@ class VentaOut(BaseModel):
     total: float
     estado: str
     comprobante: str
+    items: list[dict] = Field(default_factory=list)
 
 
 class AnularIn(BaseModel):

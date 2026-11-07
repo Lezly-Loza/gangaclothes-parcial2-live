@@ -1,0 +1,291 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: var(--papel);
+}
+
+/* ------------------------------------------------------------------- layout */
+.cuerpo {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  align-items: start;
+}
+.filtros {
+  border-right: 1.5px solid var(--linea);
+  padding: 20px 18px 30px;
+  min-height: calc(100vh - 54px);
+}
+.filtros .ceja {
+  margin: 16px 0 8px;
+}
+.filtros .ceja.primera {
+  margin-top: 0;
+  color: var(--tinta);
+}
+.ayuda-filtro {
+  font-size: 11px;
+  color: var(--gris);
+  line-height: 1.4;
+  margin: 6px 0 14px;
+}
+.chip {
+  font-family: inherit;
+}
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.swatch-boton {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--linea);
+  cursor: pointer;
+  padding: 0;
+}
+.swatch-boton.on {
+  outline: 2px solid var(--tinta);
+  outline-offset: 2px;
+}
+.limpiar {
+  margin-top: 20px;
+}
+
+main {
+  padding: 20px 26px 44px;
+  min-width: 0;
+}
+.cabecera {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+h1 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* ------------------------------------------------------------------ tarjetas */
+.grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+.tarjeta {
+  /* Es un boton: sin flex centraria el contenido y las fotos quedarian desalineadas. */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  border: 1.5px solid var(--linea);
+  border-radius: 13px;
+  overflow: hidden;
+  background: #fff;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+.tarjeta:hover {
+  border-color: var(--tinta);
+}
+.foto {
+  position: relative;
+  height: 230px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ecece5;
+}
+.foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+/* etiqueta de la promocion vigente sobre la foto (CU18) */
+.oferta {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  background: var(--ganga);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 99px;
+  padding: 3px 9px;
+}
+.antes {
+  color: var(--gris);
+  font-weight: 400;
+  font-size: 0.85em;
+  margin-left: 5px;
+}
+.promo-detalle {
+  font-size: 12px;
+  color: var(--tinta);
+  margin: -2px 0 10px;
+}
+.datos {
+  padding: 10px 12px 13px;
+}
+.nombre {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.marca {
+  font-size: 11px;
+  color: var(--gris);
+}
+.precio {
+  font-family: var(--mono);
+  color: var(--ganga);
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.disponibilidad {
+  font-size: 10.5px;
+  color: var(--ok);
+  margin-top: 3px;
+}
+.sin-stock {
+  color: var(--alerta);
+}
+.tallas {
+  margin-top: 6px;
+}
+
+/* ------------------------------------------------------------------ detalle */
+.modal.detalle {
+  max-width: 760px;
+  position: relative;
+}
+.cerrar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #fff;
+  border: 1.5px solid var(--linea);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+}
+.columnas {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 22px;
+}
+.foto.grande {
+  height: 360px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.precio.grande {
+  font-size: 17px;
+  margin: -8px 0 8px;
+}
+.descripcion {
+  font-size: 12.5px;
+  color: var(--gris);
+  line-height: 1.5;
+}
+.info .etiqueta {
+  margin: 14px 0 7px;
+}
+.chip.agotada:not(.on) {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+.stock {
+  list-style: none;
+  font-size: 12px;
+  border: 1.5px solid var(--linea);
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+.stock li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 11px;
+  color: var(--ok);
+}
+.stock li + li {
+  border-top: 1px solid var(--linea);
+}
+.stock li span {
+  color: var(--tinta);
+}
+.stock li.sin-stock {
+  color: var(--alerta);
+}
+
+.accion {
+  border-top: 1.5px solid var(--linea);
+  margin-top: 18px;
+  padding-top: 14px;
+}
+.fila-accion {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.fila-accion .grupo {
+  flex: 1;
+  min-width: 190px;
+}
+.fila-accion .cantidad {
+  flex: 0 0 110px;
+  min-width: 110px;
+}
+.reserva {
+  margin-top: 14px;
+  background: var(--suave);
+  border: 1.5px dashed var(--linea);
+  border-radius: 12px;
+  padding: 12px;
+}
+.reserva .ceja {
+  margin-bottom: 8px;
+}
+.nota,
+.aviso-cambio,
+.exito {
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 10px;
+  color: var(--gris);
+}
+.nota a,
+.exito a {
+  color: var(--ganga);
+  font-weight: 700;
+}
+.aviso-cambio {
+  color: var(--alerta);
+}
+.exito {
+  background: #e4f2ec;
+  color: var(--ok);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+
+@media (max-width: 780px) {
+  .cuerpo,
+  .columnas {
+    grid-template-columns: 1fr;
+  }
+  .filtros {
+    border-right: none;
+    border-bottom: 1.5px solid var(--linea);
+    min-height: 0;
+  }
+}

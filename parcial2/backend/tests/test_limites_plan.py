@@ -23,6 +23,7 @@ def test_estado_suscripcion_muestra_consumo(client, token_luna):
     assert recursos["sucursales"]["actual"] == 2
     assert recursos["sucursales"]["limite"] == 3
     assert recursos["sucursales"]["disponible"] == 1
+    assert recursos["productos"]["limite"] == data["plan"]["max_productos"]
 
 
 def test_andina_rechaza_segunda_sucursal_por_limite(client, token_andina):

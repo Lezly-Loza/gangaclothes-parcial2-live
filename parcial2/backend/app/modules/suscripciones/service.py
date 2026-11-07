@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ...models import Plan, Sucursal, Suscripcion, User
+from ...models import Plan, Producto, Sucursal, Suscripcion, User
 from . import schemas
 
 
@@ -28,7 +28,10 @@ def suscripcion_vigente(db: Session, tenant_id: int) -> tuple[Suscripcion | None
 
 
 def _count(db: Session, model, tenant_id: int) -> int:
-    return int(db.scalar(select(func.count()).select_from(model).where(model.tenant_id == tenant_id)) or 0)
+    query = select(func.count()).select_from(model).where(model.tenant_id == tenant_id)
+    if hasattr(model, 'activo'):
+        query = query.where(model.activo.is_(True))
+    return int(db.scalar(query) or 0)
 
 
 def consumo(db: Session, tenant_id: int) -> schemas.EstadoSuscripcionOut:
@@ -39,6 +42,7 @@ def consumo(db: Session, tenant_id: int) -> schemas.EstadoSuscripcionOut:
     consumos = [
         schemas.ConsumoLimite.build("sucursales", _count(db, Sucursal, tenant_id), plan.max_sucursales),
         schemas.ConsumoLimite.build("usuarios", _count(db, User, tenant_id), plan.max_usuarios),
+        schemas.ConsumoLimite.build("productos", _count(db, Producto, tenant_id), plan.max_productos),
     ]
 
     return schemas.EstadoSuscripcionOut(
@@ -56,6 +60,8 @@ def contratar_plan(db: Session, tenant_id: int, data: schemas.ContratarPlanIn) -
     plan = db.query(Plan).filter(Plan.codigo == data.plan_codigo, Plan.activo.is_(True)).first()
     if not plan:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Plan '{data.plan_codigo}' no existe o esta inactivo")
+
+    validar_uso_en_plan(db, tenant_id, plan)
 
     # Cerramos cualquier suscripcion activa previa.
     for prev in db.query(Suscripcion).filter(Suscripcion.tenant_id == tenant_id, Suscripcion.estado == "activa").all():
@@ -116,8 +122,10 @@ def exigir_capacidad(db: Session, tenant_id: int, recurso: str) -> tuple[Plan, i
 
 
 def validar_uso_en_plan(db: Session, tenant_id: int, plan_nuevo: Plan) -> None:
+    from ...models import Producto
     if (_count(db, Sucursal, tenant_id) > plan_nuevo.max_sucursales or
-            _count(db, User, tenant_id) > plan_nuevo.max_usuarios):
+            _count(db, User, tenant_id) > plan_nuevo.max_usuarios or
+            _count(db, Producto, tenant_id) > plan_nuevo.max_productos):
         raise HTTPException(409, "El uso actual supera el plan elegido")
 
 

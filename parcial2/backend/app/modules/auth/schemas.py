@@ -17,6 +17,16 @@ class SuperLoginIn(BaseModel):
     password: str
 
 
+class RegistroClienteIn(BaseModel):
+    codigo_tenant: str = Field(min_length=1, max_length=50)
+    nombre: str = Field(min_length=1, max_length=100)
+    apellido: str | None = Field(default=None, max_length=100)
+    documento: str = Field(min_length=1, max_length=60)
+    telefono: str | None = Field(default=None, max_length=50)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=72)
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -27,6 +37,7 @@ class TokenOut(BaseModel):
     user_id: int
     nombre: str
     roles: list[str]
+    permisos: list[str] = Field(default_factory=list)
 
 
 class MeOut(BaseModel):
@@ -35,6 +46,7 @@ class MeOut(BaseModel):
     nombre: str
     email: str
     roles: list[str]
+    permisos: list[str] = Field(default_factory=list)
     tenant_id: int | None = None
     tenant_codigo: str | None = None
     tenant_razon_social: str | None = None

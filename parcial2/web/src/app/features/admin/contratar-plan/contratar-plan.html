@@ -1,0 +1,53 @@
+<div class="cabecera">
+  <div>
+    <div class="ceja">CU-05 · Suscripcion</div>
+    <h1>Contratar plan</h1>
+    <p class="sub">Elegi el plan que se ajusta a la operacion de tu empresa.</p>
+  </div>
+  @if (estado()?.tiene_suscripcion) {
+    <a routerLink="/admin/mi-suscripcion" class="btn linea">Ver mi suscripcion</a>
+  }
+</div>
+
+@if (cargando()) {
+  <p class="mensaje">Cargando planes…</p>
+} @else if (errorCarga()) {
+  <div class="mensaje error">
+    <p>{{ errorCarga() }}</p>
+    <button class="btn linea" (click)="cargar()">Reintentar</button>
+  </div>
+} @else {
+  <div class="tarjetas-plan">
+    @for (p of planes(); track p.id) {
+      <article class="tarjeta" [class.on]="planSeleccionado() === p.codigo" (click)="elegirPlan(p.codigo)">
+        <div class="ceja">{{ p.codigo }}</div>
+        <h3>{{ p.nombre }}</h3>
+        @if (p.descripcion) { <p class="sub">{{ p.descripcion }}</p> }
+        <div class="precio"><span class="bs">Bs</span> {{ p.precio_mensual }}<small>/mes</small></div>
+        <ul class="limites">
+          <li><b>{{ p.max_sucursales }}</b> sucursales</li>
+          <li><b>{{ p.max_usuarios }}</b> usuarios</li>
+          <li><b>{{ p.max_productos | number }}</b> productos</li>
+        </ul>
+        <div class="modulos">
+          @for (m of p.modulos; track m) { <span class="chip on">{{ m }}</span> }
+        </div>
+      </article>
+    }
+  </div>
+
+  <section class="confirmar">
+    <div>
+      <div class="ceja">Confirmacion</div>
+      <h2>Plan elegido: {{ planActual()?.nombre || '—' }}</h2>
+      <p class="mono">Bs {{ planActual()?.precio_mensual || 0 }} / mes · duracion {{ duracionDias }} dias</p>
+    </div>
+    <div class="controles">
+      <label class="etiqueta">Dias de duracion</label>
+      <input type="number" min="1" class="campo" [(ngModel)]="duracionDias">
+      <button class="btn rosa" (click)="contratarPlan()" [disabled]="guardando() || !planSeleccionado()">
+        {{ guardando() ? 'Contratando…' : 'Contratar plan' }}
+      </button>
+    </div>
+  </section>
+}

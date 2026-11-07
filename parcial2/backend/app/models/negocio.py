@@ -98,7 +98,7 @@ class Inventario(Base, TenantMixin):
     stock_max: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
 
     def validarStockYGuardar(self, db, tipo: str, cantidad: int):
-        if cantidad <= 0:
+        if cantidad < 0 or (cantidad == 0 and tipo != "AJUSTE"):
             raise HTTPException(422, "La cantidad debe ser positiva")
         if tipo in {"SALIDA", "VENTA", "TRASPASO"}:
             if self.stock - self.reservado < cantidad:
@@ -107,6 +107,8 @@ class Inventario(Base, TenantMixin):
         elif tipo in {"ENTRADA", "DEVOLUCION"}:
             self.stock += cantidad
         elif tipo == "AJUSTE":
+            if cantidad < self.reservado:
+                raise HTTPException(409, "El ajuste no puede ser menor al stock reservado")
             self.stock = cantidad
         else:
             raise HTTPException(422, "Tipo de movimiento inválido")

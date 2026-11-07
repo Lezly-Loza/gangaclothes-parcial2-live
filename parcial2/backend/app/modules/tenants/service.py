@@ -36,6 +36,9 @@ def crear_tenant(db: Session, data: schemas.TenantCreateIn) -> Tenant:
     db.add(tenant)
     db.flush()
 
+    from ..seguridad.service import asegurar_roles
+    asegurar_roles(db, tenant.id)
+
     admin = User(
         tenant_id=tenant.id,
         email=data.admin.email,

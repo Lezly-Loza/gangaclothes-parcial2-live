@@ -1,0 +1,122 @@
+<div class="cabecera">
+  <div>
+    <div class="ceja">CU-01 · Plataforma</div>
+    <h1>Empresas contratantes</h1>
+  </div>
+  <button type="button" class="btn rosa" (click)="abrirNuevo()">+ Nueva empresa</button>
+</div>
+
+@if (cargando()) {
+  <p class="mensaje">Cargando empresas…</p>
+} @else if (errorCarga()) {
+  <div class="mensaje error">
+    <p>{{ errorCarga() }}</p>
+    <button class="btn linea" (click)="cargar()">Reintentar</button>
+  </div>
+} @else if (empresas().length === 0) {
+  <div class="mensaje vacio">
+    <h2>Todavia no hay empresas</h2>
+    <p>Registra la primera empresa contratante para empezar a probar la plataforma.</p>
+    <button class="btn rosa" (click)="abrirNuevo()">+ Nueva empresa</button>
+  </div>
+} @else {
+  <div class="marco-tabla">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-indice">#</th>
+          <th>Razon social</th>
+          <th>Codigo</th>
+          <th>NIT</th>
+          <th>Correo</th>
+          <th>Plan</th>
+          <th>Vence</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (e of empresas(); track e.id; let i = $index) {
+          <tr [class.inactiva]="!e.activo">
+            <td class="col-indice">{{ i + 1 }}</td>
+            <td><b>{{ e.razon_social }}</b></td>
+            <td class="mono">{{ e.codigo }}</td>
+            <td class="mono">{{ e.nit }}</td>
+            <td>{{ e.correo }}</td>
+            <td>
+              @if (e.plan_actual) { <span class="estado rosa">{{ e.plan_actual }}</span> }
+              @else { <span class="mensaje">sin plan</span> }
+            </td>
+            <td class="mono">{{ fecha(e.fecha_fin_suscripcion) }}</td>
+            <td>
+              <span class="estado" [class.ok]="e.activo" [class.bajo]="!e.activo">
+                {{ e.estado }}
+              </span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (modalAbierto()) {
+  <div class="fondo" (click)="cerrarModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>Registrar empresa contratante</h2>
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+        <div class="rejilla">
+          <div class="grupo completo">
+            <label class="etiqueta">Razon social <span class="req">*</span></label>
+            <input class="campo" formControlName="razon_social" [class.invalido]="invalido('razon_social')">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">NIT <span class="req">*</span></label>
+            <input class="campo" formControlName="nit" [class.invalido]="invalido('nit')">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Codigo <span class="req">*</span></label>
+            <input class="campo" formControlName="codigo" placeholder="nueva" [class.invalido]="invalido('codigo')">
+            @if (invalido('codigo')) { <p class="ayuda-error">Solo letras, numeros, guion o guion bajo.</p> }
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Correo <span class="req">*</span></label>
+            <input class="campo" type="email" formControlName="correo" [class.invalido]="invalido('correo')">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Telefono</label>
+            <input class="campo" formControlName="telefono">
+          </div>
+          <div class="grupo completo"><label class="etiqueta">Administrador inicial</label></div>
+          <div class="grupo">
+            <label class="etiqueta">Nombre <span class="req">*</span></label>
+            <input class="campo" formControlName="admin_nombre" [class.invalido]="invalido('admin_nombre')">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Correo del admin <span class="req">*</span></label>
+            <input class="campo" type="email" formControlName="admin_email" [class.invalido]="invalido('admin_email')">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Contrasena <span class="req">*</span></label>
+            <input class="campo" type="password" formControlName="admin_password" [class.invalido]="invalido('admin_password')">
+          </div>
+          <div class="grupo">
+            <label class="etiqueta">Plan inicial</label>
+            <select class="campo" formControlName="plan_codigo">
+              <option value="">(sin plan)</option>
+              @for (p of planes(); track p.id) {
+                <option [value]="p.codigo">{{ p.nombre }} · Bs {{ p.precio_mensual }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        @if (errorFormulario()) { <p class="error-servidor">{{ errorFormulario() }}</p> }
+        <div class="acciones">
+          <button type="button" class="btn linea" (click)="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn rosa" [disabled]="guardando()">
+            {{ guardando() ? 'Registrando…' : 'Registrar empresa' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
