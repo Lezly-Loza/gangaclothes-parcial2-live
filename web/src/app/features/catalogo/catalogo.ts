@@ -9,6 +9,7 @@ import { Registro, RecursoService } from '../../core/recurso.service';
 import { SesionStore } from '../../core/sesion';
 import { fechaSinZona, moneda, paraCampoFechaHora } from '../../shared/formato';
 import { BarraTienda } from '../../shared/tienda/barra-tienda';
+import { OfflineService } from '../../core/offline.service';
 
 interface Disponibilidad {
   sucursal_id: number;
@@ -60,6 +61,7 @@ interface CarritoResumen {
 
 interface Reserva {
   id: number;
+  codigo?: string;
   sucursal: string;
   fecha_hora_prueba: string;
 }
@@ -93,6 +95,16 @@ export class Catalogo {
   private http = inject(HttpClient);
   private recursos = inject(RecursoService);
   readonly sesion = inject(SesionStore);
+  readonly offline = inject(OfflineService);
+
+  readonly modalReservaExito = signal<{
+    codigo: string;
+    sucursal: string;
+    fecha: string;
+    unidades: number;
+    offline?: boolean;
+  } | null>(null);
+  readonly codigoCopiado = signal(false);
   readonly moneda = moneda;
 
   // ---- opciones de los filtros ----
@@ -450,13 +462,44 @@ export class Catalogo {
       notas: this.notas().trim() || null,
       detalle: [{ variante_id: variante.id, cantidad: this.cantidad() }],
     };
+
+    // CU-20: Guardar offline si no hay red
+    if (!this.offline.enLinea()) {
+      this.offline
+        .registrarReservaOffline({
+          sucursal_id: Number(datos.sucursal_id),
+          variante_id: variante.id,
+          cantidad: this.cantidad(),
+          notas: datos.notas || undefined,
+        })
+        .then((uuid) => {
+          this.enviando.set(false);
+          this.paso.set('elegir');
+          this.modalReservaExito.set({
+            codigo: `RES-LOC-${uuid.substring(0, 6).toUpperCase()}`,
+            sucursal: this.nombreSucursalAccion() || 'Sucursal',
+            fecha: `${fecha}:00`,
+            unidades: this.cantidad(),
+            offline: true,
+          });
+        });
+      return;
+    }
+
     this.http.post<Reserva>(`${API_URL}/reservas`, datos).subscribe({
       next: (reserva) => {
         this.enviando.set(false);
         this.paso.set('elegir');
+        const codGen = reserva.codigo || `RES-${reserva.id}`;
+        this.modalReservaExito.set({
+          codigo: codGen,
+          sucursal: reserva.sucursal,
+          fecha: reserva.fecha_hora_prueba,
+          unidades: this.cantidad(),
+        });
         this.exito.set({
           tipo: 'reserva',
-          texto: `Reserva #R-${reserva.id} confirmada en ${reserva.sucursal} para el ${fechaSinZona(reserva.fecha_hora_prueba)}.`,
+          texto: `Reserva ${codGen} confirmada en ${reserva.sucursal} para el ${fechaSinZona(reserva.fecha_hora_prueba)}.`,
         });
         this.recargar();
       },
@@ -466,6 +509,21 @@ export class Catalogo {
         if (err.status === 400) this.recargar();
       },
     });
+  }
+
+  copiarCodigo(): void {
+    const cod = this.modalReservaExito()?.codigo;
+    if (cod) {
+      navigator.clipboard.writeText(cod).then(() => {
+        this.codigoCopiado.set(true);
+        setTimeout(() => this.codigoCopiado.set(false), 2500);
+      });
+    }
+  }
+
+  cerrarModalExito(): void {
+    this.modalReservaExito.set(null);
+    this.codigoCopiado.set(false);
   }
 
   // ------------------------------------------------------------- CU17 carrito

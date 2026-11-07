@@ -6,6 +6,7 @@ import { catchError, of, switchMap, throwError } from 'rxjs';
 import { API_URL } from '../../../core/api';
 import { mensajeDeError } from '../../../core/errores.interceptor';
 import { Notificaciones } from '../../../core/notificaciones';
+import { OfflineService } from '../../../core/offline.service';
 import { Registro, RecursoService } from '../../../core/recurso.service';
 import { SesionStore } from '../../../core/sesion';
 import { Comprobantes } from '../../../shared/comprobante';
@@ -114,6 +115,7 @@ export class Carrito implements OnDestroy {
   private recursos = inject(RecursoService);
   private avisos = inject(Notificaciones);
   private sesion = inject(SesionStore);
+  readonly offline = inject(OfflineService);
   readonly comprobantes = inject(Comprobantes);
   readonly moneda = moneda;
 
@@ -306,6 +308,32 @@ export class Carrito implements OnDestroy {
     return this.ventaPendiente
       ? of(this.ventaPendiente)
       : this.http.post<VentaWeb>(`${API_URL}/ventas/carrito/confirmar`, {});
+  }
+
+  // ------------------------------------------------ CU-20: Reserva offline desde carrito
+  reservarCarritoOffline(): void {
+    const c = this.carrito();
+    if (!c || !c.detalle || c.detalle.length === 0) return;
+
+    this.procesando.set(true);
+    const promesas = c.detalle.map((item) =>
+      this.offline.registrarReservaOffline({
+        sucursal_id: c.sucursal_id,
+        variante_id: item.variante_id,
+        cantidad: item.cantidad,
+        notas: `Reserva desde carrito de compra · ${item.prenda}`,
+      }),
+    );
+
+    Promise.all(promesas)
+      .then((uuids) => {
+        this.procesando.set(false);
+        this.avisos.ok(`✓ ${uuids.length} prendas apartadas en reserva local sin conexión. Se sincronizarán al recuperar red.`);
+      })
+      .catch(() => {
+        this.procesando.set(false);
+        this.avisos.error('No se pudo guardar la reserva local.');
+      });
   }
 
   // --------------------------------------------------------------- tarjeta

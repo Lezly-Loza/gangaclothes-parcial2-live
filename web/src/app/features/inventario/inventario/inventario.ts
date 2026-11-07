@@ -104,6 +104,14 @@ export class Inventario {
   readonly errorLimites = signal<string | null>(null);
   formLimites: FormGroup = this.fb.group({});
 
+  // ---- modal ajuste de inventario (CU-12) ----
+  readonly ajusteFila = signal<FilaInventario | null>(null);
+  readonly guardandoAjuste = signal(false);
+  readonly errorAjuste = signal<string | null>(null);
+  formAjuste: FormGroup = this.fb.group({});
+
+  readonly alertasStockBajo = computed(() => this.filas().filter((f) => f.bajo_minimo));
+
   readonly puedeEditar = computed(() => this.sesion.permisos().includes('inventario:editar'));
   readonly puedeCrear = computed(() => this.sesion.permisos().includes('inventario:crear'));
 
@@ -252,6 +260,54 @@ export class Inventario {
 
   cerrarModal(): void {
     this.editando.set(null);
+    this.ajusteFila.set(null);
+  }
+
+  // --------------------------------------------- CU-12: ajuste de inventario
+  abrirAjuste(fila?: FilaInventario): void {
+    const f = fila ?? this.filas()[0];
+    if (!f) return;
+    this.errorAjuste.set(null);
+    this.formAjuste = this.fb.group({
+      variante_id: [f.variante_id, Validators.required],
+      cantidad: [f.cantidad, [Validators.required, Validators.min(0), Validators.pattern(ENTERO)]],
+      motivo: ['Ajuste de inventario físico', [Validators.required, Validators.maxLength(200)]],
+    });
+    this.ajusteFila.set(f);
+  }
+
+  guardarAjuste(): void {
+    if (this.formAjuste.invalid) {
+      this.formAjuste.markAllAsTouched();
+      return;
+    }
+    const val = this.formAjuste.getRawValue();
+    const sucursalId = this.sucursal.id();
+    if (!sucursalId) return;
+
+    this.errorAjuste.set(null);
+    this.guardandoAjuste.set(true);
+
+    const payload = {
+      sucursal_id: sucursalId,
+      variante_id: Number(val.variante_id),
+      tipo_movimiento: 'AJUSTE',
+      cantidad: Number(val.cantidad),
+      motivo: val.motivo?.trim(),
+    };
+
+    this.http.post(`${API_URL}/inventario/movimiento`, payload).subscribe({
+      next: () => {
+        this.guardandoAjuste.set(false);
+        this.ajusteFila.set(null);
+        this.avisos.ok('✓ Ajuste de inventario registrado correctamente.');
+        this.recargar();
+      },
+      error: (err) => {
+        this.guardandoAjuste.set(false);
+        this.errorAjuste.set(mensajeDeError(err, 'No se pudo registrar el ajuste de inventario.'));
+      },
+    });
   }
 
   // ----------------------------------------------------------- presentacion

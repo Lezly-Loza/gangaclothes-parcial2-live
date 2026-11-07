@@ -5,10 +5,16 @@
     <span class="ceja">{{ nombreSucursal() }} · del {{ fecha(desde()) }} al {{ fecha(hasta()) }} · solo ventas pagadas</span>
   </div>
   <div class="sin-imprimir botones">
-    <button type="button" class="btn rosa" [disabled]="exportando() || cargando() || !!errorFechas()" (click)="exportar()">
-      {{ exportando() ? 'Exportando…' : 'Exportar a Excel (CSV)' }}
+    <button type="button" class="btn linea" [disabled]="exportando() || cargando() || !!errorFechas()" (click)="exportarFormato('xlsx')" title="Descargar reporte en formato Microsoft Excel">
+      📊 Descargar Excel (.xlsx)
     </button>
-    <button type="button" class="btn linea" (click)="imprimir()">Imprimir / PDF</button>
+    <button type="button" class="btn linea" [disabled]="exportando() || cargando() || !!errorFechas()" (click)="exportarFormato('pdf')" title="Descargar reporte en formato PDF corporativo">
+      📄 Descargar PDF
+    </button>
+    <button type="button" class="btn linea" [disabled]="exportando() || cargando() || !!errorFechas()" (click)="exportarFormato('csv')" title="Descargar como CSV">
+      📋 CSV
+    </button>
+    <button type="button" class="btn linea" (click)="imprimir()">🖨️ Imprimir</button>
   </div>
 </div>
 
@@ -154,7 +160,7 @@
                   <tr><th>Venta</th><th>Fecha</th><th>Comprobante</th><th>Sucursal</th><th>Canal</th><th class="num">Unid.</th><th class="num">Subtotal</th><th class="num">Descuento</th><th class="num">Total (Bs)</th></tr>
                 </thead>
                 <tbody>
-                  @for (v of r.ventas; track v.id) {
+                  @for (v of ventasPaginadas(); track v.id) {
                     <tr>
                       <td class="mono">#{{ v.id }}</td>
                       <td class="mono">{{ fechaHora(v.fecha) }}</td>
@@ -170,6 +176,17 @@
                 </tbody>
               </table>
             </div>
+            @if (totalPaginasVentas() > 1) {
+              <div class="paginacion sin-imprimir">
+                <button type="button" class="btn linea sm" [disabled]="paginaActual() <= 1" (click)="cambiarPagina(paginaActual() - 1)">
+                  ← Anterior
+                </button>
+                <span class="info-pag">Página <b>{{ paginaActual() }}</b> de <b>{{ totalPaginasVentas() }}</b> ({{ r.ventas.length }} ventas)</span>
+                <button type="button" class="btn linea sm" [disabled]="paginaActual() >= totalPaginasVentas()" (click)="cambiarPagina(paginaActual() + 1)">
+                  Siguiente →
+                </button>
+              </div>
+            }
           </section>
         }
       } @else {

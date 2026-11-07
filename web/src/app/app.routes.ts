@@ -149,6 +149,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/inventario/movimientos/movimientos').then((m) => m.Movimientos),
       },
       {
+        path: 'cambios',
+        canActivate: [rolGuard],
+        data: { roles: ['administrador', 'encargado', 'cajero'] },
+        loadComponent: () => import('./features/inventario/cambios/cambios').then((m) => m.Cambios),
+      },
+      {
         path: 'compras',
         canActivate: [rolGuard],
         data: OPERACION_SUCURSAL,

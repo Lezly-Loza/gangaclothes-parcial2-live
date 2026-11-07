@@ -263,3 +263,20 @@ tr.falta td {
   margin-top: 6px;
   color: var(--ganga);
 }
+
+.caja-offline-reserva {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.caja-offline-reserva .nota {
+  font-size: 11.5px;
+  color: #92400e;
+  margin: 0;
+}

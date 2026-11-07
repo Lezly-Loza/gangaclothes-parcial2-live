@@ -194,5 +194,109 @@
         </ul>
       </section>
     </div>
+
+    <!-- ------------------------------------------------ CU-26: MACHINE LEARNING -->
+    @if (analitica(); as ml) {
+      <div class="seccion-ml">
+        <div class="cabecera-ml">
+          <div>
+            <span class="badge-ml">🤖 Inteligencia de Datos · CU-26</span>
+            <h2>Dashboard Analítico Predictivo & Segmentación ML</h2>
+            <p class="apoyo">{{ ml.nota }}</p>
+          </div>
+        </div>
+
+        <!-- Tarjetas KPI ML -->
+        <div class="fichas">
+          <div class="ficha card-ml">
+            <div class="ceja">Predicción Ventas Próx. Mes</div>
+            <div class="numero">Bs {{ moneda(prediccionMesActual()) }}</div>
+            <div class="apoyo">Regresión Lineal OLS por categoría</div>
+          </div>
+          <div class="ficha card-ml">
+            <div class="ceja">Volumen Proyectado (3 Meses)</div>
+            <div class="numero">Bs {{ moneda(totalPrediccionProximosMeses()) }}</div>
+            <div class="apoyo">Horizonte predictivo a 90 días</div>
+          </div>
+          <div class="ficha card-ml">
+            <div class="ceja">Precisión del Modelo (R²)</div>
+            <div class="numero">{{ (ml.prediccion_ventas.r2 * 100).toFixed(1) }}%</div>
+            <div class="apoyo">Ajuste estadístico global (R² = {{ ml.prediccion_ventas.r2 }})</div>
+          </div>
+          <div class="ficha card-ml">
+            <div class="ceja">Error Absoluto Medio (MAE)</div>
+            <div class="numero">Bs {{ moneda(ml.prediccion_ventas.mae) }}</div>
+            <div class="apoyo">Desviación promedio en bolivianos</div>
+          </div>
+        </div>
+
+        <!-- Gráficos ML: Predicciones y Clusters K-Means -->
+        <div class="dos-columnas">
+          <!-- Predicción por categoría -->
+          <section class="panel">
+            <div class="cabecera-panel">
+              <div>
+                <h2>Predicción de Ventas por Categoría (Próximos 3 Meses)</h2>
+                <span class="ceja">Modelo Supervisado: Regresión Lineal multivariable</span>
+              </div>
+            </div>
+            <app-barras-h [filas]="barrasPrediccionCategorias()" />
+          </section>
+
+          <!-- Segmentación de Clientes K-Means -->
+          <section class="panel">
+            <div class="cabecera-panel">
+              <div>
+                <h2>Segmentación de Clientes (K-Means Clustering)</h2>
+                <span class="ceja">Modelo No Supervisado RFM ({{ ml.segmentacion_clientes.total_clientes }} clientes analizados)</span>
+              </div>
+            </div>
+            <app-barras-h [filas]="barrasSegmentos()" />
+          </section>
+        </div>
+
+        <!-- Tabla detallada de Clusters K-Means -->
+        <section class="panel">
+          <div class="cabecera-panel">
+            <h2>Detalle de Segmentos de Clientes (Clusters RFM)</h2>
+            <span class="ceja">Inertia del Modelo: {{ ml.segmentacion_clientes.inertia.toFixed(2) }}</span>
+          </div>
+          <div class="marco-tabla">
+            <table>
+              <thead>
+                <tr>
+                  <th>Grupo / Segmento</th>
+                  <th class="num">Clientes</th>
+                  <th class="num">Recencia Promedio</th>
+                  <th class="num">Frecuencia de Compra</th>
+                  <th class="num">Ticket Promedio (Bs)</th>
+                  <th>Estrategia Recomendada</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of ml.segmentacion_clientes.segmentos; track s.segmento) {
+                  <tr>
+                    <td><b>{{ s.segmento }}</b></td>
+                    <td class="mono num">{{ s.clientes }}</td>
+                    <td class="mono num">{{ s.dias_recencia_promedio }} días</td>
+                    <td class="mono num">{{ s.frecuencia_promedio }} compras</td>
+                    <td class="mono num"><b>Bs {{ moneda(s.valor_promedio) }}</b></td>
+                    <td>
+                      @if (s.segmento.includes('Frecuente')) {
+                        <span class="estado ok">Programa VIP / Fidelización activa</span>
+                      } @else if (s.segmento.includes('Ocasional')) {
+                        <span class="estado rosa">Campañas de reactivación y promociones</span>
+                      } @else {
+                        <span class="estado bajo">Reactivación con ofertas personalizadas</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    }
   </div>
 }

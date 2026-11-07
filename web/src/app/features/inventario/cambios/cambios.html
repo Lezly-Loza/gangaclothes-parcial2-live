@@ -1,0 +1,336 @@
+<div class="p-6 max-w-4xl mx-auto">
+  <!-- Header -->
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Gestionar Cambios de Prendas</h1>
+      <p class="text-slate-500 text-sm mt-0.5">CU-16: Proceso guiado en 3 pasos con cálculo de diferencia monetaria en vivo</p>
+    </div>
+    @if (resultado()) {
+      <button
+        type="button"
+        (click)="reiniciar()"
+        class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-700 transition-colors shadow-xs"
+      >
+        + Nuevo cambio
+      </button>
+    }
+  </div>
+
+  <!-- Indicador de pasos visual -->
+  @if (!resultado()) {
+    <div class="flex items-center mb-8 bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
+      @for (n of [1, 2, 3]; track n) {
+        <div class="flex items-center flex-1 last:flex-none">
+          <div [class]="'w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all shadow-xs ' +
+                        (paso() === n ? 'bg-red-600 text-white ring-4 ring-red-100' :
+                         paso() > n ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400')">
+            {{ paso() > n ? '✓' : n }}
+          </div>
+          <div class="ml-2.5">
+            <p [class]="'text-xs font-bold leading-tight ' + (paso() >= n ? 'text-slate-800' : 'text-slate-400')">
+              {{ n === 1 ? 'Paso 1' : n === 2 ? 'Paso 2' : 'Paso 3' }}
+            </p>
+            <p [class]="'text-xs ' + (paso() >= n ? 'text-slate-600' : 'text-slate-400')">
+              {{ n === 1 ? 'Buscar venta' : n === 2 ? 'Prenda a devolver' : 'Nueva prenda' }}
+            </p>
+          </div>
+          @if (n < 3) {
+            <div [class]="'mx-4 h-0.5 flex-1 transition-colors ' + (paso() > n ? 'bg-slate-800' : 'bg-slate-200')"></div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Error banner -->
+  @if (error()) {
+    <div class="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-sm text-red-700 animate-in fade-in">
+      <span class="text-red-500 font-bold text-base leading-none mt-0.5">⚠</span>
+      <div class="flex-1">
+        <p class="font-medium">{{ error() }}</p>
+      </div>
+      <button type="button" (click)="error.set(null)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+    </div>
+  }
+
+  <!-- PASO 1: Buscar venta por código -->
+  @if (paso() === 1 && !resultado()) {
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-6">
+      <div class="max-w-md mx-auto text-center py-4">
+        <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl shadow-xs">
+          🔍
+        </div>
+        <h2 class="text-lg font-bold text-slate-800 mb-1">Buscar venta previa</h2>
+        <p class="text-xs text-slate-500 mb-5">Ingresa el ID de la venta pagada para verificar plazo y prendas</p>
+
+        <div class="flex gap-2">
+          <input
+            type="number"
+            [value]="ventaId()"
+            (input)="ventaId.set($any($event.target).value)"
+            (keyup.enter)="buscarVenta()"
+            placeholder="Ej: 1045"
+            class="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-800 text-sm font-medium"
+          />
+          <button
+            type="button"
+            (click)="buscarVenta()"
+            [disabled]="cargando() || !ventaId().trim()"
+            class="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-semibold text-sm hover:bg-slate-700 disabled:opacity-50 transition-colors shadow-xs"
+          >
+            @if (cargando()) {
+              <span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+            } @else {
+              Buscar
+            }
+          </button>
+        </div>
+
+        <div class="mt-6 p-3 bg-slate-50 rounded-xl text-left border border-slate-100 text-xs text-slate-500 space-y-1">
+          <p class="font-semibold text-slate-700">Reglas de negocio:</p>
+          <p>• La venta debe estar en estado <span class="font-medium text-emerald-700">PAGADA</span>.</p>
+          <p>• Plazo máximo: <span class="font-medium text-slate-700">7 días naturales</span> desde la fecha de emisión.</p>
+          <p>• Solo se permite un cambio por venta.</p>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- PASO 2: Seleccionar ítem a devolver y justificación -->
+  @if (paso() === 2 && ventaData() && !resultado()) {
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-6 animate-in fade-in">
+      <div class="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">Seleccionar prenda a devolver</h2>
+          <p class="text-xs text-slate-500">Venta #{{ ventaData()!.venta_id }} en {{ ventaData()!.sucursal }}</p>
+        </div>
+        <button
+          type="button"
+          (click)="volver()"
+          class="text-xs font-semibold text-slate-500 hover:text-slate-800 px-3 py-1.5 border border-slate-200 rounded-lg"
+        >
+          ← Cambiar venta
+        </button>
+      </div>
+
+      <!-- Plazo banner -->
+      <div class="mb-5 p-3.5 bg-blue-50/70 border border-blue-200/60 rounded-xl flex items-center justify-between text-xs">
+        <div>
+          <span class="font-bold text-slate-700">Emitida: {{ formatDate(ventaData()!.fecha) }}</span>
+          <span class="text-slate-500 ml-2">Total original: Bs {{ ventaData()!.total.toFixed(2) }}</span>
+        </div>
+        <span class="font-bold text-blue-700 bg-blue-100/80 px-2.5 py-1 rounded-full">
+          ⏳ {{ ventaData()!.dias_restantes_plazo }} día(s) para vencer
+        </span>
+      </div>
+
+      <!-- Formulario motivo -->
+      <form [formGroup]="formMotivo" class="mb-5">
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+          Motivo del cambio *
+        </label>
+        <textarea
+          formControlName="motivo"
+          rows="2"
+          placeholder="Ej: Cambio de talla, preferencia de color, defecto menor..."
+          class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-800 resize-none"
+        ></textarea>
+        @if (formMotivo.get('motivo')?.invalid && formMotivo.get('motivo')?.touched) {
+          <p class="text-xs text-red-600 mt-1">El motivo es obligatorio (mín. 3 caracteres).</p>
+        }
+      </form>
+
+      <!-- Lista de items de la venta -->
+      <p class="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2.5">
+        Selecciona la prenda que el cliente entrega:
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        @for (item of ventaData()!.detalle; track item.variante_id) {
+          <div
+            (click)="formMotivo.valid ? seleccionarItem(item) : formMotivo.markAllAsTouched()"
+            class="p-4 border border-slate-200 rounded-xl hover:border-slate-800 hover:bg-slate-50/50 cursor-pointer transition-all flex items-center justify-between group shadow-2xs"
+          >
+            <div>
+              <p class="font-bold text-sm text-slate-800 group-hover:text-red-600 transition-colors">
+                {{ item.prenda }}
+              </p>
+              <p class="text-xs text-slate-500 font-mono mt-0.5">
+                {{ item.sku }} · Talla {{ item.talla }} · {{ item.color }}
+              </p>
+              <p class="text-xs text-slate-400 mt-1">Cantidad comprada: {{ item.cantidad }}</p>
+            </div>
+            <div class="text-right">
+              <span class="text-sm font-bold text-slate-800 block">Bs {{ item.precio_unitario.toFixed(2) }}</span>
+              <span class="text-xs text-blue-600 font-medium group-hover:underline mt-1 inline-block">Elegir →</span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- PASO 3: Seleccionar nueva prenda con cálculo de saldo en vivo -->
+  @if (paso() === 3 && itemSeleccionado() && !resultado()) {
+    <div class="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-6 animate-in fade-in">
+      <div class="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">Seleccionar nueva prenda</h2>
+          <p class="text-xs text-slate-500">Existencias disponibles en la sucursal {{ ventaData()?.sucursal }}</p>
+        </div>
+        <button
+          type="button"
+          (click)="volver()"
+          class="text-xs font-semibold text-slate-500 hover:text-slate-800 px-3 py-1.5 border border-slate-200 rounded-lg"
+        >
+          ← Cambiar prenda devuelta
+        </button>
+      </div>
+
+      <!-- Resumen devolución -->
+      <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl mb-4 flex items-center justify-between text-xs">
+        <div>
+          <span class="text-slate-500">Devuelve: </span>
+          <strong class="text-slate-800">{{ itemSeleccionado()!.prenda }}</strong>
+          <span class="text-slate-500 ml-1">({{ itemSeleccionado()!.sku }} · Talla {{ itemSeleccionado()!.talla }} · {{ itemSeleccionado()!.color }})</span>
+        </div>
+        <span class="font-bold text-slate-800">Valor acreditado: Bs {{ itemSeleccionado()!.precio_unitario.toFixed(2) }}</span>
+      </div>
+
+      <!-- Cálculo de saldo en vivo -->
+      @if (diferenciaMonetaria() !== null) {
+        <div [class]="'p-4 rounded-xl border mb-5 text-center transition-all animate-in zoom-in-95 ' +
+                      (diferenciaMonetaria()! > 0 ? 'bg-red-50/80 border-red-200 text-red-800' :
+                       diferenciaMonetaria()! < 0 ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' :
+                       'bg-blue-50/80 border-blue-200 text-blue-800')">
+          <p class="text-xs uppercase font-bold tracking-wider mb-0.5">Diferencia monetaria en vivo</p>
+          <p class="text-2xl font-black">
+            @if (diferenciaMonetaria()! > 0) {
+              + Bs {{ diferenciaMonetaria()!.toFixed(2) }} (A cobrar al cliente)
+            } @else if (diferenciaMonetaria()! < 0) {
+              - Bs {{ Math.abs(diferenciaMonetaria()!).toFixed(2) }} (Saldo a favor del cliente)
+            } @else {
+              Bs 0.00 (Mismo precio · Sin cobro adicional)
+            }
+          </p>
+        </div>
+      }
+
+      <!-- Buscador de variantes disponibles -->
+      <div class="mb-4">
+        <input
+          type="text"
+          [value]="buscador()"
+          (input)="buscador.set($any($event.target).value)"
+          placeholder="⌕ Filtrar catálogo por prenda, talla, color o SKU..."
+          class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-800"
+        />
+      </div>
+
+      <!-- Lista de variantes -->
+      <div class="space-y-2 max-h-80 overflow-y-auto pr-1">
+        @for (v of variantesFiltradas(); track v.variante_id) {
+          <div
+            (click)="seleccionarVarianteNueva(v.variante_id)"
+            [class]="'p-3.5 border rounded-xl cursor-pointer transition-all flex items-center justify-between ' +
+                      (varianteNuevaId() === v.variante_id
+                        ? 'border-slate-800 bg-slate-900 text-white shadow-sm ring-2 ring-slate-800'
+                        : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50')"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-5 h-5 rounded-full border border-white shadow-xs shrink-0"
+                [style.background]="hex(v.color_hex)"
+              ></div>
+              <div>
+                <p class="font-bold text-sm leading-tight">{{ v.prenda }}</p>
+                <p [class]="'text-xs mt-0.5 ' + (varianteNuevaId() === v.variante_id ? 'text-slate-300' : 'text-slate-500')">
+                  {{ v.sku }} · Talla <strong class="font-bold">{{ v.talla }}</strong> · {{ v.color }} · Disponibles: {{ v.disponible }}
+                </p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span [class]="'text-sm font-black ' + (varianteNuevaId() === v.variante_id ? 'text-white' : 'text-slate-800')">
+                Bs {{ v.precio_venta.toFixed(2) }}
+              </span>
+              @if (varianteNuevaId() === v.variante_id) {
+                <span class="block text-xs text-emerald-400 font-bold">✓ Seleccionada</span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Confirmar -->
+      <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          (click)="volver()"
+          class="px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Atrás
+        </button>
+        <button
+          type="button"
+          (click)="registrarCambio()"
+          [disabled]="cargando() || !varianteNuevaId()"
+          class="px-6 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-700 disabled:opacity-50 transition-colors shadow-xs flex items-center gap-2"
+        >
+          @if (cargando()) {
+            <span class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+          }
+          Confirmar y emitir comprobante de cambio
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- RESULTADO FINAL: Comprobante emitido -->
+  @if (resultado(); as res) {
+    <div class="bg-white rounded-2xl shadow-sm border border-emerald-200 p-8 max-w-xl mx-auto text-center animate-in zoom-in-95">
+      <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-bold shadow-xs">
+        ✓
+      </div>
+      <h2 class="text-2xl font-black text-slate-800 mb-1">¡Cambio de Prenda Exitoso!</h2>
+      <p class="text-xs text-slate-500 mb-6 font-mono">Comprobante Cambio #{{ res.cambio_id }} · Venta Original #{{ res.venta_id }}</p>
+
+      <div class="grid grid-cols-2 gap-3 text-left mb-5">
+        <div class="p-3.5 bg-red-50/60 border border-red-100 rounded-xl">
+          <span class="text-3xs font-black uppercase tracking-wider text-red-600 block mb-1">Prenda Devuelta (+Stock)</span>
+          <p class="font-bold text-xs text-slate-800">{{ res.devuelta.prenda }}</p>
+          <p class="text-2xs text-slate-500">{{ res.devuelta.sku }} · {{ res.devuelta.talla }}/{{ res.devuelta.color }}</p>
+          <p class="text-xs font-bold text-slate-700 mt-2">Bs {{ res.devuelta.precio.toFixed(2) }}</p>
+        </div>
+        <div class="p-3.5 bg-emerald-50/60 border border-emerald-100 rounded-xl">
+          <span class="text-3xs font-black uppercase tracking-wider text-emerald-600 block mb-1">Prenda Nueva (-Stock)</span>
+          <p class="font-bold text-xs text-slate-800">{{ res.nueva.prenda }}</p>
+          <p class="text-2xs text-slate-500">{{ res.nueva.sku }} · {{ res.nueva.talla }}/{{ res.nueva.color }}</p>
+          <p class="text-xs font-bold text-slate-700 mt-2">Bs {{ res.nueva.precio.toFixed(2) }}</p>
+        </div>
+      </div>
+
+      <div [class]="'p-4 rounded-xl font-bold text-base mb-6 ' +
+                    (res.saldo_tipo === 'cobrar' ? 'bg-red-50 text-red-700 border border-red-200' :
+                     res.saldo_tipo === 'devolver' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                     'bg-slate-50 text-slate-700 border border-slate-200')">
+        @if (res.saldo_tipo === 'cobrar') {
+          💳 Monto cobrado al cliente: Bs {{ res.saldo.toFixed(2) }}
+        } @else if (res.saldo_tipo === 'devolver') {
+          🎁 Saldo a favor del cliente: Bs {{ Math.abs(res.saldo).toFixed(2) }}
+        } @else {
+          ✓ Sin diferencia de precio
+        }
+      </div>
+
+      <div class="flex gap-3 justify-center">
+        <button
+          type="button"
+          (click)="reiniciar()"
+          class="px-6 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors shadow-xs"
+        >
+          Registrar otro cambio
+        </button>
+      </div>
+    </div>
+  }
+</div>
+

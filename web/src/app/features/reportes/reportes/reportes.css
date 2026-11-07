@@ -182,6 +182,25 @@ h2 {
   margin-left: 10px;
 }
 
+.paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--linea);
+}
+
+.info-pag {
+  font-size: 13px;
+  color: var(--gris, #64748b);
+}
+
+.btn.sm {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
 @media (max-width: 900px) {
   .dos-columnas {
     grid-template-columns: 1fr;

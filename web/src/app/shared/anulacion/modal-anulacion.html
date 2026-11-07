@@ -1,0 +1,87 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in" (click)="cerrar()">
+  <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 border border-slate-200" (click)="$event.stopPropagation()">
+    
+    <!-- Icono advertencia -->
+    <div class="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-xs">
+      ⚠
+    </div>
+
+    <h2 class="text-xl font-bold text-slate-800 text-center mb-1">
+      Anular {{ opcion.tipo === 'VENTA' ? 'Venta' : 'Reserva' }} #{{ opcion.id }}
+    </h2>
+    <p class="text-xs text-slate-500 text-center mb-4">{{ opcion.descripcion }}</p>
+
+    <!-- Dialog de seguridad: advertencia de reversión de stock -->
+    <div class="p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl mb-4 text-xs text-amber-800 space-y-1">
+      <p class="font-bold flex items-center gap-1.5 text-amber-900">
+        <span>🔄 Reversión automática de stock</span>
+      </p>
+      <p>
+        {{ opcion.tipo === 'VENTA' 
+           ? 'Las prendas vendidas se devolverán al inventario físico de la sucursal inmediatamente.' 
+           : 'Las unidades apartadas se liberarán y volverán a estar disponibles en la tienda en línea.' }}
+      </p>
+    </div>
+
+    @if (error()) {
+      <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+        {{ error() }}
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="confirmarAnulacion()">
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+          Motivo / Justificación obligatoria *
+        </label>
+        <textarea
+          formControlName="motivo"
+          rows="3"
+          placeholder="Describe la razón de la anulación (mín. 5 caracteres)..."
+          class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+        ></textarea>
+        @if (form.get('motivo')?.invalid && form.get('motivo')?.touched) {
+          <p class="text-xs text-red-600 mt-1">El motivo es obligatorio (mínimo 5 caracteres).</p>
+        }
+      </div>
+
+      <!-- Checkbox de confirmación explícita -->
+      <label class="flex items-start gap-2.5 mb-5 cursor-pointer bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+        <input
+          type="checkbox"
+          formControlName="confirmacion"
+          class="mt-0.5 w-4 h-4 rounded text-red-600 focus:ring-red-500"
+        />
+        <span class="text-xs text-slate-600 font-medium">
+          Confirmo que deseo anular esta operación y entiendo que se registrará en la bitácora de auditoría con reversión de inventario.
+        </span>
+      </label>
+      @if (form.get('confirmacion')?.invalid && form.get('confirmacion')?.touched) {
+        <p class="text-xs text-red-600 -mt-3 mb-4">Debes marcar la confirmación para proceder.</p>
+      }
+
+      <!-- Acciones -->
+      <div class="flex gap-2">
+        <button
+          type="button"
+          (click)="cerrar()"
+          [disabled]="cargando()"
+          class="flex-1 py-2.5 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          [disabled]="cargando()"
+          class="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-50 transition-colors shadow-xs flex items-center justify-center gap-2"
+        >
+          @if (cargando()) {
+            <span class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+          }
+          Confirmar Anulación
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

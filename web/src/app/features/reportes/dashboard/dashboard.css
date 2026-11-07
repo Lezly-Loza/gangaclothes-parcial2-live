@@ -171,6 +171,46 @@ td .estado {
   color: var(--gris);
 }
 
+/* ------------------------------------------------ CU-26: MACHINE LEARNING */
+.seccion-ml {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 2px dashed var(--linea, #cbd5e1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cabecera-ml {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.badge-ml {
+  display: inline-block;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.card-ml {
+  border-left: 4px solid #3b82f6;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.card-ml .numero {
+  color: #1e293b;
+}
+
 @media (max-width: 900px) {
   .dos-columnas {
     grid-template-columns: 1fr;

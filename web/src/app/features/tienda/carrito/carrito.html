@@ -203,9 +203,19 @@
             Hay prendas sin stock suficiente en {{ venta.sucursal }}. Baja la cantidad, quitalas o elige otra sucursal.
           </p>
         }
-        <button type="button" class="btn rosa bloque" [disabled]="ocupado() !== null || faltantes().length > 0" (click)="abrirPago()">
-          Pagar Bs {{ moneda(venta.total) }}
-        </button>
+
+        @if (!offline.enLinea()) {
+          <div class="caja-offline-reserva">
+            <p class="nota">Modo sin conexión: las pasarelas bancarias requieren internet, pero puedes apartar tus prendas para asegurarlas.</p>
+            <button type="button" class="btn linea bloque" [disabled]="procesando()" (click)="reservarCarritoOffline()">
+              📦 Apartar / Reservar compra sin conexión
+            </button>
+          </div>
+        } @else {
+          <button type="button" class="btn rosa bloque" [disabled]="ocupado() !== null || faltantes().length > 0" (click)="abrirPago()">
+            Pagar Bs {{ moneda(venta.total) }}
+          </button>
+        }
         <a class="enlace seguir" routerLink="/catalogo">← Seguir comprando</a>
       </aside>
     </div>

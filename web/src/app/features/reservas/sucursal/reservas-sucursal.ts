@@ -9,6 +9,7 @@ import { SucursalActual } from '../../../core/sucursal-actual';
 import { OpcionFiltro, SelectorEstado } from '../../../shared/estado/selector-estado';
 import { fechaSinZona, instanteSinZona } from '../../../shared/formato';
 import { SelectorSucursal } from '../../../shared/sucursal/selector-sucursal';
+import { ModalAnulacion, OpcionAnulacion } from '../../../shared/anulacion/modal-anulacion';
 
 type EstadoReserva = 'pendiente' | 'preparada' | 'atendida' | 'cancelada' | 'expirada';
 type FiltroReserva = 'activas' | EstadoReserva | 'todas';
@@ -59,7 +60,7 @@ const ACTIVAS: EstadoReserva[] = ['pendiente', 'preparada'];
  */
 @Component({
   selector: 'app-reservas-sucursal',
-  imports: [SelectorEstado, SelectorSucursal],
+  imports: [SelectorEstado, SelectorSucursal, ModalAnulacion],
   templateUrl: './reservas-sucursal.html',
   styleUrl: './reservas-sucursal.css',
   host: { '(document:keydown.escape)': 'cerrarModal()' },
@@ -82,6 +83,7 @@ export class ReservasSucursal {
   readonly enProceso = signal<number | null>(null);
   readonly aExpirar = signal<ReservaSucursal | null>(null);
   readonly errorExpirar = signal<string | null>(null);
+  readonly anularSeleccionada = signal<OpcionAnulacion | null>(null);
 
   /** Se actualiza cada minuto para marcar las citas cuya hora ya paso. */
   private readonly ahora = signal(Date.now());
@@ -197,8 +199,19 @@ export class ReservasSucursal {
     });
   }
 
+  pedirAnular(reserva: ReservaSucursal): void {
+    this.anularSeleccionada.set({
+      tipo: 'RESERVA',
+      id: reserva.id,
+      descripcion: `Cliente: ${reserva.cliente.nombre ?? 'N/A'} · ${reserva.unidades} unidad(es) apartadas en ${reserva.sucursal}`,
+    });
+  }
+
   cerrarModal(): void {
-    if (this.enProceso() === null) this.aExpirar.set(null);
+    if (this.enProceso() === null) {
+      this.aExpirar.set(null);
+      this.anularSeleccionada.set(null);
+    }
   }
 
   // ----------------------------------------------------------- presentacion

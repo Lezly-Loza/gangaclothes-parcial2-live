@@ -119,6 +119,16 @@
                   >
                     Expirar
                   </button>
+                  <span class="separador">·</span>
+                  <button
+                    type="button"
+                    class="enlace peligro"
+                    [disabled]="enProceso() === reserva.id"
+                    (click)="pedirAnular(reserva)"
+                    title="Anular con justificación obligatoria (CU-17)"
+                  >
+                    Anular
+                  </button>
                 } @else {
                   <span class="sin-acciones">—</span>
                 }
@@ -177,4 +187,13 @@
       </div>
     </div>
   </div>
+}
+
+<!-- CU-17: Dialog de seguridad para anulación de reserva -->
+@if (anularSeleccionada(); as op) {
+  <app-modal-anulacion
+    [opcion]="op"
+    (anulado)="cerrarModal(); recargar()"
+    (cerrado)="cerrarModal()"
+  />
 }

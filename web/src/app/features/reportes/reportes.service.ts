@@ -127,6 +127,49 @@ export interface ReporteInventario {
   }[];
 }
 
+/** CU-26: Modelos y métricas de Machine Learning */
+export interface MetricaHistoricoML {
+  anio: number;
+  mes: number;
+  real: number;
+  predicho: number;
+}
+
+export interface PrediccionMesML {
+  anio: number;
+  mes: number;
+  predicho: number;
+}
+
+export interface CategoriaPrediccionML {
+  categoria: string;
+  historico: MetricaHistoricoML[];
+  predicciones: PrediccionMesML[];
+}
+
+export interface SegmentoClienteML {
+  segmento: string;
+  clientes: number;
+  dias_recencia_promedio: number;
+  frecuencia_promedio: number;
+  valor_promedio: number;
+}
+
+export interface AnaliticaML {
+  usando_datos_sinteticos: boolean;
+  nota: string;
+  prediccion_ventas: {
+    r2: number;
+    mae: number;
+    categorias: CategoriaPrediccionML[];
+  };
+  segmentacion_clientes: {
+    total_clientes: number;
+    segmentos: SegmentoClienteML[];
+    inertia: number;
+  };
+}
+
 export interface FilaMargen {
   prenda_id: number;
   prenda: string;
@@ -204,17 +247,28 @@ export class ReportesService {
   }
 
   /**
+   * CU-26: Retorna predicciones de ventas a 3 meses (OLS) y segmentación de clientes RFM (K-Means).
+   */
+  analiticaML(): Observable<AnaliticaML> {
+    return this.http.get<AnaliticaML>(`${API_URL}/analitica/dashboard`);
+  }
+
+  /**
    * Baja el reporte como CSV (lo arma el backend, listo para Excel). Va por
    * HttpClient y no por un enlace directo porque la ruta necesita el token.
    */
-  descargarCsv(reporte: NombreReporte, filtros: FiltrosReporte): Observable<string> {
-    const params = this.parametros(filtros).set('formato', 'csv');
+  /**
+   * CU-24: Baja el reporte en formato CSV, Excel (.xlsx) o PDF corporativo.
+   */
+  descargarArchivo(reporte: NombreReporte, filtros: FiltrosReporte, formato: 'csv' | 'xlsx' | 'pdf' = 'xlsx'): Observable<string> {
+    const params = this.parametros(filtros).set('formato', formato);
     return this.http
       .get(`${API_URL}/reportes/${reporte}`, { params, responseType: 'blob', observe: 'response' })
       .pipe(
         map((respuesta) => {
           const cabecera = respuesta.headers.get('content-disposition') ?? '';
-          const nombre = /filename="?([^";]+)"?/.exec(cabecera)?.[1] ?? `${reporte}.csv`;
+          const ext = formato === 'xlsx' ? 'xlsx' : formato === 'pdf' ? 'pdf' : 'csv';
+          const nombre = /filename="?([^";]+)"?/.exec(cabecera)?.[1] ?? `${reporte}.${ext}`;
           const url = URL.createObjectURL(respuesta.body as Blob);
           const enlace = document.createElement('a');
           enlace.href = url;
@@ -224,6 +278,10 @@ export class ReportesService {
           return nombre;
         }),
       );
+  }
+
+  descargarCsv(reporte: NombreReporte, filtros: FiltrosReporte): Observable<string> {
+    return this.descargarArchivo(reporte, filtros, 'csv');
   }
 }
 

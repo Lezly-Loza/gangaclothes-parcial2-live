@@ -80,6 +80,21 @@ export class Reportes {
   readonly todosLosMovimientos = signal(false);
   private pedido = 0;
 
+  // ---- paginación de ventas (CU-24) ----
+  readonly paginaActual = signal(1);
+  readonly porPagina = 10;
+
+  readonly totalPaginasVentas = computed(() => {
+    const total = this.ventas()?.ventas?.length ?? 0;
+    return Math.max(1, Math.ceil(total / this.porPagina));
+  });
+
+  readonly ventasPaginadas = computed(() => {
+    const lista = this.ventas()?.ventas ?? [];
+    const inicio = (this.paginaActual() - 1) * this.porPagina;
+    return lista.slice(inicio, inicio + this.porPagina);
+  });
+
   readonly errorFechas = computed(() =>
     !this.desde() || !this.hasta()
       ? 'Elegi las dos fechas del periodo.'
@@ -211,17 +226,27 @@ export class Reportes {
   }
 
   exportar(): void {
+    this.exportarFormato('xlsx');
+  }
+
+  exportarFormato(formato: 'csv' | 'xlsx' | 'pdf'): void {
     this.exportando.set(true);
-    this.servicio.descargarCsv(this.reporte(), this.filtros()).subscribe({
+    this.servicio.descargarArchivo(this.reporte(), this.filtros(), formato).subscribe({
       next: (nombre) => {
         this.exportando.set(false);
-        this.avisos.ok(`Se descargo ${nombre}: se abre directo en Excel.`);
+        this.avisos.ok(`✓ Archivo ${nombre} generado y descargado con éxito.`);
       },
       error: (err) => {
         this.exportando.set(false);
-        this.avisos.error(mensajeDeError(err, 'No se pudo exportar el reporte.'));
+        this.avisos.error(mensajeDeError(err, `No se pudo exportar a ${formato.toUpperCase()}.`));
       },
     });
+  }
+
+  cambiarPagina(p: number): void {
+    if (p >= 1 && p <= this.totalPaginasVentas()) {
+      this.paginaActual.set(p);
+    }
   }
 
   imprimir(): void {

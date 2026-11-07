@@ -358,7 +358,7 @@
               </button>
             } @else {
               <button type="button" class="btn linea" [disabled]="enviando() || !!bloqueo()" (click)="irAReservar()">
-                Reservar para probar en tienda
+                Apartar / Reservar en sucursal
               </button>
               <button type="button" class="btn rosa" [disabled]="enviando() || !!bloqueo()" (click)="agregarAlCarrito()">
                 {{ enviando() ? 'Agregando…' : 'Agregar al carrito' }}
@@ -366,6 +366,63 @@
             }
           </div>
         }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- CU-14: Modal moderno de confirmación de reserva con código copiable en un clic -->
+@if (modalReservaExito(); as res) {
+  <div class="telon" (click)="cerrarModalExito()">
+    <div class="modal" style="max-width: 440px;" (click)="$event.stopPropagation()">
+      <div class="modal-encabezado">
+        <div>
+          <h2 class="text-xl font-black text-slate-800">
+            {{ res.offline ? 'Reserva Guardada Localmente' : '¡Prenda Apartada con Éxito!' }}
+          </h2>
+          <span class="ceja">
+            {{ res.offline ? 'Se sincronizará al conectar a internet' : 'Tu stock quedó reservado en la sucursal' }}
+          </span>
+        </div>
+        <button type="button" class="cerrar" title="Cerrar" (click)="cerrarModalExito()">✕</button>
+      </div>
+
+      <div class="p-6 text-center">
+        <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-bold shadow-xs">
+          ✓
+        </div>
+
+        <p class="text-xs text-slate-500 mb-2 uppercase font-bold tracking-wider">Código de Reserva</p>
+        
+        <!-- Código amigable con opción de copiar en un clic -->
+        <div class="p-3 bg-slate-900 text-amber-300 rounded-xl font-mono text-xl font-bold tracking-widest flex items-center justify-between mb-4 shadow-inner">
+          <span class="ml-2">{{ res.codigo }}</span>
+          <button
+            type="button"
+            (click)="copiarCodigo()"
+            class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg transition-colors border border-slate-700 flex items-center gap-1.5"
+          >
+            <span>{{ codigoCopiado() ? '✓ Copiado' : '📋 Copiar' }}</span>
+          </button>
+        </div>
+
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-left text-xs text-slate-600 space-y-1 mb-5">
+          <p><strong>Sucursal:</strong> {{ res.sucursal }}</p>
+          <p><strong>Cita estimada:</strong> {{ res.fecha }}</p>
+          <p><strong>Prendas apartadas:</strong> {{ res.unidades }} unidad(es)</p>
+          @if (res.offline) {
+            <p class="text-amber-700 font-medium pt-1">
+              📡 Modo offline: tu reserva se encuentra protegida en el dispositivo y se sincronizará tan pronto detectemos conexión.
+            </p>
+          }
+        </div>
+
+        <div class="flex gap-2">
+          <button type="button" class="btn linea flex-1" (click)="cerrarModalExito()">Entendido</button>
+          <a routerLink="/mis-reservas" class="btn rosa flex-1 text-center" (click)="cerrarModalExito()">
+            Ver mis reservas →
+          </a>
+        </div>
       </div>
     </div>
   </div>

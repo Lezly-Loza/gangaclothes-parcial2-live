@@ -10,6 +10,7 @@ import { moneda, porcentaje } from '../../../shared/formato';
 import { BarrasH, FilaBarra } from '../../../shared/graficos/barras-h';
 import { PuntoSerie, SerieDias } from '../../../shared/graficos/serie-dias';
 import {
+  AnaliticaML,
   COLOR_CANAL,
   DashboardDatos,
   ETIQUETA_CANAL,
@@ -53,6 +54,7 @@ export class Dashboard {
 
   readonly datos = signal<DashboardDatos | null>(null);
   readonly margen = signal<ReporteMargen | null>(null);
+  readonly analitica = signal<AnaliticaML | null>(null);
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
   readonly exportando = signal(false);
@@ -124,6 +126,51 @@ export class Dashboard {
   );
   readonly mayorGanancia = computed(() => Math.max(1, ...this.gananciaPorPrenda().map((p) => p.ganancia_unitaria)));
 
+  // ------------------------------------------------------------- machine learning (CU-26)
+  readonly totalPrediccionProximosMeses = computed(() => {
+    const cats = this.analitica()?.prediccion_ventas.categorias ?? [];
+    return cats.reduce((acc, cat) => acc + cat.predicciones.reduce((pAcc, p) => pAcc + p.predicho, 0), 0);
+  });
+
+  readonly prediccionMesActual = computed(() => {
+    const cats = this.analitica()?.prediccion_ventas.categorias ?? [];
+    return cats.reduce((acc, cat) => acc + (cat.predicciones[0]?.predicho ?? 0), 0);
+  });
+
+  readonly totalClientesSegmentados = computed(() => {
+    return this.analitica()?.segmentacion_clientes.total_clientes ?? 0;
+  });
+
+  readonly barrasSegmentos = computed<FilaBarra[]>(() => {
+    const segs = this.analitica()?.segmentacion_clientes.segmentos ?? [];
+    const total = this.totalClientesSegmentados() || 1;
+    const colores = ['#0f766e', '#0284c7', '#64748b', '#d97706'];
+    return segs.map((s, idx) => ({
+      etiqueta: s.segmento,
+      valor: s.clientes,
+      texto: `${s.clientes} clientes (${porcentaje((s.clientes / total) * 100)})`,
+      detalle: `Recencia prom: ${s.dias_recencia_promedio}d · Frec: ${s.frecuencia_promedio} · Ticket: Bs ${moneda(s.valor_promedio)}`,
+      color: colores[idx % colores.length],
+    }));
+  });
+
+  readonly barrasPrediccionCategorias = computed<FilaBarra[]>(() => {
+    const cats = this.analitica()?.prediccion_ventas.categorias ?? [];
+    return cats.map((c) => {
+      const sumFut = c.predicciones.reduce((acc, p) => acc + p.predicho, 0);
+      const m1 = c.predicciones[0]?.predicho ?? 0;
+      const m2 = c.predicciones[1]?.predicho ?? 0;
+      const m3 = c.predicciones[2]?.predicho ?? 0;
+      return {
+        etiqueta: c.categoria,
+        valor: sumFut,
+        texto: `Bs ${moneda(sumFut)} (3 meses)`,
+        detalle: `Mes 1: Bs ${moneda(m1)} · Mes 2: Bs ${moneda(m2)} · Mes 3: Bs ${moneda(m3)}`,
+        color: '#3b82f6',
+      };
+    });
+  });
+
   constructor() {
     this.sucursales.cargar();
     effect(() => {
@@ -143,11 +190,13 @@ export class Dashboard {
     forkJoin({
       datos: this.reportes.dashboard(filtros),
       margen: this.reportes.margen(filtros),
+      ml: this.reportes.analiticaML(),
     }).subscribe({
-      next: ({ datos, margen }) => {
+      next: ({ datos, margen, ml }) => {
         if (pedido !== this.pedido) return;
         this.datos.set(datos);
         this.margen.set(margen);
+        this.analitica.set(ml);
         this.cargando.set(false);
       },
       error: (err) => {
