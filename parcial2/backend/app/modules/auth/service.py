@@ -37,13 +37,27 @@ def registrar_cliente(db: Session, data: schemas.RegistroClienteIn) -> schemas.T
 
 
 def login_tenant(db: Session, data: schemas.LoginIn) -> schemas.TokenOut:
-    tenant = db.query(Tenant).filter(Tenant.codigo == data.codigo_tenant).first()
-    if not tenant or not tenant.activo:
+    codigo = (data.codigo_tenant or "").strip().lower()
+    if codigo in ("gangaclothes", "ganga", "default"):
+        codigo = "luna"
+
+    email_clean = data.email.strip().lower()
+
+    if codigo:
+        tenant = db.query(Tenant).filter(Tenant.codigo == codigo, Tenant.activo.is_(True)).first()
+    else:
+        user_candidato = db.query(User).filter(User.email == email_clean, User.activo.is_(True)).first()
+        if user_candidato:
+            tenant = db.query(Tenant).filter(Tenant.id == user_candidato.tenant_id, Tenant.activo.is_(True)).first()
+        else:
+            tenant = None
+
+    if not tenant:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, _CREDS_INVALID)
 
     user = (
         db.query(User)
-        .filter(User.tenant_id == tenant.id, User.email == data.email)
+        .filter(User.tenant_id == tenant.id, User.email == email_clean)
         .first()
     )
     if not user or not user.activo or not verify_password(data.password, user.password_hash):
