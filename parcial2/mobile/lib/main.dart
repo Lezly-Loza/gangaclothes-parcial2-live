@@ -1,146 +1,106 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'api_service.dart';
-import 'producto_local_dao.dart';
+import 'estilo.dart';
+import 'tienda.dart';
+import 'gestion.dart';
+import 'offline.dart';
 
-final api = ApiService();
+ApiService api = ApiService();
 void main() => runApp(const GangaApp());
 
 class GangaApp extends StatelessWidget {
   const GangaApp({super.key});
-  @override Widget build(BuildContext context) => MaterialApp(
-    title: 'GangaClothes', theme: ThemeData(colorSchemeSeed: const Color(0xff263469)),
-    home: const LoginScreen());
+  @override Widget build(BuildContext context) => MaterialApp(title: 'GangaClothes',
+    debugShowCheckedModeBanner: false, theme: tema, home: const Inicio());
 }
-
-Widget field(String label, TextEditingController ctrl, {bool secret=false}) => Padding(
-  padding: const EdgeInsets.symmetric(vertical: 6),
-  child: TextField(controller: ctrl, obscureText: secret, decoration: InputDecoration(
-    labelText: label, border: const OutlineInputBorder())));
+class Inicio extends StatelessWidget {
+  const Inicio({super.key});
+  @override Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>?>(
+    future: api.sesionGuardada(), builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return snapshot.data == null ? const LoginScreen() : HomeScreen(sesion: snapshot.data!);
+    });
+}
+void entrar(BuildContext context, Map<String, dynamic> sesion) => Navigator.pushAndRemoveUntil(context,
+    MaterialPageRoute(builder: (_) => HomeScreen(sesion: sesion)), (_) => false);
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
   @override State<LoginScreen> createState() => _LoginScreenState();
 }
 class _LoginScreenState extends State<LoginScreen> {
-  final tenant=TextEditingController(text:'luna');
-  final email=TextEditingController(text:'vendedor@boutique-luna.bo');
-  final password=TextEditingController(text:'Luna12345');
-  String error='';
+  final empresa = TextEditingController(); final correo = TextEditingController(); final clave = TextEditingController();
+  bool registro = false, ocupado = false; String? error;
+  final nombre = TextEditingController(); final documento = TextEditingController(); final telefono = TextEditingController();
+  @override void dispose() { for (final c in [empresa, correo, clave, nombre, documento, telefono]) { c.dispose(); } super.dispose(); }
   Future<void> login() async {
+    if (empresa.text.trim().isEmpty || correo.text.trim().isEmpty || clave.text.isEmpty ||
+        (registro && (nombre.text.trim().isEmpty || documento.text.trim().isEmpty))) {
+      setState(() => error = 'Completa los campos obligatorios.'); return;
+    }
+    setState(() { ocupado = true; error = null; });
     try {
-      final session=await api.login({'codigo_tenant':tenant.text,'email':email.text,'password':password.text});
-      if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder:(_)=>HomeScreen(rol:(session['roles'] as List).first.toString())));
-    } catch (e) {setState(()=>error='Credenciales incorrectas o sin conexión');}
+      final datos = {'codigo_tenant': empresa.text.trim(), 'email': correo.text.trim(), 'password': clave.text,
+        if (registro) ...{'nombre': nombre.text.trim(), 'documento': documento.text.trim(), 'telefono': telefono.text.trim()}};
+      final sesion = registro ? await api.registrar(datos) : await api.login(datos);
+      if (mounted) entrar(context, sesion);
+    } catch (e) { if (mounted) setState(() => error = mensajeError(e)); }
+    finally { if (mounted) setState(() => ocupado = false); }
   }
-  @override Widget build(BuildContext context) => Scaffold(appBar:AppBar(title:const Text('GangaClothes')),
-    body:ListView(padding:const EdgeInsets.all(20),children:[const Text('Iniciar sesión',style:TextStyle(fontSize:26)),
-      field('Código de tenant',tenant),field('Correo',email),field('Contraseña',password,secret:true),
-      FilledButton(onPressed:login,child:const Text('Ingresar')),Text(error)]));
+  @override Widget build(BuildContext context) => Scaffold(body: SafeArea(child: Center(child: ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: 480), child: ListView(padding: const EdgeInsets.all(24), children: [
+      Container(padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: negro, borderRadius: BorderRadius.circular(16)),
+        child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.checkroom, color: rosa, size: 40),
+          SizedBox(height: 16), Marca(clara: true), SizedBox(height: 10), Text('Tu tienda, en un solo lugar.', style: TextStyle(color: Colors.white70))])),
+      const SizedBox(height: 28), Text(registro ? 'Crear cuenta de cliente' : 'Bienvenido de vuelta', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
+      const SizedBox(height: 8), const Text('Ingresa el código de tu empresa para continuar.', style: TextStyle(color: Colors.black54)),
+      const SizedBox(height: 20), campo('Código de empresa', empresa),
+      if (registro) ...[campo('Nombre completo', nombre), campo('Documento', documento), campo('Teléfono (opcional)', telefono)],
+      campo('Correo electrónico', correo, tipo: TextInputType.emailAddress), campo('Contraseña', clave, secreto: true),
+      if (error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(error!, style: const TextStyle(color: Colors.red))),
+      SizedBox(height: 48, child: FilledButton(onPressed: ocupado ? null : login, child: Text(ocupado ? 'Espera…' : registro ? 'Crear cuenta' : 'Iniciar sesión'))),
+      TextButton(onPressed: ocupado ? null : () => setState(() { registro = !registro; error = null; }),
+        child: Text(registro ? 'Ya tengo una cuenta' : '¿Cliente nuevo? Crear cuenta')),
+    ])))));
 }
+Widget campo(String nombre, TextEditingController c, {bool secreto = false, TextInputType? tipo}) => Padding(
+  padding: const EdgeInsets.only(bottom: 12), child: TextField(controller: c, obscureText: secreto,
+    keyboardType: tipo, decoration: InputDecoration(labelText: nombre)));
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key,required this.rol});final String rol;
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key, required this.sesion});
+  final Map<String, dynamic> sesion;
+  @override State<HomeScreen> createState() => _HomeScreenState();
+}
+class _HomeScreenState extends State<HomeScreen> {
+  int indice = 0;
   @override Widget build(BuildContext context) {
-    final pages=<String,Widget>{
-      if(rol=='vendedor'||rol=='admin') 'Clientes':const ClientesScreen(),
-      if(rol=='cliente') 'Reservar':const ReservarPrendaScreen(),
-      if(rol=='vendedor'||rol=='cliente') 'Carrito':const CarritoScreen(),
-      if(rol=='encargado') 'Anular':const AnularOperacionScreen(),
-      if(rol=='vendedor') 'Modo offline':const ModoOfflineScreen(),
-    };
-    return Scaffold(appBar:AppBar(title:Text('GangaClothes · $rol')),
-      body:ListView(children:pages.entries.map((e)=>ListTile(title:Text(e.key),trailing:const Icon(Icons.chevron_right),
-        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>e.value)))).toList()));
+    final roles = List<String>.from(widget.sesion['roles'] ?? []);
+    final permisos = List<String>.from(widget.sesion['permisos'] ?? []);
+    final cliente = roles.contains('cliente');
+    final opciones = <({String nombre, IconData icono, Widget pagina})>[
+      if (cliente) (nombre: 'Catálogo', icono: Icons.checkroom, pagina: const CatalogoScreen()),
+      if (cliente) (nombre: 'Mis reservas', icono: Icons.event_available_outlined, pagina: const MisReservasScreen()),
+      if (cliente) (nombre: 'Carrito', icono: Icons.shopping_bag_outlined, pagina: const CarritoScreen()),
+      if (cliente) (nombre: 'Mis compras', icono: Icons.receipt_long_outlined, pagina: const MisComprasScreen()),
+      if (cliente) (nombre: 'Mis pedidos', icono: Icons.local_shipping_outlined, pagina: const MisPedidosScreen()),
+      if (roles.any((r) => ['admin', 'administrador', 'vendedor', 'cliente'].contains(r)))
+        (nombre: 'Catálogo sin conexión', icono: Icons.offline_pin_outlined, pagina: ModoOfflineScreen(sesion: widget.sesion)),
+      if (permisos.contains('clientes:ver')) (nombre: 'Clientes', icono: Icons.people_outline, pagina: ClientesScreen(permisos: permisos)),
+      if (permisos.contains('ventas:anular') || permisos.contains('reservas:anular'))
+        (nombre: 'Anular operación', icono: Icons.cancel_outlined, pagina: AnularOperacionScreen(permisos: permisos)),
+    ];
+    if (indice >= opciones.length) indice = 0;
+    return Scaffold(appBar: AppBar(title: const Marca(clara: true), actions: [IconButton(tooltip: 'Cerrar sesión',
+      onPressed: () async { await api.salir(); if (context.mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false); },
+      icon: const Icon(Icons.logout))]),
+      drawer: Drawer(backgroundColor: negro, child: SafeArea(child: Column(children: [
+        ListTile(title: const Marca(clara: true), subtitle: Padding(padding: const EdgeInsets.only(top: 8), child: Text(
+          '${widget.sesion['nombre']} · ${(widget.sesion['tenant_codigo'] ?? '')}', style: const TextStyle(color: Colors.white70)))),
+        const Divider(color: Colors.white24), Expanded(child: ListView(children: [for (var i = 0; i < opciones.length; i++)
+          ListTile(selected: indice == i, selectedTileColor: const Color(0xff351927), iconColor: Colors.white70,
+            textColor: Colors.white, selectedColor: rosa, leading: Icon(opciones[i].icono), title: Text(opciones[i].nombre),
+            onTap: () { setState(() => indice = i); Navigator.pop(context); })]))]))),
+      body: opciones.isEmpty ? vacio('Tu cuenta no tiene funciones móviles asignadas.') : opciones[indice].pagina);
   }
 }
-
-class ClientesScreen extends StatefulWidget {
-  const ClientesScreen({super.key});
-  @override State<ClientesScreen> createState()=>_ClientesScreenState();
-}
-class _ClientesScreenState extends State<ClientesScreen> {
-  final q=TextEditingController();List<dynamic> clientes=[];String mensaje='';
-  @override void initState(){super.initState();buscarClientes('');}
-  Future<void> buscarClientes(String termino) async {try{final rows=await api.buscarClientes(termino);setState(()=>clientes=rows);}catch(e){setState(()=>mensaje='Sin conexión');}}
-  Future<void> crearCliente(Map<String,dynamic> datos) async {await api.crearCliente(datos);await buscarClientes(q.text);}
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Buscar clientes')),
-    body:ListView(padding:const EdgeInsets.all(16),children:[field('Nombre o documento',q),
-      FilledButton(onPressed:()=>buscarClientes(q.text),child:const Text('Buscar')),Text(mensaje),
-      ...clientes.map((c)=>ListTile(title:Text('${c['nombre']}'),subtitle:Text('${c['documento']}')))]));
-}
-
-class ReservarPrendaScreen extends StatefulWidget {
-  const ReservarPrendaScreen({super.key});
-  @override State<ReservarPrendaScreen> createState()=>_ReservarPrendaScreenState();
-}
-class _ReservarPrendaScreenState extends State<ReservarPrendaScreen> {
-  final variante=TextEditingController(text:'2'), sucursal=TextEditingController(text:'1');
-  final cliente=TextEditingController(text:'1'), cantidad=TextEditingController(text:'1');String codigo='';
-  void elegirPrenda(){variante.text='1';}
-  Future<void> reservar([dynamic varianteArg, dynamic sucursalArg, dynamic cantidadArg]) async {
-    try {final r=await api.crearReserva({'variante_id':varianteArg is int ? varianteArg : int.parse(variante.text),
-      'sucursal_id':sucursalArg is int ? sucursalArg : int.parse(sucursal.text),'cliente_id':int.parse(cliente.text),
-      'cantidad':cantidadArg is int ? cantidadArg : int.parse(cantidad.text)});setState(()=>codigo='Reserva confirmada: ${r['codigo']}');mostrarCodigo();}
-    catch(e){setState(()=>codigo='No se pudo reservar: $e');}
-  }
-  String mostrarCodigo()=>codigo;
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Reservar prenda')),
-    body:ListView(padding:const EdgeInsets.all(16),children:[field('Variante',variante),field('Sucursal',sucursal),
-      field('Cliente',cliente),field('Cantidad',cantidad),FilledButton(onPressed:()=>reservar(),child:const Text('Reservar')),Text(codigo)]));
-}
-
-class CarritoScreen extends StatefulWidget {
-  const CarritoScreen({super.key});
-  @override State<CarritoScreen> createState()=>_CarritoScreenState();
-}
-class _CarritoScreenState extends State<CarritoScreen> {
-  final variante=TextEditingController(text:'1'),cantidad=TextEditingController(text:'1');
-  final sucursal=TextEditingController(text:'1'),cliente=TextEditingController(text:'1');
-  final List<Map<String,int>> items=[];String comprobante='';
-  void agregarItem(int variante,int cant){setState(()=>items.add({'variante_id':variante,'cantidad':cant}));}
-  int calcularTotal()=>items.fold(0,(total,item)=>total+item['cantidad']!);
-  Future<void> confirmarVenta([dynamic datos]) async {try{final r=await api.registrarVenta({
-    'sucursal_id':int.parse(sucursal.text),'cliente_id':int.parse(cliente.text),
-    'forma_pago':'EFECTIVO','items':items});setState(()=>comprobante='${r['comprobante']} · Bs ${r['total']}');mostrarComprobante();}
-    catch(e){setState(()=>comprobante='No se pudo vender: $e');}}
-  String mostrarComprobante()=>comprobante;
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Carrito')),
-    body:ListView(padding:const EdgeInsets.all(16),children:[field('Variante',variante),field('Cantidad',cantidad),
-      FilledButton(onPressed:()=>agregarItem(int.parse(variante.text),int.parse(cantidad.text)),child:const Text('Agregar')),
-      ...items.map((i)=>ListTile(title:Text('Variante ${i['variante_id']} × ${i['cantidad']}'))),
-      Text('Total de unidades: ${calcularTotal()}'),field('Sucursal',sucursal),field('Cliente',cliente),
-      FilledButton(onPressed:()=>confirmarVenta(),child:const Text('Confirmar venta')),Text(comprobante)]));
-}
-
-class AnularOperacionScreen extends StatefulWidget {
-  const AnularOperacionScreen({super.key});
-  @override State<AnularOperacionScreen> createState()=>_AnularOperacionScreenState();
-}
-class _AnularOperacionScreenState extends State<AnularOperacionScreen> {
-  final id=TextEditingController(text:'1'),motivo=TextEditingController(text:'Solicitud del cliente');String resultado='';
-  int buscarOperacion()=>int.parse(id.text);
-  Future<void> anular(int id,String motivo) async {try{final r=await api.anular(id,motivo);setState(()=>resultado='Operación ${r['estado']}');mostrarAnulada();}
-    catch(e){setState(()=>resultado='No se pudo anular: $e');}}
-  String mostrarAnulada()=>resultado;
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Anular operación')),
-    body:ListView(padding:const EdgeInsets.all(16),children:[field('Venta ID',id),field('Motivo',motivo),
-      FilledButton(onPressed:()=>anular(buscarOperacion(),motivo.text),child:const Text('Anular')),Text(resultado)]));
-}
-
-class ModoOfflineScreen extends StatefulWidget {
-  const ModoOfflineScreen({super.key});
-  @override State<ModoOfflineScreen> createState()=>_ModoOfflineScreenState();
-}
-class _ModoOfflineScreenState extends State<ModoOfflineScreen> {
-  final dao=ProductoLocalDao();int disponibles=0;String fecha='';
-  @override void initState(){super.initState();abrirModoOffline();}
-  Future<void> abrirModoOffline() async {setState(()=>disponibles=0);final n=await dao.contarProductos();final f=await dao.fechaDescarga();setState((){disponibles=n;fecha=f;});}
-  Future<void> prepararOffline([dynamic filtros]) async {try{final data=await api.descargarCatalogo({'sucursal_id':1});
-    await dao.guardarCatalogoLocal(data);}catch(e){/* Conserva datos locales. */}await abrirModoOffline();mostrarDisponibles();}
-  int mostrarDisponibles()=>disponibles;
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Modo offline')),
-    body:ListView(padding:const EdgeInsets.all(16),children:[FilledButton(onPressed:()=>prepararOffline(),child:const Text('Preparar offline')),
-      Text('$disponibles productos disponibles offline',style:const TextStyle(fontSize:22)),Text('Última descarga: $fecha')]));
-}
-
