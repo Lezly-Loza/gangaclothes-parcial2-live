@@ -37,18 +37,11 @@ export const MENU: GrupoMenu[] = [
   },
   {
     titulo: 'General',
-    items: [{ etiqueta: 'Panel', ruta: '/admin', roles: ['administrador', 'encargado', 'cajero'], disponible: true }],
+    items: [{ etiqueta: 'Dashboard', ruta: '/admin/dashboard', roles: ['administrador', 'encargado', 'cajero'], disponible: true }],
   },
   {
     titulo: 'Analisis',
     items: [
-      {
-        etiqueta: 'Dashboard',
-        ruta: '/admin/dashboard',
-        roles: ['administrador', 'encargado'],
-        permiso: 'reportes:ver',
-        disponible: true,
-      },
       {
         etiqueta: 'Reportes',
         ruta: '/admin/reportes',
