@@ -20,11 +20,13 @@ class Inicio extends StatelessWidget {
   @override Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>?>(
     future: api.sesionGuardada(), builder: (context, snapshot) {
       if (snapshot.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-      return snapshot.data == null ? const LoginScreen() : HomeScreen(sesion: snapshot.data!);
+      return snapshot.data == null ? const LoginScreen() : pantallaSesion(snapshot.data!);
     });
 }
+Widget pantallaSesion(Map<String, dynamic> sesion) => sesion['kind'] == 'super'
+    ? SuperHomeScreen(sesion: sesion) : HomeScreen(sesion: sesion);
 void entrar(BuildContext context, Map<String, dynamic> sesion) => Navigator.pushAndRemoveUntil(context,
-    MaterialPageRoute(builder: (_) => HomeScreen(sesion: sesion)), (_) => false);
+    MaterialPageRoute(builder: (_) => pantallaSesion(sesion)), (_) => false);
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,19 +34,19 @@ class LoginScreen extends StatefulWidget {
 }
 class _LoginScreenState extends State<LoginScreen> {
   final empresa = TextEditingController(); final correo = TextEditingController(); final clave = TextEditingController();
-  bool registro = false, ocupado = false; String? error;
+  bool registro = false, ocupado = false, superadmin = false; String? error;
   final nombre = TextEditingController(); final documento = TextEditingController(); final telefono = TextEditingController();
   @override void dispose() { for (final c in [empresa, correo, clave, nombre, documento, telefono]) { c.dispose(); } super.dispose(); }
   Future<void> login() async {
-    if (empresa.text.trim().isEmpty || correo.text.trim().isEmpty || clave.text.isEmpty ||
+    if ((!superadmin && empresa.text.trim().isEmpty) || correo.text.trim().isEmpty || clave.text.isEmpty ||
         (registro && (nombre.text.trim().isEmpty || documento.text.trim().isEmpty))) {
       setState(() => error = 'Completa los campos obligatorios.'); return;
     }
     setState(() { ocupado = true; error = null; });
     try {
-      final datos = {'codigo_tenant': empresa.text.trim(), 'email': correo.text.trim(), 'password': clave.text,
+      final datos = {if (!superadmin) 'codigo_tenant': empresa.text.trim(), 'email': correo.text.trim(), 'password': clave.text,
         if (registro) ...{'nombre': nombre.text.trim(), 'documento': documento.text.trim(), 'telefono': telefono.text.trim()}};
-      final sesion = registro ? await api.registrar(datos) : await api.login(datos);
+      final sesion = registro ? await api.registrar(datos) : superadmin ? await api.loginSuper(datos) : await api.login(datos);
       if (mounted) entrar(context, sesion);
     } catch (e) { if (mounted) setState(() => error = mensajeError(e)); }
     finally { if (mounted) setState(() => ocupado = false); }
@@ -55,19 +57,57 @@ class _LoginScreenState extends State<LoginScreen> {
         child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.checkroom, color: rosa, size: 40),
           SizedBox(height: 16), Marca(clara: true), SizedBox(height: 10), Text('Tu tienda, en un solo lugar.', style: TextStyle(color: Colors.white70))])),
       const SizedBox(height: 28), Text(registro ? 'Crear cuenta de cliente' : 'Bienvenido de vuelta', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-      const SizedBox(height: 8), const Text('Ingresa el código de tu empresa para continuar.', style: TextStyle(color: Colors.black54)),
-      const SizedBox(height: 20), campo('Código de empresa', empresa),
+      if (!registro) ...[const SizedBox(height: 12), Wrap(spacing: 8, children: [
+        ChoiceChip(label: const Text('Mi empresa'), selected: !superadmin, onSelected: ocupado ? null : (_) => setState(() { superadmin = false; error = null; })),
+        ChoiceChip(label: const Text('Superadministrador'), selected: superadmin, onSelected: ocupado ? null : (_) => setState(() { superadmin = true; error = null; })),
+      ])],
+      const SizedBox(height: 8), Text(superadmin ? 'Acceso a la plataforma.' : 'Ingresa el código de tu empresa para continuar.', style: const TextStyle(color: Colors.black54)),
+      const SizedBox(height: 20), if (!superadmin) campo('Código de empresa', empresa),
       if (registro) ...[campo('Nombre completo', nombre), campo('Documento', documento), campo('Teléfono (opcional)', telefono)],
       campo('Correo electrónico', correo, tipo: TextInputType.emailAddress), campo('Contraseña', clave, secreto: true),
       if (error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(error!, style: const TextStyle(color: Colors.red))),
       SizedBox(height: 48, child: FilledButton(onPressed: ocupado ? null : login, child: Text(ocupado ? 'Espera…' : registro ? 'Crear cuenta' : 'Iniciar sesión'))),
-      TextButton(onPressed: ocupado ? null : () => setState(() { registro = !registro; error = null; }),
+      if (!superadmin) TextButton(onPressed: ocupado ? null : () => setState(() { registro = !registro; error = null; }),
         child: Text(registro ? 'Ya tengo una cuenta' : '¿Cliente nuevo? Crear cuenta')),
     ])))));
 }
 Widget campo(String nombre, TextEditingController c, {bool secreto = false, TextInputType? tipo}) => Padding(
   padding: const EdgeInsets.only(bottom: 12), child: TextField(controller: c, obscureText: secreto,
     keyboardType: tipo, decoration: InputDecoration(labelText: nombre)));
+
+class SuperHomeScreen extends StatefulWidget {
+  const SuperHomeScreen({super.key, required this.sesion});
+  final Map<String, dynamic> sesion;
+  @override State<SuperHomeScreen> createState() => _SuperHomeScreenState();
+}
+class _SuperHomeScreenState extends State<SuperHomeScreen> {
+  late Future<List<dynamic>> datos;
+  @override void initState() { super.initState(); datos = cargar(); }
+  Future<List<dynamic>> cargar() => Future.wait([api.get('/tenants'), api.get('/planes')]);
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Plataforma'), actions: [IconButton(tooltip: 'Cerrar sesión', icon: const Icon(Icons.logout),
+      onPressed: () async { await api.salir(); if (context.mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false); })]),
+    body: FutureBuilder<List<dynamic>>(future: datos, builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+      if (snapshot.hasError) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Text('No se pudieron cargar empresas y planes.'),
+        TextButton(onPressed: () => setState(() => datos = cargar()), child: const Text('Reintentar'))]));
+      final empresas = mapas(snapshot.data![0]), planes = mapas(snapshot.data![1]);
+      return ListView(padding: const EdgeInsets.all(20), children: [
+        Text('Hola, ${widget.sesion['nombre']}', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 8), const Text('Consulta empresas y planes. Para administrarlos, usa la web.'),
+        const SizedBox(height: 20), Text('Empresas', style: Theme.of(context).textTheme.titleLarge),
+        if (empresas.isEmpty) const Text('No hay empresas registradas.'),
+        for (final e in empresas) Card(child: ListTile(title: Text('${e['razon_social']}'),
+          subtitle: Text('${e['codigo']} · ${e['plan_actual'] ?? 'Sin plan'}'))),
+        const SizedBox(height: 20), Text('Planes y precios', style: Theme.of(context).textTheme.titleLarge),
+        if (planes.isEmpty) const Text('No hay planes registrados.'),
+        for (final p in planes) Card(child: ListTile(title: Text('${p['nombre']}'),
+          subtitle: Text('${p['max_sucursales']} sucursales · ${p['max_usuarios']} usuarios'),
+          trailing: Text('${bs(p['precio_mensual'])}/mes'))),
+      ]);
+    }));
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.sesion});

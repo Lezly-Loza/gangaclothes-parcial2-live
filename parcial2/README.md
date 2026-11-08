@@ -7,6 +7,43 @@ por defecto) · Angular · Flutter.
 
 ## Estado de la integración
 
+### Reportes por voz, analítica y respaldos programados
+
+En **Reportes**, dicta o escribe una pregunta y genera el reporte: se muestra
+una gráfica de las ventas reales del periodo seleccionado y se puede escuchar
+la respuesta. El dictado usa el reconocimiento del navegador, necesita su
+permiso de micrófono y puede requerir Internet; no todos los navegadores lo
+admiten. En el asistente del negocio también se puede dictar. Gemini requiere
+una clave `GEMINI_API` en el backend; sin ella se muestra un resumen de datos
+reales, identificado como tal, que no interpreta libremente la pregunta.
+
+En **Dashboard**, la predicción usa ventas pagadas de la empresa y sucursal
+seleccionadas. Con al menos 21 días se compara la regresión lineal con un
+promedio por día de semana, probando ambos en los últimos siete días antes de
+entrenar el elegido sobre todo el periodo. Se muestra el error absoluto medio.
+Es un pronóstico exploratorio, no una garantía; con poca historia puede no
+estar disponible. El análisis no envía datos personales a Gemini.
+
+En **Respaldos**, además de descargar una copia manual, cada empresa dispone
+de una copia diaria a las 02:00 (hora de Bolivia) por defecto y puede cambiar
+esa hora, desactivar el respaldo diario o programar una copia adicional en una
+fecha concreta. Se guardan en `parcial2/backend/.respaldos/<empresa>/` (o el
+directorio definido por `RESPALDOS_DIRECTORIO`); contienen datos privados y
+deben protegerse y descargarse a otro dispositivo. La aplicación debe estar
+encendida para ejecutar el programador, que revisa cada 30 segundos; si estuvo
+apagada durante la hora programada, intenta crear la copia al arrancar. Se
+recomienda ejecutar un único proceso servidor para evitar ejecuciones dobles.
+Las operaciones offline no sincronizadas no se incluyen.
+
+Las copias en el mismo disco no protegen contra una pérdida de ese disco. El
+disco efímero del plan gratuito de Render tampoco garantiza conservarlas al
+reiniciar o redesplegar y el servicio puede dormirse: **no es un respaldo
+automático confiable en producción** sin almacenamiento externo persistente y
+un programador que funcione aun con la aplicación dormida. No se ha conectado
+ese servicio externo. La restauración disponible es en una base SQLite nueva
+mediante la herramienta documentada abajo, no una restauración automática de
+PostgreSQL.
+
 Para trabajar en la versión integrada, inicia el backend y la web de esta
 carpeta. La aplicación original de la raíz se conserva como referencia y usa
 otra base de datos; sus datos no se han migrado automáticamente a `parcial2`.

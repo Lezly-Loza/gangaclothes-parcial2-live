@@ -115,6 +115,7 @@ def init_db() -> None:
     """Crea tablas si no existen. Importa aqui para registrar modelos."""
     from ..models import tenant, plan, suscripcion, user, superadmin, sucursal, operacion, negocio  # noqa: F401
 
+    from ..modules.respaldos import programacion  # noqa: F401
     Base.metadata.create_all(bind=engine)
     # Las bases existentes reciben las tablas nuevas sin borrar datos. Los
     # roles iniciales se crean por tenant y no se duplican en siguientes arranques.

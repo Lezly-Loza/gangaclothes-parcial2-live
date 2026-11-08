@@ -31,6 +31,7 @@ class ApiService {
     return result;
   }
   Future<Map<String, dynamic>> login(Map<String, dynamic> dto) async => _saveSession((await _dio.post('/auth/login', data: dto)).data);
+  Future<Map<String, dynamic>> loginSuper(Map<String, dynamic> dto) async => _saveSession((await _dio.post('/auth/super/login', data: dto)).data);
   Future<Map<String, dynamic>> registrar(Map<String, dynamic> dto) async => _saveSession((await _dio.post('/auth/register', data: dto)).data);
   Future<Map<String, dynamic>?> sesionGuardada() async {
     final raw = (await SharedPreferences.getInstance()).getString('last_session');
