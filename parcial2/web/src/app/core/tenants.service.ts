@@ -14,6 +14,9 @@ export interface Tenant {
   activo: boolean;
   plan_actual?: string | null;
   fecha_fin_suscripcion?: string | null;
+  sucursales_count?: number;
+  sucursales_nombres?: string[];
+  usuarios_count?: number;
 }
 
 export interface AdminInicialIn {

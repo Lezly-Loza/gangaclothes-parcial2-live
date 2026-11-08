@@ -129,7 +129,7 @@
               <tr>
                 <th>Código</th>
                 <th>Razón Social</th>
-                <th>NIT</th>
+                <th>Sucursales</th>
                 <th>Estado</th>
               </tr>
             </thead>
@@ -138,7 +138,9 @@
                 <tr>
                   <td><span class="badge-rol">{{ emp.codigo }}</span></td>
                   <td><b>{{ emp.razon_social }}</b></td>
-                  <td class="mono">{{ emp.nit }}</td>
+                  <td>
+                    <span class="badge-rol">{{ emp.sucursales_count ?? 1 }} {{ (emp.sucursales_count ?? 1) === 1 ? 'sucursal' : 'sucursales' }}</span>
+                  </td>
                   <td><span class="badge-part text-ok">Activa</span></td>
                 </tr>
               }

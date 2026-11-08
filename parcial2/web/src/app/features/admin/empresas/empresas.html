@@ -30,6 +30,7 @@
           <th>NIT</th>
           <th>Correo</th>
           <th>Plan</th>
+          <th>Sucursales</th>
           <th>Vence</th>
           <th>Estado</th>
         </tr>
@@ -45,6 +46,16 @@
             <td>
               @if (e.plan_actual) { <span class="estado rosa">{{ e.plan_actual }}</span> }
               @else { <span class="mensaje">sin plan</span> }
+            </td>
+            <td>
+              <span class="badge-sucursales">{{ e.sucursales_count ?? 1 }} {{ (e.sucursales_count ?? 1) === 1 ? 'sucursal' : 'sucursales' }}</span>
+              @if (e.sucursales_nombres && e.sucursales_nombres.length > 0) {
+                <div class="mini-sucursales">
+                  @for (nom of e.sucursales_nombres; track nom) {
+                    <span class="chip-suc">{{ nom }}</span>
+                  }
+                </div>
+              }
             </td>
             <td class="mono">{{ fecha(e.fecha_fin_suscripcion) }}</td>
             <td>

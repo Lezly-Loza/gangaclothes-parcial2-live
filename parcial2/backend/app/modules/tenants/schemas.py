@@ -40,6 +40,9 @@ class TenantOut(BaseModel):
 class TenantResumenOut(TenantOut):
     plan_actual: str | None = None
     fecha_fin_suscripcion: date | None = None
+    sucursales_count: int = 0
+    sucursales_nombres: list[str] = []
+    usuarios_count: int = 0
 
 
 class TenantUpdateIn(BaseModel):

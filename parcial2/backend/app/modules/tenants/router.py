@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from ...core.deps import get_db, require_super
 from ...core.database import TenantScope
-from ...models import Plan, Suscripcion, Tenant
+from ...models import Plan, Suscripcion, Tenant, Sucursal, User
 from . import schemas, service
 
 
@@ -38,6 +38,8 @@ def listar_empresas(
         )
         plan_nombre = sub[1].nombre if sub else None
         fecha_fin = sub[0].fecha_fin if sub else None
+        sucs = db.query(Sucursal).filter(Sucursal.tenant_id == t.id).all()
+        u_count = db.query(User).filter(User.tenant_id == t.id).count()
         resumen.append(
             schemas.TenantResumenOut(
                 id=t.id,
@@ -51,6 +53,9 @@ def listar_empresas(
                 created_at=t.created_at,
                 plan_actual=plan_nombre,
                 fecha_fin_suscripcion=fecha_fin,
+                sucursales_count=len(sucs),
+                sucursales_nombres=[s.nombre for s in sucs],
+                usuarios_count=u_count,
             )
         )
     return resumen
