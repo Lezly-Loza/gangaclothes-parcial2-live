@@ -19,8 +19,14 @@ from .config import get_settings
 
 settings = get_settings()
 
-connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
-engine = create_engine(settings.database_url, future=True, connect_args=connect_args)
+database_url = settings.database_url
+if database_url.startswith("postgres://"):
+    database_url = "postgresql://" + database_url[len("postgres://"):]
+es_sqlite = database_url.startswith("sqlite")
+if not es_sqlite and settings.jwt_secret == "cambia-esto-en-produccion-por-un-secret-largo-y-aleatorio":
+    raise RuntimeError("Configura un JWT_SECRET propio antes de conectar una base de producción")
+connect_args = {"check_same_thread": False} if es_sqlite else {}
+engine = create_engine(database_url, future=True, connect_args=connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
 
