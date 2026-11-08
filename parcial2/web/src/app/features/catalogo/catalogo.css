@@ -289,3 +289,227 @@ h1 {
     min-height: 0;
   }
 }
+
+/* ---------------------------------- favoritos y reseñas */
+.tarjeta-caja {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.btn-favorito-tarjeta {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  z-index: 2;
+  transition: all 0.15s ease;
+}
+
+.btn-favorito-tarjeta:hover,
+.btn-favorito-tarjeta.activo {
+  background: #ffe4e6;
+  border-color: #f43f5e;
+  color: #e11d48;
+}
+
+.calificacion-mini {
+  font-size: 11px;
+  font-weight: 700;
+  color: #d97706;
+  margin-bottom: 4px;
+}
+
+.fila-titulo-modal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fila-titulo-modal h2 {
+  margin: 0;
+}
+
+.btn-favorito-modal {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+
+.btn-favorito-modal:hover,
+.btn-favorito-modal.activo {
+  background: #ffe4e6;
+  border-color: #f43f5e;
+  color: #e11d48;
+}
+
+.calificacion-promedio-linea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px 0;
+}
+
+.calificacion-promedio-linea .estrellas {
+  font-size: 13px;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.calificacion-promedio-linea .opiniones {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Sección de reseñas */
+.seccion-resenas {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1.5px solid var(--linea);
+}
+
+.resenas-titulo {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: var(--t-alto);
+}
+
+.resenas-vacio {
+  font-size: 13px;
+  color: var(--gris);
+  margin-bottom: 16px;
+}
+
+.lista-resenas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.tarjeta-resena {
+  background: #f8fafc;
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.resena-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.resena-autor {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--t-alto);
+}
+
+.resena-estrellas {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.resena-estrellas .dorada {
+  color: #f59e0b;
+}
+
+.resena-fecha {
+  font-size: 11px;
+  color: var(--gris);
+  margin-left: auto;
+}
+
+.resena-comentario {
+  font-size: 12.5px;
+  margin: 0;
+  color: var(--t-alto);
+  line-height: 1.4;
+}
+
+/* Formulario nueva reseña */
+.formulario-resena {
+  background: #fff;
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.formulario-resena h4 {
+  margin: 0 0 10px 0;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.selector-calificacion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.selector-calificacion .lbl {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gris);
+}
+
+.estrellas-selector {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-estrella {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: color 0.1s;
+}
+
+.btn-estrella.activa {
+  color: #f59e0b;
+}
+
+.campo-comentario {
+  width: 100%;
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.campo-comentario:focus {
+  outline: none;
+  border-color: var(--ganga);
+}
+
+.btn-publicar-resena {
+  padding: 8px 16px;
+  font-size: 12.5px;
+}

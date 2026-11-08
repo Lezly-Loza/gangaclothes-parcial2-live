@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ...core.database import TenantScope
-from ...core.deps import get_db, require_roles
+from ...core.deps import get_db, require_roles, require_tenant
 from ...models import (CarritoCliente, CitaReserva, Cliente, Color, DatosComplementarios, DetalleReserva,
-    DetalleVenta, Envio, Inventario, Pago, Producto, Reserva, Sucursal, Talla, Variante, Venta)
+    DetalleVenta, Envio, Inventario, Pago, PrendaFavorita, PrendaResena, Producto, Reserva, Sucursal, Talla, User, Variante, Venta)
 from ..productos.promociones import precio_promocional
 from ..reservas import service as reservas
 from . import schemas, service
@@ -31,6 +31,10 @@ class CompraIn(BaseModel):
     longitud: float | None = Field(default=None, ge=-180, le=180)
     referencia: str | None = Field(default=None, max_length=300)
     telefono: str | None = Field(default=None, max_length=50)
+
+class ResenaIn(BaseModel):
+    calificacion: int = Field(ge=1, le=5)
+    comentario: str = Field(min_length=3, max_length=1000)
 
 class ReservaIn(BaseModel):
     sucursal_id: int
@@ -220,3 +224,105 @@ def mis_pedidos(scope: TenantScope = Depends(cliente_scope), db: Session = Depen
     c = cliente(db, scope); tid = scope.tenant_id
     envios = db.query(Envio).join(Venta, Venta.id == Envio.venta_id).filter(Envio.tenant_id == tid, Venta.tenant_id == tid, Venta.cliente_id == c.id).order_by(Envio.id.desc()).all()
     return [salida_envio(db, tid, e) for e in envios]
+
+
+@router.get('/favoritos/ids')
+def mis_favoritos_ids(scope: TenantScope = Depends(cliente_scope), db: Session = Depends(get_db)):
+    favs = db.query(PrendaFavorita).filter_by(tenant_id=scope.tenant_id, usuario_id=scope.user_id).all()
+    return [f.producto_id for f in favs]
+
+
+@router.get('/favoritos')
+def mis_favoritos(scope: TenantScope = Depends(cliente_scope), db: Session = Depends(get_db)):
+    tid = scope.tenant_id
+    favs = db.query(PrendaFavorita).filter_by(tenant_id=tid, usuario_id=scope.user_id).order_by(PrendaFavorita.id.desc()).all()
+    resultado = []
+    extras = {e.registro_id: e.datos or {} for e in db.query(DatosComplementarios).filter_by(tenant_id=tid, tipo='prendas').all()}
+    for f in favs:
+        p = db.query(Producto).filter_by(tenant_id=tid, id=f.producto_id).first()
+        if not p or not p.activo: continue
+        extra = extras.get(p.id, {})
+        final, promo = precio_promocional(db, tid, p.id, p.precio_base)
+        variantes = db.query(Variante).filter_by(tenant_id=tid, producto_id=p.id, activo=True).all()
+        stock_total = sum(i.stock - i.reservado for i in db.query(Inventario).filter(Inventario.tenant_id == tid, Inventario.variante_id.in_([v.id for v in variantes])).all()) if variantes else 0
+        resultado.append({
+            'favorito_id': f.id,
+            'producto_id': p.id,
+            'nombre': p.nombre,
+            'descripcion': p.descripcion,
+            'marca': extra.get('marca'),
+            'imagen_url': p.imagen_url,
+            'precio_base': float(p.precio_base),
+            'precio_final': float(final),
+            'en_promocion': bool(promo),
+            'promocion_etiqueta': f'{promo.valor:g}%' if promo and promo.tipo_descuento == 'porcentaje' else (f'Bs {promo.valor:g}' if promo else None),
+            'stock_disponible': max(0, stock_total),
+            'fecha_guardado': f.fecha.isoformat(),
+        })
+    return resultado
+
+
+@router.post('/favoritos/{producto_id}')
+def agregar_favorito(producto_id: int, scope: TenantScope = Depends(cliente_scope), db: Session = Depends(get_db)):
+    tid = scope.tenant_id
+    p = db.query(Producto).filter_by(tenant_id=tid, id=producto_id, activo=True).first()
+    if not p: raise HTTPException(404, 'Prenda no encontrada')
+    existente = db.query(PrendaFavorita).filter_by(tenant_id=tid, usuario_id=scope.user_id, producto_id=producto_id).first()
+    if not existente:
+        nuevo = PrendaFavorita(tenant_id=tid, usuario_id=scope.user_id, producto_id=producto_id, fecha=datetime.utcnow())
+        db.add(nuevo)
+        db.commit()
+    return {'ok': True, 'producto_id': producto_id, 'favorito': True}
+
+
+@router.delete('/favoritos/{producto_id}')
+def eliminar_favorito(producto_id: int, scope: TenantScope = Depends(cliente_scope), db: Session = Depends(get_db)):
+    tid = scope.tenant_id
+    existente = db.query(PrendaFavorita).filter_by(tenant_id=tid, usuario_id=scope.user_id, producto_id=producto_id).first()
+    if existente:
+        db.delete(existente)
+        db.commit()
+    return {'ok': True, 'producto_id': producto_id, 'favorito': False}
+
+
+@router.get('/prendas/{producto_id}/resenas')
+def ver_resenas(producto_id: int, scope: TenantScope = Depends(require_tenant), db: Session = Depends(get_db)):
+    tid = scope.tenant_id
+    resenas = db.query(PrendaResena).filter_by(tenant_id=tid, producto_id=producto_id).order_by(PrendaResena.id.desc()).all()
+    total = len(resenas)
+    promedio = sum(r.calificacion for r in resenas) / total if total > 0 else 0.0
+    return {
+        'producto_id': producto_id,
+        'total': total,
+        'promedio': round(promedio, 1),
+        'resenas': [{
+            'id': r.id,
+            'autor': r.autor_nombre,
+            'calificacion': r.calificacion,
+            'comentario': r.comentario,
+            'fecha': r.fecha.isoformat(),
+            'es_propia': (r.usuario_id == scope.user_id) if hasattr(scope, 'user_id') else False
+        } for r in resenas]
+    }
+
+
+@router.post('/prendas/{producto_id}/resenas')
+def crear_resena(producto_id: int, body: ResenaIn, scope: TenantScope = Depends(cliente_scope), db: Session = Depends(get_db)):
+    tid = scope.tenant_id
+    p = db.query(Producto).filter_by(tenant_id=tid, id=producto_id, activo=True).first()
+    if not p: raise HTTPException(404, 'Prenda no encontrada')
+    u = db.query(User).filter_by(tenant_id=tid, id=scope.user_id).first()
+    autor = u.nombre if u else 'Cliente'
+    resena = PrendaResena(
+        tenant_id=tid,
+        producto_id=producto_id,
+        usuario_id=scope.user_id,
+        autor_nombre=autor,
+        calificacion=body.calificacion,
+        comentario=body.comentario.strip(),
+        fecha=datetime.utcnow()
+    )
+    db.add(resena)
+    db.commit()
+    return {'ok': True, 'mensaje': 'Reseña registrada con éxito', 'id': resena.id}
+

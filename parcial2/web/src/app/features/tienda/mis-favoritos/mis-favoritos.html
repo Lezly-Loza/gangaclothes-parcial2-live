@@ -1,0 +1,78 @@
+<app-barra-tienda />
+
+<main class="contenedor">
+  <div class="cabecera">
+    <div>
+      <h1>Mis prendas favoritas</h1>
+      <p class="subtitulo">Prendas y estilos que guardaste para revisar, reservar o comprar más tarde.</p>
+    </div>
+    <a routerLink="/catalogo" class="btn linea">Ir al catálogo</a>
+  </div>
+
+  @if (cargando()) {
+    <div class="vacio">
+      <p>Cargando tus prendas favoritas…</p>
+    </div>
+  } @else if (error()) {
+    <div class="vacio error">
+      <p>{{ error() }}</p>
+      <button type="button" class="btn linea" (click)="cargarFavoritos()">Reintentar</button>
+    </div>
+  } @else if (favoritos().length === 0) {
+    <div class="vacio">
+      <p>Aún no guardaste ninguna prenda como favorita.</p>
+      <p class="pista">Explora nuestro catálogo y marca el botón de favorito en las prendas que más te gusten.</p>
+      <a routerLink="/catalogo" class="btn rosa">Explorar catálogo</a>
+    </div>
+  } @else {
+    <div class="cuadricula">
+      @for (item of favoritos(); track item.producto_id) {
+        <article class="tarjeta" (click)="verEnCatalogo(item)">
+          <div class="foto">
+            @if (item.imagen_url) {
+              <img [src]="item.imagen_url" [alt]="item.nombre" />
+            } @else {
+              <div class="sin-foto">Prenda</div>
+            }
+            @if (item.en_promocion) {
+              <span class="insignia-promo">{{ item.promocion_etiqueta }}</span>
+            }
+            <button type="button" class="btn-favorito activo" title="Quitar de favoritos" (click)="quitar(item, $event)">
+              Quitar
+            </button>
+          </div>
+
+          <div class="cuerpo">
+            <h2 class="nombre">{{ item.nombre }}</h2>
+            @if (item.marca) {
+              <p class="marca">{{ item.marca }}</p>
+            }
+
+            <div class="precios">
+              @if (item.en_promocion) {
+                <span class="anterior">Bs {{ item.precio_base.toFixed(2) }}</span>
+                <span class="precio promo">Bs {{ item.precio_final.toFixed(2) }}</span>
+              } @else {
+                <span class="precio">Bs {{ item.precio_final.toFixed(2) }}</span>
+              }
+            </div>
+
+            <div class="estado-stock">
+              @if (item.stock_disponible > 0) {
+                <span class="stock ok">{{ item.stock_disponible }} unidades disponibles</span>
+              } @else {
+                <span class="stock bajo">Agotado temporalmente</span>
+              }
+            </div>
+
+            <div class="acciones">
+              <button type="button" class="btn rosa btn-accion" (click)="verEnCatalogo(item)">
+                Ver en catálogo
+              </button>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</main>

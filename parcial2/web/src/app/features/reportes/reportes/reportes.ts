@@ -211,18 +211,28 @@ export class Reportes {
     this.hasta.set(isoLocal());
   }
 
-  exportar(): void {
+  exportarFormato(formato: 'excel' | 'pdf' | 'json'): void {
+    if (formato === 'pdf') {
+      this.imprimir();
+      this.avisos.ok('Vista de impresión oficial activada para guardar o exportar en PDF.');
+      return;
+    }
     this.exportando.set(true);
-    this.servicio.descargarCsv(this.reporte(), this.filtros()).subscribe({
+    this.servicio.descargarArchivo(this.reporte(), this.filtros(), formato).subscribe({
       next: (nombre) => {
         this.exportando.set(false);
-        this.avisos.ok(`Se descargo ${nombre}: se abre directo en Excel.`);
+        const tipoDesc = formato === 'excel' ? 'formato Excel' : 'formato JSON';
+        this.avisos.ok(`Se descargó ${nombre} correctamente en ${tipoDesc}.`);
       },
       error: (err) => {
         this.exportando.set(false);
         this.avisos.error(mensajeDeError(err, 'No se pudo exportar el reporte.'));
       },
     });
+  }
+
+  exportar(): void {
+    this.exportarFormato('excel');
   }
 
   imprimir(): void {

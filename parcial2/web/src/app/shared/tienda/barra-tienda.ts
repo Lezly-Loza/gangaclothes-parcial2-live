@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
+import { PushService } from '../../core/push.service';
 import { SesionStore } from '../../core/sesion';
 
 /**
@@ -18,6 +19,7 @@ import { SesionStore } from '../../core/sesion';
         <a routerLink="/catalogo" routerLinkActive="on">Catalogo</a>
         @if (esCliente()) {
           <a routerLink="/modo-offline" routerLinkActive="on">Catálogo sin conexión</a>
+          <a routerLink="/mis-favoritos" routerLinkActive="on">Mis favoritos</a>
           <a routerLink="/mis-reservas" routerLinkActive="on">Mis reservas</a>
           <a routerLink="/mis-compras" routerLinkActive="on">Mis compras</a>
           <a routerLink="/mis-envios" routerLinkActive="on">Mis pedidos</a>
@@ -26,6 +28,11 @@ import { SesionStore } from '../../core/sesion';
       </nav>
 
       @if (sesion.autenticado()) {
+        @if (push.soportado && !push.habilitado()) {
+          <button type="button" class="btn linea acceso notif-btn" (click)="push.solicitarPermiso()" title="Activar avisos en tiempo real">
+            Activar Push
+          </button>
+        }
         <span class="yo">{{ sesion.nombreCompleto() }} · {{ sesion.rolPrincipal() }}</span>
         @if (esPersonal()) {
           <a class="btn linea acceso" routerLink="/admin">Ir al panel</a>
@@ -75,6 +82,11 @@ import { SesionStore } from '../../core/sesion';
       padding: 5px 13px;
       color: var(--gris);
     }
+    .notif-btn {
+      color: #e11d48;
+      border-color: #f43f5e;
+      background: #fff1f2;
+    }
     .acceso {
       padding: 6px 13px;
       font-size: 11.5px;
@@ -87,6 +99,7 @@ import { SesionStore } from '../../core/sesion';
 export class BarraTienda {
   readonly auth = inject(AuthService);
   readonly sesion = inject(SesionStore);
+  readonly push = inject(PushService);
   private router = inject(Router);
 
   readonly esCliente = computed(() => this.sesion.tieneAlgunRol('cliente'));

@@ -1,6 +1,7 @@
 """Reportes del tenant. Costos y ganancias usan los costos actuales conocidos."""
 import csv
 import io
+import json
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
@@ -163,10 +164,28 @@ def _csv(nombre, filas):
         claves = list(filas[0])
         escritor = csv.DictWriter(salida, fieldnames=claves, extrasaction="ignore")
         escritor.writeheader()
-        escritor.writerows({k: ("'" + v if isinstance(v, str) and v.lstrip().startswith(("=", "+", "-", "@")) else v)
+        escritor.writerows({k: ("'" + str(v) if isinstance(v, str) and str(v).lstrip().startswith(("=", "+", "-", "@")) else v)
                             for k, v in fila.items()} for fila in filas)
     return Response(content="\ufeff" + salida.getvalue(), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="{nombre}.csv"'})
+
+
+def _excel(nombre, filas):
+    salida = io.StringIO(newline="")
+    if filas:
+        claves = list(filas[0])
+        escritor = csv.DictWriter(salida, fieldnames=claves, delimiter=";", extrasaction="ignore")
+        escritor.writeheader()
+        escritor.writerows({k: ("'" + str(v) if isinstance(v, str) and str(v).lstrip().startswith(("=", "+", "-", "@")) else v)
+                            for k, v in fila.items()} for fila in filas)
+    return Response(content="\ufeff" + salida.getvalue(), media_type="application/vnd.ms-excel; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{nombre}_excel.csv"'})
+
+
+def _json(nombre, datos):
+    contenido = json.dumps(datos, ensure_ascii=False, indent=2, default=str)
+    return Response(content=contenido, media_type="application/json; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{nombre}.json"'})
 
 
 @router.get("/ventas")
@@ -184,6 +203,8 @@ def ventas(desde: date | None = None, hasta: date | None = None, sucursal_id: in
         return (valor, f"Semana del {valor}" if agrupar == "semana" else valor)
     filas = [{k: v[k] for k in ("id", "fecha", "nro_comprobante", "sucursal", "canal", "unidades", "subtotal", "descuento", "total", "ganancia")} for v in vs]
     if formato == "csv": return _csv("ventas", filas)
+    if formato in ("excel", "xlsx"): return _excel("ventas", filas)
+    if formato == "json": return _json("ventas", {"totales": _totales(vs), "ventas": filas})
     return {"periodo": {"desde": desde, "hasta": hasta}, "totales": _totales(vs),
             "por_periodo": _grupos(vs, periodo), "por_sucursal": _grupos(vs, lambda v: (v["sucursal_id"], v["sucursal"])),
             "por_canal": _grupos(vs, lambda v: (v["canal"], v["canal"])),
@@ -197,7 +218,10 @@ def inventario(desde: date | None = None, hasta: date | None = None, sucursal_id
     desde, hasta = _periodo(desde, hasta)
     if sucursal_id and not db.query(Sucursal).filter_by(tenant_id=scope.tenant_id, id=sucursal_id).first(): raise HTTPException(404, "Sucursal no encontrada")
     resultado = _inventario(db, scope.tenant_id, desde, hasta, sucursal_id)
-    return _csv("inventario", resultado["stock"]) if formato == "csv" else resultado
+    if formato == "csv": return _csv("inventario", resultado["stock"])
+    if formato in ("excel", "xlsx"): return _excel("inventario", resultado["stock"])
+    if formato == "json": return _json("inventario", resultado)
+    return resultado
 
 
 @router.get("/margen")
@@ -205,7 +229,10 @@ def margen(desde: date | None = None, hasta: date | None = None, sucursal_id: in
            formato: str | None = None, scope: TenantScope = Depends(require_permiso("reportes:ver")), db: Session = Depends(get_db)):
     desde, hasta = _periodo(desde, hasta)
     resultado = _margen(db, scope.tenant_id, desde, hasta, sucursal_id)
-    return _csv("margen", resultado["prendas"]) if formato == "csv" else resultado
+    if formato == "csv": return _csv("margen", resultado["prendas"])
+    if formato in ("excel", "xlsx"): return _excel("margen", resultado["prendas"])
+    if formato == "json": return _json("margen", resultado)
+    return resultado
 
 
 @router.get("/dashboard")

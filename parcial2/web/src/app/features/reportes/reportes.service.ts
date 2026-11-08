@@ -204,17 +204,17 @@ export class ReportesService {
   }
 
   /**
-   * Baja el reporte como CSV (lo arma el backend, listo para Excel). Va por
-   * HttpClient y no por un enlace directo porque la ruta necesita el token.
+   * Descarga el reporte en el formato seleccionado (Excel, CSV o JSON).
    */
-  descargarCsv(reporte: NombreReporte, filtros: FiltrosReporte): Observable<string> {
-    const params = this.parametros(filtros).set('formato', 'csv');
+  descargarArchivo(reporte: NombreReporte, filtros: FiltrosReporte, formato: 'excel' | 'csv' | 'json'): Observable<string> {
+    const params = this.parametros(filtros).set('formato', formato);
     return this.http
       .get(`${API_URL}/reportes/${reporte}`, { params, responseType: 'blob', observe: 'response' })
       .pipe(
         map((respuesta) => {
           const cabecera = respuesta.headers.get('content-disposition') ?? '';
-          const nombre = /filename="?([^";]+)"?/.exec(cabecera)?.[1] ?? `${reporte}.csv`;
+          const ext = formato === 'json' ? 'json' : 'csv';
+          const nombre = /filename="?([^";]+)"?/.exec(cabecera)?.[1] ?? `${reporte}_${formato}.${ext}`;
           const url = URL.createObjectURL(respuesta.body as Blob);
           const enlace = document.createElement('a');
           enlace.href = url;
@@ -224,6 +224,14 @@ export class ReportesService {
           return nombre;
         }),
       );
+  }
+
+  /**
+   * Baja el reporte como CSV (lo arma el backend, listo para Excel). Va por
+   * HttpClient y no por un enlace directo porque la ruta necesita el token.
+   */
+  descargarCsv(reporte: NombreReporte, filtros: FiltrosReporte): Observable<string> {
+    return this.descargarArchivo(reporte, filtros, 'csv');
   }
 }
 

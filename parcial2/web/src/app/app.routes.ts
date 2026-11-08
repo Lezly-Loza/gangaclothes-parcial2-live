@@ -59,6 +59,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/offline/modo-offline').then((m) => m.ModoOfflinePage),
   },
   {
+    path: 'mis-favoritos',
+    canActivate: [authGuard, rolGuard],
+    data: SOLO_CLIENTE,
+    loadComponent: () => import('./features/tienda/mis-favoritos/mis-favoritos').then((m) => m.MisFavoritos),
+  },
+  {
     path: 'mis-reservas',
     canActivate: [authGuard, rolGuard],
     data: SOLO_CLIENTE,

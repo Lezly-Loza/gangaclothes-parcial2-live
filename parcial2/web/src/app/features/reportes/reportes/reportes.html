@@ -5,10 +5,13 @@
     <span class="ceja">{{ nombreSucursal() }} · del {{ fecha(desde()) }} al {{ fecha(hasta()) }} · solo ventas pagadas</span>
   </div>
   <div class="sin-imprimir botones">
-    <button type="button" class="btn rosa" [disabled]="exportando() || cargando() || !!errorFechas()" (click)="exportar()">
-      {{ exportando() ? 'Exportando…' : 'Exportar a Excel (CSV)' }}
+    <button type="button" class="btn rosa" [disabled]="exportando() || cargando() || !!errorFechas()" (click)="exportarFormato('excel')">
+      Exportar a Excel
     </button>
-    <button type="button" class="btn linea" (click)="imprimir()">Imprimir / PDF</button>
+    <button type="button" class="btn linea" (click)="exportarFormato('pdf')">Descargar PDF</button>
+    <button type="button" class="btn linea" [disabled]="exportando() || cargando() || !!errorFechas()" (click)="exportarFormato('json')">
+      Exportar a JSON
+    </button>
   </div>
 </div>
 

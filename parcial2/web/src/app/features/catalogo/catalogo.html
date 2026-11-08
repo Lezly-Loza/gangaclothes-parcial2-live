@@ -117,42 +117,120 @@
     } @else {
       <div class="grilla">
         @for (prenda of prendas(); track prenda.id) {
-          <button type="button" class="tarjeta" (click)="abrir(prenda)">
-            <div class="foto">
-              @if (prenda.promocion; as promo) {
-                <span class="oferta">{{ promo.etiqueta }}</span>
-              }
-              @if (prenda.imagen_url) {
-                <img [src]="prenda.imagen_url" [alt]="prenda.nombre" loading="lazy" />
-              } @else {
-                <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#9AA0A6" stroke-width="1.4">
-                  <path d="M12 4a2 2 0 1 1 2 2c-1 .4-2 .9-2 2m0 0L3 15.5a1 1 0 0 0 .6 1.8h16.8a1 1 0 0 0 .6-1.8L12 8z" />
-                </svg>
-              }
-            </div>
-            <div class="datos">
-              <div class="nombre">{{ prenda.nombre }}</div>
-              @if (prenda.marca) {
-                <div class="marca">{{ prenda.marca }}</div>
-              }
-              @if (prenda.promocion) {
-                <div class="precio">
-                  Bs {{ moneda(prenda.precio_final) }}
-                  <s class="antes">Bs {{ moneda(prenda.precio_venta) }}</s>
-                </div>
-              } @else {
-                <div class="precio">Bs {{ moneda(prenda.precio_venta) }}</div>
-              }
-              <div class="disponibilidad" [class.sin-stock]="prenda.disponible_total <= 0">
-                ● {{ textoDisponibilidad(prenda) }}
+          <div class="tarjeta-caja">
+            <button type="button" class="tarjeta" (click)="abrir(prenda)">
+              <div class="foto">
+                @if (prenda.promocion; as promo) {
+                  <span class="oferta">{{ promo.etiqueta }}</span>
+                }
+                @if (prenda.imagen_url) {
+                  <img [src]="prenda.imagen_url" [alt]="prenda.nombre" loading="lazy" />
+                } @else {
+                  <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#9AA0A6" stroke-width="1.4">
+                    <path d="M12 4a2 2 0 1 1 2 2c-1 .4-2 .9-2 2m0 0L3 15.5a1 1 0 0 0 .6 1.8h16.8a1 1 0 0 0 .6-1.8L12 8z" />
+                  </svg>
+                }
               </div>
-              @if (tallasDe(prenda).length) {
-                <div class="tallas ceja">{{ tallasDe(prenda).join(' · ') }}</div>
-              }
-            </div>
-          </button>
+              <div class="datos">
+                <div class="nombre">{{ prenda.nombre }}</div>
+                @if (prenda.marca) {
+                  <div class="marca">{{ prenda.marca }}</div>
+                }
+                @if (prenda.calificacion_promedio) {
+                  <div class="calificacion-mini">★ {{ prenda.calificacion_promedio }} ({{ prenda.calificacion_total }})</div>
+                }
+                @if (prenda.promocion) {
+                  <div class="precio">
+                    Bs {{ moneda(prenda.precio_final) }}
+                    <s class="antes">Bs {{ moneda(prenda.precio_venta) }}</s>
+                  </div>
+                } @else {
+                  <div class="precio">Bs {{ moneda(prenda.precio_venta) }}</div>
+                }
+                <div class="disponibilidad" [class.sin-stock]="prenda.disponible_total <= 0">
+                  ● {{ textoDisponibilidad(prenda) }}
+                </div>
+                @if (tallasDe(prenda).length) {
+                  <div class="tallas ceja">{{ tallasDe(prenda).join(' · ') }}</div>
+                }
+              </div>
+            </button>
+            @if (esCliente()) {
+              <button
+                type="button"
+                class="btn-favorito-tarjeta"
+                [class.activo]="esFavorito(prenda.id)"
+                (click)="toggleFavorito(prenda, $event)"
+                [title]="esFavorito(prenda.id) ? 'Quitar de favoritos' : 'Guardar en favoritos'"
+              >
+                {{ esFavorito(prenda.id) ? 'Favorito' : 'Guardar' }}
+              </button>
+            }
+          </div>
         }
       </div>
+
+      <!-- --------------------------------- sección de reseñas y opiniones -->
+      <section class="seccion-resenas">
+        <h3 class="resenas-titulo">Reseñas y opiniones de clientes</h3>
+
+        @if (cargandoResenas()) {
+          <p class="resenas-vacio">Cargando opiniones…</p>
+        } @else if (resenas().length === 0) {
+          <p class="resenas-vacio">Esta prenda aún no tiene opiniones. ¡Sé la primera persona en calificarla!</p>
+        } @else {
+          <div class="lista-resenas">
+            @for (r of resenas(); track r.id) {
+              <div class="tarjeta-resena">
+                <div class="resena-cabecera">
+                  <span class="resena-autor">{{ r.autor }}</span>
+                  <span class="resena-estrellas">
+                    @for (s of [1,2,3,4,5]; track s) {
+                      <span [class.dorada]="s <= r.calificacion">★</span>
+                    }
+                  </span>
+                  <span class="resena-fecha">{{ r.fecha.slice(0, 10) }}</span>
+                </div>
+                <p class="resena-comentario">{{ r.comentario }}</p>
+              </div>
+            }
+          </div>
+        }
+
+        @if (esCliente()) {
+          <div class="formulario-resena">
+            <h4>Deja tu reseña sobre esta prenda</h4>
+            <div class="selector-calificacion">
+              <span class="lbl">Calificación:</span>
+              <div class="estrellas-selector">
+                @for (val of [1, 2, 3, 4, 5]; track val) {
+                  <button
+                    type="button"
+                    class="btn-estrella"
+                    [class.activa]="val <= nuevaCalificacion()"
+                    (click)="nuevaCalificacion.set(val)"
+                  >★</button>
+                }
+              </div>
+            </div>
+            <textarea
+              class="campo-comentario"
+              rows="3"
+              placeholder="Cuéntanos sobre la tela, el talle, la comodidad o la calidad…"
+              [value]="nuevoComentario()"
+              (input)="nuevoComentario.set($any($event.target).value)"
+            ></textarea>
+            <button
+              type="button"
+              class="btn rosa btn-publicar-resena"
+              [disabled]="enviandoResena() || nuevoComentario().trim().length < 3"
+              (click)="enviarResena()"
+            >
+              {{ enviandoResena() ? 'Publicando…' : 'Publicar reseña' }}
+            </button>
+          </div>
+        }
+      </section>
     }
   </main>
 </div>
@@ -178,7 +256,26 @@
           @if (prenda.marca) {
             <div class="ceja">{{ prenda.marca }}</div>
           }
-          <h2>{{ prenda.nombre }}</h2>
+          <div class="fila-titulo-modal">
+            <h2>{{ prenda.nombre }}</h2>
+            @if (esCliente()) {
+              <button
+                type="button"
+                class="btn-favorito-modal"
+                [class.activo]="esFavorito(prenda.id)"
+                (click)="toggleFavorito(prenda)"
+                [title]="esFavorito(prenda.id) ? 'Quitar de favoritos' : 'Guardar como prenda favorita'"
+              >
+                {{ esFavorito(prenda.id) ? 'En Favoritos' : 'Guardar en Favoritos' }}
+              </button>
+            }
+          </div>
+          @if (prenda.calificacion_promedio) {
+            <div class="calificacion-promedio-linea">
+              <span class="estrellas">★ {{ prenda.calificacion_promedio }} / 5</span>
+              <span class="opiniones">({{ prenda.calificacion_total }} opiniones de clientes)</span>
+            </div>
+          }
           @if (prenda.promocion; as promo) {
             <div class="precio grande">
               Bs {{ moneda(prenda.precio_final) }}
@@ -368,6 +465,68 @@
           </div>
         }
       </div>
+
+      <!-- --------------------------------- sección de reseñas y opiniones -->
+      <section class="seccion-resenas">
+        <h3 class="resenas-titulo">Reseñas y opiniones de clientes</h3>
+
+        @if (cargandoResenas()) {
+          <p class="resenas-vacio">Cargando opiniones…</p>
+        } @else if (resenas().length === 0) {
+          <p class="resenas-vacio">Esta prenda aún no tiene opiniones. ¡Sé la primera persona en calificarla!</p>
+        } @else {
+          <div class="lista-resenas">
+            @for (r of resenas(); track r.id) {
+              <div class="tarjeta-resena">
+                <div class="resena-cabecera">
+                  <span class="resena-autor">{{ r.autor }}</span>
+                  <span class="resena-estrellas">
+                    @for (s of [1,2,3,4,5]; track s) {
+                      <span [class.dorada]="s <= r.calificacion">★</span>
+                    }
+                  </span>
+                  <span class="resena-fecha">{{ r.fecha.slice(0, 10) }}</span>
+                </div>
+                <p class="resena-comentario">{{ r.comentario }}</p>
+              </div>
+            }
+          </div>
+        }
+
+        @if (esCliente()) {
+          <div class="formulario-resena">
+            <h4>Deja tu reseña sobre esta prenda</h4>
+            <div class="selector-calificacion">
+              <span class="lbl">Calificación:</span>
+              <div class="estrellas-selector">
+                @for (val of [1, 2, 3, 4, 5]; track val) {
+                  <button
+                    type="button"
+                    class="btn-estrella"
+                    [class.activa]="val <= nuevaCalificacion()"
+                    (click)="nuevaCalificacion.set(val)"
+                  >★</button>
+                }
+              </div>
+            </div>
+            <textarea
+              class="campo-comentario"
+              rows="3"
+              placeholder="Cuéntanos sobre la tela, el talle, la comodidad o la calidad…"
+              [value]="nuevoComentario()"
+              (input)="nuevoComentario.set($any($event.target).value)"
+            ></textarea>
+            <button
+              type="button"
+              class="btn rosa btn-publicar-resena"
+              [disabled]="enviandoResena() || nuevoComentario().trim().length < 3"
+              (click)="enviarResena()"
+            >
+              {{ enviandoResena() ? 'Publicando…' : 'Publicar reseña' }}
+            </button>
+          </div>
+        }
+      </section>
     </div>
   </div>
 }

@@ -5,6 +5,8 @@ import { catchError, Observable, of, switchMap, throwError } from 'rxjs';
 
 import { API_URL } from '../../core/api';
 import { mensajeDeError } from '../../core/errores.interceptor';
+import { Notificaciones } from '../../core/notificaciones';
+import { PushService } from '../../core/push.service';
 import { Registro } from '../../core/recurso.service';
 import { SesionStore } from '../../core/sesion';
 import { fechaSinZona, moneda, paraCampoFechaHora } from '../../shared/formato';
@@ -45,7 +47,18 @@ interface PrendaCatalogo {
   categoria_id: number;
   coleccion_id: number | null;
   disponible_total: number;
+  calificacion_promedio?: number | null;
+  calificacion_total?: number;
   variantes: VarianteCatalogo[];
+}
+
+export interface ResenaItem {
+  id: number;
+  autor: string;
+  calificacion: number;
+  comentario: string;
+  fecha: string;
+  es_propia: boolean;
 }
 
 /** Lo que se usa del carrito (backend: ventas/service.py `salida`). */
@@ -93,7 +106,16 @@ function sucursalGuardada(): number | null {
 export class Catalogo {
   private http = inject(HttpClient);
   readonly sesion = inject(SesionStore);
+  readonly push = inject(PushService);
+  private avisos = inject(Notificaciones);
   readonly moneda = moneda;
+
+  readonly favoritosIds = signal<Set<number>>(new Set());
+  readonly resenas = signal<ResenaItem[]>([]);
+  readonly cargandoResenas = signal<boolean>(false);
+  readonly nuevaCalificacion = signal<number>(5);
+  readonly nuevoComentario = signal<string>('');
+  readonly enviandoResena = signal<boolean>(false);
 
   // ---- opciones de los filtros ----
   readonly temporadas = signal<Registro[]>([]);
@@ -202,6 +224,7 @@ export class Catalogo {
 
   constructor() {
     this.cargarOpciones();
+    this.cargarFavoritos();
     // Cada cambio de filtro, sucursal incluida, vuelve a consultar la API.
     effect(() => {
       const params = {
@@ -358,6 +381,7 @@ export class Catalogo {
     this.errorAccion.set(null);
     this.exito.set(null);
     this.cambioSucursal.set(null);
+    this.cargarResenas(prenda.id);
     // Arranca en la primera combinacion que se puede llevar.
     const inicial = prenda.variantes.find((v) => v.disponible_total > 0) ?? prenda.variantes[0];
     this.colorSel.set(inicial?.color_id ?? null);
@@ -367,6 +391,94 @@ export class Catalogo {
 
   cerrarDetalle(): void {
     this.abierta.set(null);
+  }
+
+  cargarFavoritos(): void {
+    if (!this.esCliente()) return;
+    this.http.get<number[]>(`${API_URL}/tienda/favoritos/ids`).subscribe({
+      next: (ids) => this.favoritosIds.set(new Set(ids)),
+      error: () => {},
+    });
+  }
+
+  esFavorito(id: number): boolean {
+    return this.favoritosIds().has(id);
+  }
+
+  toggleFavorito(prenda: PrendaCatalogo, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (!this.esCliente()) {
+      this.avisos.error('Inicia sesión como cliente para guardar favoritos.');
+      return;
+    }
+    const activo = this.esFavorito(prenda.id);
+    if (activo) {
+      this.http.delete(`${API_URL}/tienda/favoritos/${prenda.id}`).subscribe({
+        next: () => {
+          this.favoritosIds.update((s) => {
+            const copia = new Set(s);
+            copia.delete(prenda.id);
+            return copia;
+          });
+          this.avisos.ok(`«${prenda.nombre}» quitada de favoritos.`);
+        },
+      });
+    } else {
+      this.http.post(`${API_URL}/tienda/favoritos/${prenda.id}`, {}).subscribe({
+        next: () => {
+          this.favoritosIds.update((s) => new Set([...s, prenda.id]));
+          this.avisos.ok(`«${prenda.nombre}» agregada a tus favoritos.`);
+          this.push.notificar('Prenda en Favoritos', {
+            body: `Has guardado «${prenda.nombre}» en tu lista de favoritos.`,
+          });
+        },
+      });
+    }
+  }
+
+  cargarResenas(productoId: number): void {
+    this.cargandoResenas.set(true);
+    this.http.get<{ total: number; promedio: number; resenas: ResenaItem[] }>(`${API_URL}/tienda/prendas/${productoId}/resenas`).subscribe({
+      next: (res) => {
+        this.resenas.set(res.resenas);
+        this.cargandoResenas.set(false);
+      },
+      error: () => {
+        this.resenas.set([]);
+        this.cargandoResenas.set(false);
+      },
+    });
+  }
+
+  enviarResena(): void {
+    const prenda = this.abierta();
+    if (!prenda || !this.esCliente()) return;
+    const txt = this.nuevoComentario().trim();
+    if (txt.length < 3) {
+      this.avisos.error('Escribe al menos unas palabras para tu reseña.');
+      return;
+    }
+    this.enviandoResena.set(true);
+    const body = {
+      calificacion: this.nuevaCalificacion(),
+      comentario: txt,
+    };
+    this.http.post(`${API_URL}/tienda/prendas/${prenda.id}/resenas`, body).subscribe({
+      next: () => {
+        this.enviandoResena.set(false);
+        this.nuevoComentario.set('');
+        this.nuevaCalificacion.set(5);
+        this.avisos.ok('Tu reseña ha sido publicada. ¡Gracias por tu opinión!');
+        this.push.notificar('Reseña publicada', {
+          body: `Tu reseña sobre «${prenda.nombre}» ha sido publicada.`,
+        });
+        this.cargarResenas(prenda.id);
+      },
+      error: (err) => {
+        this.enviandoResena.set(false);
+        this.avisos.error(mensajeDeError(err, 'No se pudo publicar la reseña.'));
+      },
+    });
   }
 
   elegirColor(id: number): void {
@@ -452,6 +564,9 @@ export class Catalogo {
           tipo: 'reserva',
           texto: `Reserva ${reserva.codigo} confirmada en ${reserva.sucursal} para el ${fechaSinZona(reserva.fecha_hora_prueba)}.`,
         });
+        this.push.notificar('Reserva confirmada', {
+          body: `Reserva ${reserva.codigo} confirmada en ${reserva.sucursal} para el ${fechaSinZona(reserva.fecha_hora_prueba)}.`,
+        });
         this.recargar();
       },
       error: (err) => {
@@ -504,6 +619,9 @@ export class Catalogo {
           this.exito.set({
             tipo: 'carrito',
             texto: `Agregado al carrito. Llevas ${carrito.unidades} ${carrito.unidades === 1 ? 'prenda' : 'prendas'} por Bs ${moneda(carrito.total)}, desde ${carrito.sucursal}.`,
+          });
+          this.push.notificar('Prenda en tu carrito', {
+            body: `Agregaste una prenda al carrito (${carrito.unidades} prendas por Bs ${moneda(carrito.total)}).`,
           });
         },
         error: (err) => {
