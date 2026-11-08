@@ -14,6 +14,8 @@
 
 <p class="mensaje">Las ganancias y el valor a costo incluyen solo prendas con costo registrado y usan el costo actual, no histórico.</p>
 
+<app-reporte-generativo [desde]="desde()" [hasta]="hasta()" [sucursalId]="sucursalId()" />
+
 <div class="sin-imprimir">
   <div class="pestanas">
     <app-selector-estado [(valor)]="reporte" [opciones]="opcionesReporte" />

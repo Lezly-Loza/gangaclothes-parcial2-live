@@ -8,6 +8,7 @@ import { FilaInventario } from '../../inventario/inventario/inventario';
 
 interface VentaCambio { id: number; codigo: string; sucursal_id: number; estado: string; total: number; detalles: { variante_id: number; cantidad: number }[]; }
 interface VentaReciente { codigo: string; estado: string; sucursal: string; total: number; fecha: string | null; }
+interface Cotizacion { precio_pagado: number; precio_nuevo: number; diferencia: number; cobrar: number; devolver: number; plazo_dias: number; aviso: string; }
 
 @Component({
   selector: 'app-cambios', imports: [FormsModule],
@@ -29,21 +30,32 @@ interface VentaReciente { codigo: string; estado: string; sucursal: string; tota
       <section class="tarjeta">
         <h2>Venta {{ actual.codigo }} · {{ actual.estado }}</h2>
         <label class="etiqueta" for="devuelta">Prenda que devuelve</label>
-        <select id="devuelta" class="campo" [(ngModel)]="varianteDevuelta">
+        <select id="devuelta" class="campo" [(ngModel)]="varianteDevuelta" (ngModelChange)="solicitarCotizacion()">
           <option [ngValue]="null">Selecciona una prenda</option>
           @for (detalle of actual.detalles; track $index) {
             <option [ngValue]="detalle.variante_id">{{ nombreVariante(detalle.variante_id) }} · {{ detalle.cantidad }} unidad(es)</option>
           }
         </select>
         <label class="etiqueta" for="nueva">Prenda que recibe</label>
-        <select id="nueva" class="campo" [(ngModel)]="varianteNueva">
+        <select id="nueva" class="campo" [(ngModel)]="varianteNueva" (ngModelChange)="solicitarCotizacion()">
           <option [ngValue]="null">Selecciona una prenda disponible</option>
           @for (fila of inventario(); track fila.variante_id) {
             @if (fila.disponible > 0) { <option [ngValue]="fila.variante_id">{{ fila.sku }} · {{ fila.prenda }} · {{ fila.talla }} · {{ fila.color }} ({{ fila.disponible }} disponibles)</option> }
           }
         </select>
+        @if (cotizando()) { <p>Calculando diferencia…</p> }
+        @if (errorCotizacion()) { <p role="alert">{{ errorCotizacion() }}</p> }
+        @if (cotizacion(); as c) {
+          <div class="resultado" role="status">
+            <p>Pagó por la prenda devuelta: <b>Bs {{ c.precio_pagado.toFixed(2) }}</b> · Prenda nueva: <b>Bs {{ c.precio_nuevo.toFixed(2) }}</b></p>
+            @if (c.devolver > 0) { <p><b>Devolver al cliente: Bs {{ c.devolver.toFixed(2) }}</b></p> }
+            @else if (c.cobrar > 0) { <p><b>Cobrar al cliente: Bs {{ c.cobrar.toFixed(2) }}</b></p> }
+            @else { <p><b>Sin diferencia de precio.</b></p> }
+            <p>Plazo de la empresa: {{ c.plazo_dias }} días. {{ c.aviso }}</p>
+          </div>
+        }
         <label class="etiqueta" for="motivo">Motivo</label><input id="motivo" class="campo" [(ngModel)]="motivo">
-        <button class="btn rosa" (click)="cambiar(actual, varianteNueva, motivo)" [disabled]="guardando() || !varianteDevuelta || !varianteNueva || !motivo.trim()">{{ guardando() ? 'Procesando…' : 'Registrar cambio' }}</button>
+        <button class="btn rosa" (click)="cambiar(actual, varianteNueva, motivo)" [disabled]="guardando() || cotizando() || !cotizacion() || !varianteDevuelta || !varianteNueva || !motivo.trim()">{{ guardando() ? 'Procesando…' : 'Registrar cambio' }}</button>
       </section>
     }
     @if (comprobante()) { <p class="resultado">{{ comprobante() }}</p> }
@@ -55,13 +67,15 @@ export class CambioPrendaPage {
   codigo = ''; motivo = ''; varianteDevuelta: number | null = null; varianteNueva: number | null = null;
   readonly venta = signal<VentaCambio | null>(null); readonly inventario = signal<FilaInventario[]>([]);
   readonly guardando = signal(false); readonly comprobante = signal('');
+  readonly cotizando = signal(false); readonly cotizacion = signal<Cotizacion | null>(null); readonly errorCotizacion = signal('');
+  private versionCotizacion = 0;
   readonly recientes = signal<VentaReciente[]>([]); readonly errorRecientes = signal('');
   constructor() { this.http.get<VentaReciente[]>(`${API_URL}/operaciones/recientes?tipo=ventas`).subscribe({
     next: filas => this.recientes.set(filas), error: e => this.errorRecientes.set(mensajeDeError(e, 'No se pudieron cargar las ventas recientes.')) }); }
   seleccionarVenta(codigo: string) { if (codigo) { this.codigo = codigo; this.buscarVenta(codigo); } }
   buscarVenta(codigo: string) {
     if (!codigo.trim()) return;
-    this.venta.set(null); this.comprobante.set('');
+    this.venta.set(null); this.comprobante.set(''); this.cotizacion.set(null); this.errorCotizacion.set(''); this.versionCotizacion++;
     this.http.get<VentaCambio>(`${API_URL}/ventas/${encodeURIComponent(codigo.trim())}`).subscribe({
       next: venta => this.http.get<FilaInventario[]>(`${API_URL}/inventario`, { params: { sucursal_id: venta.sucursal_id } }).subscribe({
         next: filas => { this.inventario.set(filas); this.venta.set(venta); this.varianteDevuelta = null; this.varianteNueva = null; },
@@ -70,12 +84,23 @@ export class CambioPrendaPage {
     });
   }
   nombreVariante(id: number) { const f = this.inventario().find(x => x.variante_id === id); return f ? `${f.sku} · ${f.prenda} · ${f.talla} · ${f.color}` : `Variante #${id}`; }
+  solicitarCotizacion() {
+    const version = ++this.versionCotizacion; const venta = this.venta();
+    this.cotizacion.set(null); this.errorCotizacion.set('');
+    if (!venta || !this.varianteDevuelta || !this.varianteNueva) { this.cotizando.set(false); return; }
+    this.cotizando.set(true);
+    this.http.post<Cotizacion>(`${API_URL}/cambios/cotizar`, { venta_id: venta.id, variante_devuelta_id: this.varianteDevuelta, variante_nueva_id: this.varianteNueva }).subscribe({
+      next: r => { if (version === this.versionCotizacion) { this.cotizacion.set(r); this.cotizando.set(false); } },
+      error: e => { if (version === this.versionCotizacion) { this.errorCotizacion.set(mensajeDeError(e, 'No se pudo calcular la diferencia')); this.cotizando.set(false); } },
+    });
+  }
   cambiar(item: VentaCambio, nueva: number | null, motivo: string) {
-    if (!this.varianteDevuelta || !nueva || !motivo.trim()) return;
+    const cotizacion = this.cotizacion();
+    if (!this.varianteDevuelta || !nueva || !motivo.trim() || !cotizacion) return;
     this.guardando.set(true);
-    this.http.post<{ id: number; diferencia: number }>(`${API_URL}/cambios`, { venta_id: item.id, variante_devuelta_id: this.varianteDevuelta, variante_nueva_id: nueva, motivo: motivo.trim() }).subscribe({
-      next: r => { this.guardando.set(false); this.venta.set(null); this.comprobante.set(`Cambio ${r.id} registrado. Diferencia de precio: Bs ${Number(r.diferencia).toFixed(2)}.`); this.mostrarComprobante(); },
-      error: e => { this.guardando.set(false); this.avisos.error(mensajeDeError(e, 'No se pudo registrar el cambio')); },
+    this.http.post<{ id: number; diferencia: number; cobrar: number; devolver: number }>(`${API_URL}/cambios`, { venta_id: item.id, variante_devuelta_id: this.varianteDevuelta, variante_nueva_id: nueva, motivo: motivo.trim(), diferencia_esperada: cotizacion.diferencia }).subscribe({
+      next: r => { this.guardando.set(false); this.venta.set(null); const ajuste = r.devolver > 0 ? `Devolver al cliente Bs ${r.devolver.toFixed(2)}` : r.cobrar > 0 ? `Cobrar al cliente Bs ${r.cobrar.toFixed(2)}` : 'Sin diferencia de precio'; this.comprobante.set(`Cambio ${r.id} registrado. ${ajuste}. El dinero debe entregarse o cobrarse fuera del sistema.`); this.mostrarComprobante(); },
+      error: e => { this.guardando.set(false); this.avisos.error(mensajeDeError(e, 'No se pudo registrar el cambio')); this.solicitarCotizacion(); },
     });
   }
   mostrarComprobante() { return this.comprobante(); }

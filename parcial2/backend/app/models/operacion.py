@@ -7,7 +7,7 @@ from ..core.database import Base, TenantMixin
 
 
 class OperacionLog(Base, TenantMixin):
-    """Preparado para operacion sin conexion + sincronizacion (CU-18 a CU-23, no implementados este parcial).
+    """Registro de operaciones sincronizadas sin conexión.
 
     Idempotencia: UNIQUE(tenant_id, uuid_operacion) impide duplicados en reenvios.
     Estados: LOCAL | ENVIADA | CONFIRMADA | RECHAZADA | EN_CONFLICTO.

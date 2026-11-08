@@ -1,5 +1,9 @@
 # REPARTO DE TAREAS — Parcial 2 (SI2 · UAGRM)
 
+> **Nota de estado:** este documento conserva la planificación original. La
+> versión actual continúa la interfaz del primer parcial e incorpora los CU-18
+> a CU-26; consulta el [README de parcial2](../README.md) para su estado y límites.
+
 > **Proyecto nuevo desde cero.** NO es continuación del parcial 1.
 > SaaS multitenant para tiendas de ropa. Metodología **ICONIX** (no PUDS).
 > Stack: FastAPI + SQLAlchemy + PostgreSQL · Angular · Flutter.

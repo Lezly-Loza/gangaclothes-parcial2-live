@@ -27,6 +27,8 @@
 
 <p class="mensaje">Las ganancias y el valor a costo incluyen solo prendas con costo registrado y usan el costo actual, no histórico.</p>
 
+<app-analitica-dashboard [desde]="filtros().desde" [hasta]="filtros().hasta" [sucursalId]="sucursalId()" />
+
 @if (error()) {
   <div class="mensaje error">
     <p>{{ error() }}</p>

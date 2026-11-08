@@ -4,6 +4,7 @@ import { RouterOutlet } from '@angular/router';
 import { Asistente } from './shared/asistente/asistente';
 import { Avisos } from './shared/avisos/avisos';
 import { PwaService } from './core/pwa.service';
+import { OfflineService } from './services/offline.service';
 
 @Component({
   selector: 'app-root',
@@ -16,4 +17,4 @@ import { PwaService } from './core/pwa.service';
     <app-asistente />
   `,
 })
-export class App { readonly pwa = inject(PwaService); }
+export class App { readonly pwa = inject(PwaService); private readonly offline = inject(OfflineService); }

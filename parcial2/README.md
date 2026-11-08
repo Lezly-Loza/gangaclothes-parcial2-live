@@ -43,7 +43,8 @@ con la demo existente usa empresa `luna`, correo `cliente@boutique-luna.bo` y
 contraseña `Luna12345`. Al entrar abre «Catálogo sin conexión»: elige sucursal,
 categoría y temporada, y descarga la selección. La copia queda en IndexedDB,
 separada por empresa y cuenta, y muestra precios y existencias del momento de
-la descarga. Permite consultar, no comprar ni reservar sin conexión. Para abrir
+la descarga. También permite guardar reservas y ventas de contado pendientes
+para sincronizarlas al recuperar la conexión. Para abrir
 la app tras cerrar el navegador sin internet se requiere una compilación PWA
 de producción instalada y abierta previamente con conexión; `ng serve` no
 registra el service worker.
@@ -193,16 +194,60 @@ CORS_ORIGINS=http://localhost:4200,http://localhost:5173
 5. **Superadmin** — `GET /api/v1/tenants` lista todas las empresas con su
    plan vigente y fecha de fin.
 
-## 7. Preparación para CU-18 a CU-23 (sin implementar)
+## 7. Operación sin conexión y reportes analíticos (CU-19 a CU-26)
 
-Tabla `operaciones_log` con:
+En web y móvil inicia sesión con conexión y abre **Catálogo sin conexión**.
+Elige una sucursal y descarga la selección antes de desconectarte. El catálogo
+guardado muestra los precios y existencias de la descarga. Una cuenta de cliente
+puede registrar una reserva local y el personal con permiso de venta puede
+registrar una venta de contado con efectivo recibido. Cada operación contiene
+una sola variante; para otra variante se registra otra operación.
 
-- `UNIQUE(tenant_id, uuid_operacion)` → **idempotencia**: reenviar la misma
-  operación no la duplica.
-- `estado` ∈ `{LOCAL, ENVIADA, CONFIRMADA, RECHAZADA, EN_CONFLICTO}` →
-  máquina de estados para sincronización offline.
+Las operaciones se guardan por empresa y cuenta en el dispositivo, aparecen en
+**Operaciones locales** y no están confirmadas hasta sincronizar. Si la pantalla
+offline está abierta, la web intenta sincronizar cuando vuelve la conexión; en ambas plataformas se puede usar el
+botón **Sincronizar pendientes**. Si se pierde la respuesta, reintenta con el
+mismo identificador: el backend evita duplicados. El servidor revisa permisos,
+stock y precio; si cambian, la operación queda en conflicto. Revisa el efectivo
+con el cliente, descarta el conflicto y vuelve a descargar antes de crear otra
+operación. Los pendientes no se pueden descartar si su resultado es incierto.
+Vuelve a iniciar sesión con la misma cuenta si el token ha vencido.
+Las ventas sincronizadas usan en los reportes la fecha indicada por el reloj del
+dispositivo al registrar el cobro; el servidor conserva también la fecha de
+sincronización y rechaza relojes adelantados más de cinco minutos.
 
-Ver [backend/app/models/operacion.py](backend/app/models/operacion.py).
+El stock local solo orienta: otros dispositivos pueden vender o reservar las
+mismas unidades y provocar conflictos. Una operación confirmada sigue descontada
+de la copia antigua hasta volver a descargarla. Borrar datos del navegador o de
+la app antes de sincronizar también borra sus operaciones locales; no son una
+copia de seguridad. Para abrir la web desconectada debe usarse la PWA de
+producción, instalada y abierta previamente con conexión; `ng serve` no instala
+el service worker. El móvil guarda estos datos sin cifrado adicional.
+
+Para probar la PWA local en PowerShell, con el backend de `parcial2` ya iniciado:
+
+```powershell
+cd parcial2/web
+npm run build -- --configuration production
+..\backend\.venv-run\Scripts\python.exe scripts/servir_pwa.py
+```
+
+Abre `http://127.0.0.1:4300`, inicia sesión y descarga el catálogo antes de
+desconectarte. Ese servidor es solo para pruebas en la computadora.
+
+Los reportes convencionales permiten filtrar y exportar CSV o imprimir PDF. En
+**Reportes** puedes escribir o dictar una consulta: Gemini recibe la pregunta y
+datos agregados de la empresa, sin enviar datos personales de clientes. Utiliza
+`GEMINI_API` del entorno o del `.env` de `parcial2/backend`; si falta, intenta
+reutilizar la clave del `.env` del backend del primer parcial. Si el servicio o
+la clave falla, se identifica el resultado como resumen sin modelo. El dictado
+depende del navegador y de su servicio de reconocimiento de voz.
+
+El dashboard calcula un pronóstico exploratorio por regresión lineal y agrupa
+clientes con K-means usando recencia, frecuencia y monto. La pantalla indica
+cuando faltan datos y muestra el error retrospectivo cuando hay historia
+suficiente. Son estimaciones, no garantías; las ventas de prueba registradas
+también forman parte de los reportes.
 
 ## 8. Reparto de CUs
 
@@ -451,4 +496,105 @@ Cuando armes tus endpoints:
   llamá a `exigir_capacidad(db, scope.tenant_id, "<recurso>")` antes de
   crear — devuelve 409 con mensaje consistente al resto del sistema.
 - Agregá tus endpoints documentándolos acá debajo cuando los termines.
+
+## 10. Parcial 2 completo: CU-01 a CU-18
+
+Los módulos nuevos siguen `router.py` → `service.py` → modelos SQLAlchemy con
+`TenantMixin`. Están registrados en `app/main.py`. La venta guarda venta,
+detalles, pago y movimientos con un solo `commit`; la reserva aparta inventario
+en la misma transacción. Stripe se usa solo si se configura una clave
+`STRIPE_SECRET_KEY=sk_test_...`; sin ella la pasarela simula la aprobación.
+
+| CU | Módulo / ruta principal |
+|---|---|
+| 03 | `GET/POST /api/v1/usuarios` |
+| 06 | `POST /api/v1/suscripciones/cambiar`, `/renovar` |
+| 08 | `GET/POST /api/v1/productos` |
+| 09 | `GET/POST /api/v1/catalogos/{tipo}` |
+| 10 | `GET/POST /api/v1/proveedores` |
+| 11 | `GET/POST /api/v1/clientes` |
+| 12 | `GET /api/v1/inventario`, `POST /api/v1/inventario/movimientos` |
+| 14 | `POST /api/v1/reservas` |
+| 15 | `POST /api/v1/ventas` |
+| 16 | `GET /api/v1/ventas/{codigo}`, `POST /api/v1/cambios` |
+| 17 | `POST /api/v1/ventas/{id}/anular`, `/reservas/{id}/anular` |
+| 18 | `GET /api/v1/offline/catalogo?sucursal_id=...&desde=...` |
+
+CU-13 vive en `web/`: PWA Angular con service worker, manifest e íconos.
+El cliente móvil vive en `mobile/` y usa SQLite (`sqflite`) para el catálogo
+offline. Para una instalación ya existente de SQLite, usa una base nueva o
+aplica una migración: `Tenant` ahora tiene `plazo_cambio_dias` y `create_all`
+no modifica tablas preexistentes.
+
+### Ejecutar y verificar
+
+```powershell
+cd parcial2/backend
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m app.seeds.demo
+.venv\Scripts\python.exe -m pytest -q
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+En otra terminal:
+
+```powershell
+cd parcial2/web
+npm install
+npm start
+```
+
+Para Flutter:
+
+```powershell
+cd parcial2/mobile
+flutter pub get
+flutter run
+```
+
+Las 24 capturas están en `docs/capturas/`. Las seis `_movil` se tomaron con
+Flutter web a 390×844 porque no había emulador Android; las `_web` con Angular
+a 1366×768. El script `docs/capturas/capturar_web.ts` las repite con Playwright
+tras iniciar backend, Angular y el servidor de `mobile/build/web` en los
+puertos 8000, 4200 y 8002 respectivamente. Para repetir los flujos de escritura
+con los mismos datos, empieza con una base SQLite nueva y ejecuta las semillas.
+
+## Respaldo de una empresa y operaciones sin conexión
+
+En el panel de la empresa, **Seguridad → Respaldos** permite a un administrador
+descargar y verificar una copia JSON de esa empresa. Contiene datos privados y
+hashes de contraseñas: guárdala de forma segura. El código SHA-256 permite detectar
+cambios accidentales, pero no es una firma digital. La descarga es manual y no
+incluye las operaciones aún pendientes en teléfonos o navegadores: sincronízalas
+antes. No incluye secretos globales ni otras empresas.
+
+Para ensayar una recuperación, desde `parcial2/backend` ejecuta:
+
+```powershell
+.\.venv-run\Scripts\python.exe -m app.modules.respaldos.restaurar --archivo 'C:\ruta\respaldo-empresa.json' --destino 'C:\ruta\empresa-restaurada.db'
+```
+
+El destino debe ser un archivo SQLite nuevo: la herramienta no sobrescribe una
+base ni incorpora datos a una base compartida ya existente. La copia recupera
+los datos de la empresa y los planes que usa, no la cuenta de superadministrador.
+Prueba periódicamente la restauración en una base separada.
+
+Las reservas y ventas locales permanecen pendientes hasta que el servidor las
+confirme. Si otra operación agotó el stock o cambió el precio, quedan en conflicto
+y no se creó la reserva o venta. La aplicación intenta sincronizar al reconectar
+o al abrirla con sesión y conexión; la cola y su resultado permanecen en el
+dispositivo. Cerrar sesión o borrar datos antes de sincronizar puede impedir el
+acceso a la cola; vuelve a entrar con la cuenta original.
+
+Los cambios de prendas muestran el precio pagado, el precio actual de la variante
+nueva y la diferencia a cobrar o devolver antes de confirmar. Se valida el plazo
+configurado para la empresa (siete días por defecto). El sistema registra el
+cambio de inventario; la entrega o cobro del dinero se hace fuera del sistema.
+
+El reporte en lenguaje natural usa datos agregados de la empresa y el período
+seleccionado. Con Gemini configurado envía la pregunta y agregados al proveedor;
+sin modelo disponible solo muestra un resumen calculado, no una respuesta
+generativa libre. La voz depende del servicio del navegador.
+
 

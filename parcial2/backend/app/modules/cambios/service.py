@@ -21,8 +21,9 @@ def verificar_plazo(venta: Venta, plazo_dias: int):
         raise HTTPException(409, "Fuera de plazo")
 
 
-def registrar_cambio(db: Session, tenant_id: int, data: schemas.CambioIn):
-    venta = db.query(Venta).filter_by(tenant_id=tenant_id, id=data.venta_id).first()
+def _evaluar(db: Session, tenant_id: int, data: schemas.CotizarIn, *, bloquear=False):
+    consulta_venta = db.query(Venta).filter_by(tenant_id=tenant_id, id=data.venta_id)
+    venta = (consulta_venta.with_for_update() if bloquear else consulta_venta).first()
     if not venta:
         raise HTTPException(404, "Venta no encontrada")
     if venta.estado == "ANULADA":
@@ -32,30 +33,53 @@ def registrar_cambio(db: Session, tenant_id: int, data: schemas.CambioIn):
     if data.variante_devuelta_id == data.variante_nueva_id:
         raise HTTPException(422, "Seleccione una variante diferente")
     items = db.query(DetalleVenta).filter_by(tenant_id=tenant_id, venta_id=venta.id,
-                                             variante_id=data.variante_devuelta_id).all()
-    item = items[0] if items else None
+                                             variante_id=data.variante_devuelta_id).order_by(DetalleVenta.id).all()
     nueva = db.query(Variante).filter_by(tenant_id=tenant_id, id=data.variante_nueva_id, activo=True).first()
-    if not item or not nueva:
+    if not items or not nueva:
         raise HTTPException(404, "Variante no encontrada en venta o catálogo")
     ya_cambiadas = db.query(CambioPrenda).filter_by(tenant_id=tenant_id, venta_id=venta.id,
                                                     variante_devuelta_id=data.variante_devuelta_id).count()
     if ya_cambiadas >= sum(detalle.cantidad for detalle in items):
         raise HTTPException(409, "Ya se cambiaron todas las unidades de esta variante")
-    inv_vieja = db.query(Inventario).filter_by(tenant_id=tenant_id, sucursal_id=venta.sucursal_id,
-                                               variante_id=data.variante_devuelta_id).first()
-    inv_nueva = db.query(Inventario).filter_by(tenant_id=tenant_id, sucursal_id=venta.sucursal_id,
-                                               variante_id=data.variante_nueva_id).first()
+    restante = ya_cambiadas
+    item = items[0]
+    for detalle in items:
+        if restante < detalle.cantidad:
+            item = detalle
+            break
+        restante -= detalle.cantidad
+    consulta_inv = db.query(Inventario).filter(Inventario.tenant_id == tenant_id,
+        Inventario.sucursal_id == venta.sucursal_id, Inventario.variante_id.in_([data.variante_devuelta_id, data.variante_nueva_id])).order_by(Inventario.variante_id)
+    inventarios = (consulta_inv.with_for_update() if bloquear else consulta_inv).all()
+    inv_vieja = next((i for i in inventarios if i.variante_id == data.variante_devuelta_id), None)
+    inv_nueva = next((i for i in inventarios if i.variante_id == data.variante_nueva_id), None)
     if not inv_nueva or inv_nueva.stock - inv_nueva.reservado < 1:
         raise HTTPException(409, "Sin stock")
+    precio_nuevo, _ = precio_promocional(db, tenant_id, nueva.producto_id, nueva.precio)
+    diferencia = precio_nuevo - item.precio_unitario
+    return venta, tenant, item, inv_vieja, inv_nueva, precio_nuevo, diferencia
+
+
+def cotizar_cambio(db: Session, tenant_id: int, data: schemas.CotizarIn):
+    _, tenant, item, _, _, precio_nuevo, diferencia = _evaluar(db, tenant_id, data)
+    return {"precio_pagado": float(item.precio_unitario), "precio_nuevo": float(precio_nuevo),
+            "diferencia": float(diferencia), "cobrar": float(max(diferencia, 0)),
+            "devolver": float(max(-diferencia, 0)), "plazo_dias": tenant.plazo_cambio_dias,
+            "aviso": "La diferencia se cobra o devuelve fuera del sistema; el cambio no mueve dinero automáticamente."}
+
+
+def registrar_cambio(db: Session, tenant_id: int, data: schemas.CambioIn):
+    venta, tenant, item, inv_vieja, inv_nueva, precio_nuevo, diferencia = _evaluar(db, tenant_id, data, bloquear=True)
+    if data.diferencia_esperada is not None and data.diferencia_esperada != diferencia:
+        raise HTTPException(409, "El precio cambió. Consulta la diferencia antes de registrar el cambio")
     if not inv_vieja:
         inv_vieja = Inventario(tenant_id=tenant_id, sucursal_id=venta.sucursal_id,
                                variante_id=data.variante_devuelta_id, stock=0, reservado=0, stock_min=0, stock_max=100)
         db.add(inv_vieja)
-    precio_nuevo, _ = precio_promocional(db, tenant_id, nueva.producto_id, nueva.precio)
     cambio = CambioPrenda(tenant_id=tenant_id, venta_id=venta.id,
                           variante_devuelta_id=data.variante_devuelta_id,
                           variante_nueva_id=data.variante_nueva_id,
-                          diferencia=precio_nuevo - item.precio_unitario, motivo=data.motivo)
+                          diferencia=diferencia, motivo=data.motivo)
     cambio.verificarPlazoYGuardar(db, venta, tenant.plazo_cambio_dias)
     inv_vieja.validarStockYGuardar(db, "DEVOLUCION", 1)
     inv_nueva.validarStockYGuardar(db, "SALIDA", 1)

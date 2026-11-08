@@ -38,8 +38,10 @@ export const MENU: GrupoMenu[] = [
     titulo: 'Seguridad',
     items: [
       { etiqueta: 'Usuarios', ruta: '/admin/usuarios', roles: ADMIN, disponible: true },
+      { etiqueta: 'Usuarios', ruta: '/admin/usuarios', roles: ADMIN, disponible: true },
       { etiqueta: 'Roles y Permisos', ruta: '/admin/roles', roles: ADMIN, disponible: true },
       { etiqueta: 'Bitácora de Auditoría', ruta: '/admin/bitacora', roles: ADMIN, disponible: true },
+      { etiqueta: 'Respaldos', ruta: '/admin/respaldos', roles: ADMIN, disponible: true },
     ],
   },
   {

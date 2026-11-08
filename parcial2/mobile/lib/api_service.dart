@@ -18,7 +18,7 @@ class ApiService {
     _dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
-      if (token != null) options.headers['Authorization'] = 'Bearer $token';
+      if (token != null && !options.headers.containsKey('Authorization')) options.headers['Authorization'] = 'Bearer $token';
       handler.next(options);
     }));
   }
@@ -43,6 +43,8 @@ class ApiService {
   }
   Future<dynamic> get(String path, [Map<String, dynamic>? params]) async => (await _dio.get(path, queryParameters: params)).data;
   Future<dynamic> post(String path, [Map<String, dynamic>? data]) async => (await _dio.post(path, data: data ?? {})).data;
+  Future<dynamic> postConToken(String path, Map<String, dynamic> data, String token) async =>
+      (await _dio.post(path, data: data, options: Options(headers: {'Authorization': 'Bearer $token'}))).data;
   Future<dynamic> put(String path, Map<String, dynamic> data) async => (await _dio.put(path, data: data)).data;
   Future<dynamic> patch(String path, Map<String, dynamic> data) async => (await _dio.patch(path, data: data)).data;
   Future<dynamic> delete(String path) async => (await _dio.delete(path)).data;
