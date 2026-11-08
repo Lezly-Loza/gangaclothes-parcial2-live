@@ -42,3 +42,6 @@ certificados/
 .DS_Store
 .claude/
 CLAUDE.md
+
+# Los respaldos contienen datos privados.
+.respaldos/

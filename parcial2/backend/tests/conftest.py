@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
 import pytest
@@ -18,11 +19,19 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
+# Debe configurarse ANTES de importar módulos de la aplicación durante la
+# colección: algunos tests importan modelos a nivel de módulo y crean engine.
+_test_dir = BACKEND_DIR / ('.testtmp-pytest-' + uuid.uuid4().hex)
+_test_dir.mkdir()
+_test_db = _test_dir / 'test.db'
+os.environ['DATABASE_URL'] = f'sqlite:///{_test_db.as_posix()}'
+os.environ['JWT_SECRET'] = 'test-secret'
+os.environ['RESPALDOS_DIRECTORIO'] = str(_test_dir / 'respaldos')
+
 
 @pytest.fixture(scope="session")
 def _db_path(tmp_path_factory):
-    d = tmp_path_factory.mktemp("saas-db")
-    return d / "test.db"
+    return _test_db
 
 
 @pytest.fixture(scope="session", autouse=True)

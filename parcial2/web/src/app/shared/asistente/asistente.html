@@ -111,6 +111,9 @@
     </div>
 
     <form (submit)="$event.preventDefault(); enviar()">
+      @if (esPersonal()) {
+        <button type="button" class="icono" aria-label="Dictar pregunta" [disabled]="escuchando() || pensando()" (click)="dictar()">{{ escuchando() ? '…' : '🎙' }}</button>
+      }
       <input
         class="campo"
         placeholder="Escribí tu mensaje…"

@@ -28,6 +28,15 @@ def _regresion(valores):
     return ym - pendiente * xm, pendiente
 
 
+def _pronosticar(valores, horizonte, metodo):
+    """Entrena con días cronológicos; incluye los días sin venta en cero."""
+    if metodo == 'promedio_semanal':
+        return [sum(valores[j] for j in range(len(valores)) if j % 7 == (len(valores) + i) % 7) /
+                len([j for j in range(len(valores)) if j % 7 == (len(valores) + i) % 7]) for i in range(horizonte)]
+    a, b = _regresion(valores)
+    return [max(0, a + b * (len(valores) + i)) for i in range(horizonte)]
+
+
 def _segmentar(db, tid, vs, hasta):
     por_cliente = defaultdict(list)
     ids = [v['id'] for v in vs]
@@ -73,20 +82,24 @@ def analitica(desde: date | None = None, hasta: date | None = None, sucursal_id:
     total_dias = (hasta - desde).days + 1
     totales = defaultdict(float)
     for v in vs: totales[v['fecha_local']] += v['total']
-    valores = [totales[desde + timedelta(days=i)] for i in range(total_dias)]
     dias_con_ventas = len(totales)
+    valores = [totales.get(desde + timedelta(days=i), 0.0) for i in range(total_dias)]
     if total_dias < 14 or dias_con_ventas < 4:
         prediccion = {'disponible': False, 'motivo': 'Se requieren al menos 14 días de período y ventas en cuatro días distintos.', 'dias_con_ventas': dias_con_ventas, 'valores': []}
     else:
-        a, b = _regresion(valores)
-        puntos = [{'fecha': (hasta + timedelta(days=i)).isoformat(), 'monto_estimado': round(max(0, a + b * (total_dias + i - 1)), 2)} for i in range(1, 8)]
-        # Error de un pronóstico retrospectivo de siete días, si hay historia suficiente.
-        error = None
+        # Elegir por error fuera de muestra, sin entrenar con los siete días de prueba.
+        error = None; metricas = {}; metodo = 'lineal'
         if total_dias >= 21:
-            a0, b0 = _regresion(valores[:-7]); base = total_dias - 7
-            error = round(sum(abs(valores[base+i] - max(0, a0+b0*(base+i))) for i in range(7)) / 7, 2)
-        prediccion = {'disponible': True, 'metodo': 'Regresión lineal de ventas diarias', 'dias_con_ventas': dias_con_ventas,
+            for candidato in ('lineal', 'promedio_semanal'):
+                estimados = _pronosticar(valores[:-7], 7, candidato)
+                metricas[candidato] = round(sum(abs(real - estimado) for real, estimado in zip(valores[-7:], estimados)) / 7, 2)
+            metodo = min(metricas, key=metricas.get); error = metricas[metodo]
+        estimados = _pronosticar(valores, 7, metodo)
+        puntos = [{'fecha': (hasta + timedelta(days=i+1)).isoformat(), 'monto_estimado': round(valor, 2)} for i, valor in enumerate(estimados)]
+        prediccion = {'disponible': True, 'metodo': 'Regresión lineal de ventas diarias' if metodo == 'lineal' else 'Promedio entrenado por día de la semana', 'dias_con_ventas': dias_con_ventas,
                       'error_absoluto_medio_7_dias': error, 'valores': puntos,
+                      'dias_entrenamiento': total_dias, 'errores_validacion': metricas,
+                      'historico': [{'fecha': (hasta - timedelta(days=6-i)).isoformat(), 'monto': round(valores[-7+i], 2)} for i in range(7)],
                       'aviso': 'Estimación basada en ventas históricas; no garantiza resultados y puede variar por estacionalidad.'}
     return {'periodo': {'desde': desde, 'hasta': hasta}, 'prediccion': prediccion, 'segmentos': _segmentar(db, scope.tenant_id, vs, hasta)}
 
@@ -133,6 +146,7 @@ def generativo(body: ReporteGenerativoIn, scope: TenantScope = Depends(require_p
     inventario = reportes._inventario(db, scope.tenant_id, desde, hasta, body.sucursal_id)
     datos = {'periodo': {'desde': desde.isoformat(), 'hasta': hasta.isoformat()},
              'ventas': reportes._totales(vs), 'inventario': inventario['totales'],
+             'por_dia': reportes._grupos(vs, lambda v: (v['fecha_local'].isoformat(), v['fecha_local'].isoformat())),
              'por_sucursal': reportes._grupos(vs, lambda v: (v['sucursal_id'], v['sucursal'])),
              'por_canal': reportes._grupos(vs, lambda v: (v['canal'], v['canal']))}
     clave = _clave_gemini()

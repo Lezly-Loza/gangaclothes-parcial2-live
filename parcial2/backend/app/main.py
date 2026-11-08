@@ -40,7 +40,13 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
-    yield
+    from .modules.respaldos.programacion import iniciar
+    detener, hilo = iniciar()
+    try:
+        yield
+    finally:
+        detener.set()
+        hilo.join(timeout=5)
 
 
 def create_app() -> FastAPI:

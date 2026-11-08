@@ -17,7 +17,10 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
     expect(find.text('Código de empresa'), findsOneWidget);
     expect(find.text('Correo electrónico'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Contraseña'), 100, scrollable: find.byType(Scrollable).first);
     expect(find.text('Contraseña'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Iniciar sesión'), 100, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Iniciar sesión'));
     await tester.pump();
     expect(find.text('Completa los campos obligatorios.'), findsOneWidget);
@@ -29,6 +32,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Nombre completo'), findsOneWidget);
     expect(find.text('Documento'), findsOneWidget);
+  });
+  testWidgets('superadministrador entra sin código de empresa y consulta plataforma', (tester) async {
+    final adapter = ApiAcceso();
+    app.api = ApiService(baseUrl: 'http://localhost/api/v1', adapter: adapter);
+    await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
+    await tester.tap(find.text('Superadministrador'));
+    await tester.pump();
+    expect(find.text('Código de empresa'), findsNothing);
+    await tester.enterText(find.widgetWithText(TextField, 'Correo electrónico'), 'root@plataforma.bo');
+    await tester.enterText(find.widgetWithText(TextField, 'Contraseña'), 'clave-prueba');
+    tester.testTextInput.hide();
+    await tester.scrollUntilVisible(find.text('Iniciar sesión'), 100, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Iniciar sesión'));
+    await tester.pumpAndSettle();
+    expect(adapter.rutas, contains('/auth/super/login'));
+    expect(adapter.enviado, isNot(contains('codigo_tenant')));
+    expect(find.text('Plataforma'), findsOneWidget);
+    expect(find.text('Planes y precios'), findsOneWidget);
+    expect(find.text('Plan de prueba'), findsOneWidget);
+    app.api = ApiService();
+  });
+  test('acceso de empresa envía código de tenant y conserva sesión', () async {
+    final adapter = ApiAcceso();
+    final servicio = ApiService(baseUrl: 'http://localhost/api/v1', adapter: adapter);
+    final sesion = await servicio.login({'codigo_tenant': 'luna', 'email': 'cliente@boutique-luna.bo', 'password': 'clave-prueba'});
+    expect(adapter.rutas, contains('/auth/login'));
+    expect(adapter.enviado['codigo_tenant'], 'luna');
+    expect(sesion['tenant_codigo'], 'luna');
+    expect((await servicio.sesionGuardada())?['kind'], 'tenant');
   });
   test('las copias offline se separan por empresa y usuario y reemplazan la selección', () async {
     final a = ProductoLocalDao(tenantId: 1, userId: 1);
@@ -125,6 +158,28 @@ void main() {
     expect(guardadas.where((o) => o['estado'] == 'confirmada').length, 1);
     expect(guardadas.where((o) => o['estado'] == 'pendiente').length, 1);
   });
+}
+
+class ApiAcceso implements HttpClientAdapter {
+  final rutas = <String>[];
+  Map<String, dynamic> enviado = {};
+  @override Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+    rutas.add(options.path);
+    dynamic result;
+    if (options.path == '/auth/super/login') {
+      enviado = Map.from(options.data);
+      result = {'access_token': 'prueba', 'kind': 'super', 'nombre': 'Super', 'user_id': 1, 'roles': ['superadmin']};
+    } else if (options.path == '/auth/login') {
+      enviado = Map.from(options.data);
+      result = {'access_token': 'prueba', 'kind': 'tenant', 'tenant_id': 1, 'tenant_codigo': 'luna', 'user_id': 1, 'roles': ['cliente']};
+    } else if (options.path == '/tenants') {
+      result = [{'razon_social': 'Luna', 'codigo': 'luna', 'plan_actual': 'Plan de prueba'}];
+    } else if (options.path == '/planes') {
+      result = [{'nombre': 'Plan de prueba', 'max_sucursales': 2, 'max_usuarios': 10, 'precio_mensual': 99}];
+    } else { result = []; }
+    return ResponseBody.fromString(jsonEncode(result), 200, headers: {Headers.contentTypeHeader: ['application/json']});
+  }
+  @override void close({bool force = false}) {}
 }
 
 class ApiDePrueba implements HttpClientAdapter {

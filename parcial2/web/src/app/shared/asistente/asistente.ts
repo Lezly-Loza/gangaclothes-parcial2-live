@@ -37,6 +37,12 @@ interface Turno {
   consultas?: string[];
 }
 
+interface Voz {
+  lang: string; interimResults: boolean; start(): void;
+  onresult: ((event: {results: ArrayLike<ArrayLike<{transcript: string}>>}) => void) | null;
+  onerror: (() => void) | null; onend: (() => void) | null;
+}
+
 /**
  * Asistente de GangaClothes (CU28).
  *
@@ -66,6 +72,7 @@ export class Asistente {
   readonly turnos = signal<Turno[]>([]);
   readonly borrador = signal('');
   readonly pensando = signal(false);
+  readonly escuchando = signal(false);
   readonly error = signal<string | null>(null);
   readonly detalleVisible = signal<number | null>(null);
   private conversacion: number | null = null;
@@ -115,6 +122,14 @@ export class Asistente {
     this.error.set(null);
     this.pensando.set(true);
 
+    if (this.esPersonal()) {
+      this.http.post<{respuesta: string; aviso?: string}>(`${API_URL}/reportes/generativo`, {pregunta: texto}).subscribe({
+        next: r => { this.pensando.set(false); this.turnos.update(t => [...t, {de: 'asistente', texto: r.respuesta}]); if (r.aviso) this.error.set(r.aviso); },
+        error: err => { this.pensando.set(false); this.error.set(mensajeDeError(err, 'No se pudo consultar el reporte.')); },
+      });
+      return;
+    }
+
     this.http
       .post<RespuestaChat>(`${API_URL}/ia/chat`, {
         mensaje: texto,
@@ -141,6 +156,18 @@ export class Asistente {
           this.error.set(mensajeDeError(err, 'No se pudo consultar al asistente.'));
         },
       });
+  }
+
+  dictar(): void {
+    const navegador = window as unknown as {SpeechRecognition?: new () => Voz; webkitSpeechRecognition?: new () => Voz};
+    const Constructor = navegador.SpeechRecognition ?? navegador.webkitSpeechRecognition;
+    if (!Constructor) { this.error.set('Este navegador no admite dictado. Puedes escribir tu pregunta.'); return; }
+    const voz = new Constructor(); voz.lang = 'es-BO'; voz.interimResults = false;
+    this.error.set(null); this.escuchando.set(true);
+    voz.onresult = e => this.borrador.set(Array.from(e.results).map(r => r[0]?.transcript ?? '').join(' '));
+    voz.onerror = () => { this.error.set('No se pudo reconocer la voz. Revisa los permisos del micrófono.'); this.escuchando.set(false); };
+    voz.onend = () => this.escuchando.set(false);
+    try { voz.start(); } catch { this.escuchando.set(false); this.error.set('No se pudo iniciar el micrófono.'); }
   }
 
   limpiar(): void {

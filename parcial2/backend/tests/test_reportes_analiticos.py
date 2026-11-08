@@ -45,8 +45,23 @@ def test_prediccion_y_segmentacion_con_historia_y_datos_insuficientes(client, to
     r = client.get('/api/v1/reportes/analitica', headers=h(token_luna))
     assert r.status_code == 200, r.text
     assert r.json()['prediccion']['disponible'] and len(r.json()['prediccion']['valores']) == 7
+    pred = r.json()['prediccion']
+    assert len(pred['historico']) == 7 and set(pred['errores_validacion']) == {'lineal', 'promedio_semanal'}
+    assert pred['error_absoluto_medio_7_dias'] == min(pred['errores_validacion'].values())
     assert r.json()['segmentos']['disponible'] and sum(g['clientes'] for g in r.json()['segmentos']['grupos']) == 3
     assert 'cliente_id' not in str(r.json()['segmentos'])
     hoy = (ahora - timedelta(hours=4)).date().isoformat()
     insuficiente = client.get(f'/api/v1/reportes/analitica?desde={hoy}&hasta={hoy}', headers=h(token_luna))
     assert insuficiente.status_code == 200 and not insuficiente.json()['prediccion']['disponible']
+
+
+def test_dias_sin_ventas_no_cuentan_como_historia_de_entrenamiento(client, token_luna, monkeypatch):
+    from datetime import date
+    from app.modules.ventas import analitica
+    ventas = [{'fecha_local': date(2026, 1, dia), 'total': 100} for dia in (1, 8, 15)]
+    monkeypatch.setattr(analitica.reportes, '_datos', lambda *args: (ventas, []))
+    monkeypatch.setattr(analitica, '_segmentar', lambda *args: {'disponible': False, 'grupos': []})
+    r = client.get('/api/v1/reportes/analitica?desde=2026-01-01&hasta=2026-01-30', headers=h(token_luna))
+    assert r.status_code == 200
+    assert r.json()['prediccion']['dias_con_ventas'] == 3
+    assert r.json()['prediccion']['disponible'] is False

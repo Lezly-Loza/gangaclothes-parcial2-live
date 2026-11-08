@@ -5,6 +5,8 @@ de `parcial2`. La interfaz usa la identidad negra, blanca y rosa de la versión
 actual. El menú depende de los roles y permisos de la cuenta.
 
 - **CU-02:** inicio de sesión con código de empresa y registro de clientes.
+  También se puede ingresar como superadministrador sin código para consultar
+  empresas y planes; su administración y edición se realizan desde la web.
 - **CU-11:** búsqueda, creación y edición de clientes, según permisos.
 - **CU-14:** catálogo por sucursal, selección de variante y reserva con cita;
   consulta y cancelación de reservas propias.
@@ -84,6 +86,23 @@ Cuenta de demostración: empresa `luna`, correo `cliente@boutique-luna.bo`,
 contraseña `Luna12345`. Cierra sesión y vuelve a entrar después de cambiar los
 permisos de una cuenta. No vuelvas a sembrar la base existente si contiene datos
 que quieras conservar.
+
+### Probar el servidor publicado en el emulador
+
+La carpeta `mobile` de la raíz corresponde al primer parcial y no envía el
+código de empresa. Ejecuta la aplicación desde `parcial2/mobile` para usar el
+segundo parcial. Es una aplicación Android distinta y no borra los datos de la
+anterior. En PowerShell:
+
+```powershell
+cd parcial2/mobile
+flutter run -d emulator-5554 --dart-define=API_URL=https://gangaclothes-parcial2.onrender.com/api/v1 --dart-define=WEB_URL=https://ganga-clothes.vercel.app
+```
+
+En «Mi empresa», las cuentas demo de Ana y del cliente usan código `luna` y
+contraseña `Luna12345`. En «Superadministrador», la cuenta demo usa
+`root@plataforma.bo` y `SuperSegura123`, sin código de empresa. Los datos de
+prueba se consultan en el servidor publicado, no en SQLite de la computadora.
 
 ## Verificación
 
