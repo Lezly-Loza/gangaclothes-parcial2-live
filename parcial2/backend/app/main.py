@@ -29,6 +29,9 @@ from .modules.ventas.reportes import router as reportes_router
 from .modules.productos.promociones import router as promociones_router
 from .modules.productos.catalogo_tienda import router as catalogo_tienda_router
 from .modules.ventas.tienda import router as tienda_router
+from .modules.offline.sincronizacion import router as sincronizacion_router
+from .modules.ventas.analitica import router as analitica_router
+from .modules.respaldos.router import router as respaldos_router
 
 
 settings = get_settings()
@@ -69,7 +72,7 @@ def create_app() -> FastAPI:
     app.include_router(planes_router, prefix=prefix)
     for router in (usuarios_router, catalogos_router, productos_router, proveedores_router,
                    clientes_router, inventario_router, reservas_router, ventas_router,
-                   cambios_router, offline_router, seguridad_router, catalogos_compat_router, prendas_panel_router, compras_router, envios_router, reportes_router, promociones_router, catalogo_tienda_router, tienda_router):
+                   cambios_router, offline_router, seguridad_router, catalogos_compat_router, prendas_panel_router, compras_router, envios_router, reportes_router, promociones_router, catalogo_tienda_router, tienda_router, sincronizacion_router, analitica_router, respaldos_router):
         app.include_router(router, prefix=prefix)
 
     @app.get("/health", tags=["health"])

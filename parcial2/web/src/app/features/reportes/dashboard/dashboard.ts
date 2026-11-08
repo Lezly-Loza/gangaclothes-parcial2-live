@@ -9,6 +9,7 @@ import { OpcionFiltro, SelectorEstado } from '../../../shared/estado/selector-es
 import { moneda, porcentaje } from '../../../shared/formato';
 import { BarrasH, FilaBarra } from '../../../shared/graficos/barras-h';
 import { PuntoSerie, SerieDias } from '../../../shared/graficos/serie-dias';
+import { AnaliticaDashboard } from '../analitica-dashboard';
 import {
   COLOR_CANAL,
   DashboardDatos,
@@ -34,7 +35,7 @@ const PERIODOS: OpcionFiltro<Periodo>[] = [
  */
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, SelectorEstado, BarrasH, SerieDias],
+  imports: [RouterLink, SelectorEstado, BarrasH, SerieDias, AnaliticaDashboard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })

@@ -8,6 +8,7 @@ import { OpcionFiltro, SelectorEstado } from '../../../shared/estado/selector-es
 import { fechaLocal, moneda, porcentaje } from '../../../shared/formato';
 import { BarrasH, FilaBarra } from '../../../shared/graficos/barras-h';
 import { PuntoSerie, SerieDias } from '../../../shared/graficos/serie-dias';
+import { ReporteGenerativo } from '../reporte-generativo';
 import {
   COLOR_CANAL,
   ETIQUETA_CANAL,
@@ -44,7 +45,7 @@ const MOVIMIENTOS_VISIBLES = 60;
  */
 @Component({
   selector: 'app-reportes',
-  imports: [SelectorEstado, BarrasH, SerieDias],
+  imports: [SelectorEstado, BarrasH, SerieDias, ReporteGenerativo],
   templateUrl: './reportes.html',
   styleUrl: './reportes.css',
 })

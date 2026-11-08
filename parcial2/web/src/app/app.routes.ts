@@ -55,8 +55,7 @@ export const routes: Routes = [
     loadComponent: () => import('./features/catalogo/catalogo').then((m) => m.Catalogo),
   },
   {
-    path: 'modo-offline', canActivate: [authGuard, rolGuard],
-    data: { roles: ['cliente', 'administrador', 'cajero'] },
+    path: 'modo-offline', canActivate: [authGuard],
     loadComponent: () => import('./features/offline/modo-offline').then((m) => m.ModoOfflinePage),
   },
   {
@@ -129,6 +128,10 @@ export const routes: Routes = [
         canActivate: [rolGuard],
         data: SOLO_ADMIN,
         loadComponent: () => import('./features/admin/bitacora/bitacora').then((m) => m.Bitacora),
+      },
+      {
+        path: 'respaldos', title: 'Respaldos | GangaClothes', canActivate: [rolGuard], data: SOLO_ADMIN,
+        loadComponent: () => import('./features/admin/respaldos/respaldos').then(m => m.Respaldos),
       },
       rutaCrud('categorias', CATEGORIAS),
       rutaCrud('tallas', TALLAS),

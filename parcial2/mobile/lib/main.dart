@@ -4,6 +4,8 @@ import 'estilo.dart';
 import 'tienda.dart';
 import 'gestion.dart';
 import 'offline.dart';
+import 'operaciones_offline.dart';
+import 'sincronizador.dart';
 
 ApiService api = ApiService();
 void main() => runApp(const GangaApp());
@@ -74,6 +76,18 @@ class HomeScreen extends StatefulWidget {
 }
 class _HomeScreenState extends State<HomeScreen> {
   int indice = 0;
+  late final Sincronizador sincronizador;
+  @override void initState() {
+    super.initState();
+    sincronizador = Sincronizador(OperacionesOffline(tenantId: widget.sesion['tenant_id'] as int,
+      userId: widget.sesion['user_id'] as int, api: api), (op) {
+      if (!mounted) return;
+      final tipo = op['tipo'] == 'reserva' ? 'Reserva' : 'Venta';
+      final texto = op['estado'] == 'confirmada' ? '$tipo confirmada: ${op['codigo']}' : '$tipo no confirmada: ${op['error']}';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+    });
+  }
+  @override void dispose() { sincronizador.dispose(); super.dispose(); }
   @override Widget build(BuildContext context) {
     final roles = List<String>.from(widget.sesion['roles'] ?? []);
     final permisos = List<String>.from(widget.sesion['permisos'] ?? []);
@@ -84,8 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (cliente) (nombre: 'Carrito', icono: Icons.shopping_bag_outlined, pagina: const CarritoScreen()),
       if (cliente) (nombre: 'Mis compras', icono: Icons.receipt_long_outlined, pagina: const MisComprasScreen()),
       if (cliente) (nombre: 'Mis pedidos', icono: Icons.local_shipping_outlined, pagina: const MisPedidosScreen()),
-      if (roles.any((r) => ['admin', 'administrador', 'vendedor', 'cliente'].contains(r)))
-        (nombre: 'Catálogo sin conexión', icono: Icons.offline_pin_outlined, pagina: ModoOfflineScreen(sesion: widget.sesion)),
+      if (permisos.any((p) => ['prendas:ver', 'inventario:ver', 'ventas:crear', 'reservas:crear'].contains(p)))
+        (nombre: 'Catálogo sin conexión', icono: Icons.offline_pin_outlined, pagina: ModoOfflineScreen(sesion: widget.sesion, sincronizador: sincronizador)),
       if (permisos.contains('clientes:ver')) (nombre: 'Clientes', icono: Icons.people_outline, pagina: ClientesScreen(permisos: permisos)),
       if (permisos.contains('ventas:anular') || permisos.contains('reservas:anular'))
         (nombre: 'Anular operación', icono: Icons.cancel_outlined, pagina: AnularOperacionScreen(permisos: permisos)),

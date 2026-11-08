@@ -37,6 +37,13 @@ def obtener(codigo: str, scope: TenantScope = Depends(require_tenant), db: Sessi
                           "precio_unitario": float(d.precio_unitario)} for d in detalles]}
 
 
+@router.post("/cambios/cotizar")
+def cotizar(body: schemas.CotizarIn, scope: TenantScope = Depends(require_permiso("cambios:crear")), db: Session = Depends(get_db)):
+    return service.cotizar_cambio(db, scope.tenant_id, body)
+
+
 @router.post("/cambios", status_code=201)
 def registrar(body: schemas.CambioIn, scope: TenantScope = Depends(require_permiso("cambios:crear")), db: Session = Depends(get_db)):
-    return service.registrar_cambio(db, scope.tenant_id, body)
+    cambio = service.registrar_cambio(db, scope.tenant_id, body)
+    diferencia = float(cambio.diferencia)
+    return {"id": cambio.id, "diferencia": diferencia, "cobrar": max(0, diferencia), "devolver": max(0, -diferencia)}

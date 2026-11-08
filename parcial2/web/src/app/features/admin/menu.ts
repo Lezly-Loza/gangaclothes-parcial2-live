@@ -64,6 +64,7 @@ export const MENU: GrupoMenu[] = [
       { etiqueta: 'Usuarios', ruta: '/admin/usuarios', roles: ADMIN, disponible: true },
       { etiqueta: 'Roles y permisos', ruta: '/admin/roles', roles: ADMIN, disponible: true },
       { etiqueta: 'Bitacora', ruta: '/admin/bitacora', roles: ADMIN, disponible: true },
+      { etiqueta: 'Respaldos', ruta: '/admin/respaldos', roles: ADMIN, disponible: true },
     ],
   },
   {

@@ -12,16 +12,32 @@ actual. El menú depende de los roles y permisos de la cuenta.
   envío a domicilio. La compra descuenta stock y aparece en los reportes.
 - **CU-17:** clientes cancelan sus reservas; el personal con permisos puede
   buscar ventas o reservas por código o entre las recientes y anularlas.
-- **CU-18:** descarga de catálogo por sucursal, categoría y temporada para
-  consultar sin conexión. La copia queda separada por empresa y cuenta y se
-  conserva si falla una descarga posterior. Los datos reflejan el momento de la
-  descarga; comprar y reservar requieren conexión.
+- **CU-18 y CU-19:** descarga y consulta de catálogo por sucursal, categoría y
+  temporada. La copia queda separada por empresa y cuenta y refleja el momento
+  de descarga.
+- **CU-20 a CU-23:** reserva local para clientes y venta de contado local para
+  personal autorizado, una variante por operación. En «Operaciones locales» se
+  consultan los pendientes y se sincronizan al recuperar conexión, al volver a
+  abrir la aplicación o manualmente. Un conflicto requiere
+  revisar stock, precio y efectivo; se puede descartar y crear otra operación.
+  No se pueden descartar pendientes cuyo resultado pueda ser incierto.
 
 El pago del carrito es **simulado** y no mueve dinero real. La tarifa y distancia
 del envío no se calculan; el seguimiento se actualiza cuando la sucursal procesa
 el pedido. En dispositivo se guarda la sesión localmente para poder volver a
 abrir la copia offline; no utilices esta implementación como almacenamiento
 seguro de credenciales para una aplicación de producción.
+No borres los datos de la app antes de sincronizar: las operaciones pendientes
+existen solo en ese dispositivo. El stock descargado no garantiza disponibilidad
+en el servidor y un token vencido requiere volver a iniciar sesión.
+
+En Android, «Activar avisos en Android» solicita permiso para mostrar el resultado
+de cada operación cuando la aplicación sincroniza. Son notificaciones **locales**:
+no son push remoto y no ejecutan la sincronización mientras la app está cerrada.
+Al abrirla, vuelve a intentar las operaciones pendientes. Si una reserva tiene
+conflicto por falta de stock o cambio de precio, no está confirmada; consulta
+«Operaciones locales» para ver el motivo. Si el permiso está desactivado, los
+resultados siguen guardados en la aplicación.
 
 ## Ejecutar con Android
 
