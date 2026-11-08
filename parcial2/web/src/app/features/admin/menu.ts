@@ -75,7 +75,7 @@ export const MENU: GrupoMenu[] = [
     items: [
       { etiqueta: 'Reportes Oficiales', ruta: '/admin/reportes', roles: ['administrador', 'encargado'], permiso: 'reportes:ver', disponible: true },
       { etiqueta: 'Promociones', ruta: '/admin/promociones', roles: ADMIN, permiso: 'promociones:ver', disponible: true },
-      { etiqueta: 'Dashboard & Machine Learning', ruta: '/admin/dashboard', roles: ['administrador', 'encargado'], permiso: 'reportes:ver', disponible: true },
+      { etiqueta: 'Indicadores y Métricas', ruta: '/admin/dashboard', roles: ['administrador', 'encargado'], permiso: 'reportes:ver', disponible: true },
     ],
   },
   {

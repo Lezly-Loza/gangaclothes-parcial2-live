@@ -201,6 +201,33 @@
   line-height: 1;
 }
 
+.kpi-svg-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpi-card.destacado .kpi-svg-box {
+  background: #ffe4e6;
+  color: #e11d48;
+}
+
+.kpi-card.destacado-super .kpi-svg-box {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.kpi-card.alerta .kpi-svg-box {
+  background: #fef3c7;
+  color: #d97706;
+}
+
 .kpi-contenido {
   display: flex;
   flex-direction: column;
