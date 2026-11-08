@@ -73,3 +73,4 @@ export class MisFavoritos implements OnInit {
     this.router.navigate(['/catalogo'], { queryParams: { q: item.nombre } });
   }
 }
+
