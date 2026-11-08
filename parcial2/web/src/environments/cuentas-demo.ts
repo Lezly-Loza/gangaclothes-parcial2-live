@@ -18,5 +18,6 @@ export const CUENTAS_DEMO: CuentaDemo[] = [
   { rol: 'Valeria (Cliente)', codigo_tenant: 'luna', email: 'valeria@gangaclothes.com', password: 'Cliente#2026' },
   { rol: 'Textiles Andinos', codigo_tenant: 'luna', email: 'proveedor@gangaclothes.com', password: 'Proveedor123' },
   { rol: 'Conf. Oriente', codigo_tenant: 'luna', email: 'oriente@gangaclothes.com',    password: 'Proveedor123' },
+  { rol: 'Admin (Andina Básica)', codigo_tenant: 'andina', email: 'admin@andina.bo', password: 'Admin123' },
   { rol: 'Superadmin',  codigo_tenant: '',     email: 'root@plataforma.bo',          password: 'SuperSegura123' },
 ];
