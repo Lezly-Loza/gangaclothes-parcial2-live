@@ -204,17 +204,17 @@ export class ReportesService {
   }
 
   /**
-   * Descarga el reporte en el formato seleccionado (Excel, CSV o JSON).
+   * Descarga el reporte en el formato seleccionado (Excel .xlsx, PDF .pdf, CSV o JSON).
    */
-  descargarArchivo(reporte: NombreReporte, filtros: FiltrosReporte, formato: 'excel' | 'csv' | 'json'): Observable<string> {
+  descargarArchivo(reporte: NombreReporte, filtros: FiltrosReporte, formato: 'excel' | 'pdf' | 'csv' | 'json'): Observable<string> {
     const params = this.parametros(filtros).set('formato', formato);
     return this.http
       .get(`${API_URL}/reportes/${reporte}`, { params, responseType: 'blob', observe: 'response' })
       .pipe(
         map((respuesta) => {
           const cabecera = respuesta.headers.get('content-disposition') ?? '';
-          const ext = formato === 'json' ? 'json' : 'csv';
-          const nombre = /filename="?([^";]+)"?/.exec(cabecera)?.[1] ?? `${reporte}_${formato}.${ext}`;
+          const ext = formato === 'json' ? 'json' : (formato === 'pdf' ? 'pdf' : (formato === 'excel' ? 'xlsx' : 'csv'));
+          const nombre = /filename="?([^";]+)"?/.exec(cabecera)?.[1] ?? `${reporte}.${ext}`;
           const url = URL.createObjectURL(respuesta.body as Blob);
           const enlace = document.createElement('a');
           enlace.href = url;

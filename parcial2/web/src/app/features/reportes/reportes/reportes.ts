@@ -212,16 +212,11 @@ export class Reportes {
   }
 
   exportarFormato(formato: 'excel' | 'pdf' | 'json'): void {
-    if (formato === 'pdf') {
-      this.imprimir();
-      this.avisos.ok('Vista de impresión oficial activada para guardar o exportar en PDF.');
-      return;
-    }
     this.exportando.set(true);
     this.servicio.descargarArchivo(this.reporte(), this.filtros(), formato).subscribe({
       next: (nombre) => {
         this.exportando.set(false);
-        const tipoDesc = formato === 'excel' ? 'formato Excel' : 'formato JSON';
+        const tipoDesc = formato === 'excel' ? 'Excel (.xlsx)' : (formato === 'pdf' ? 'PDF Oficial (.pdf)' : 'JSON estructurado');
         this.avisos.ok(`Se descargó ${nombre} correctamente en ${tipoDesc}.`);
       },
       error: (err) => {

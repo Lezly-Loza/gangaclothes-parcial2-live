@@ -171,15 +171,78 @@ def _csv(nombre, filas):
 
 
 def _excel(nombre, filas):
-    salida = io.StringIO(newline="")
-    if filas:
-        claves = list(filas[0])
-        escritor = csv.DictWriter(salida, fieldnames=claves, delimiter=";", extrasaction="ignore")
-        escritor.writeheader()
-        escritor.writerows({k: ("'" + str(v) if isinstance(v, str) and str(v).lstrip().startswith(("=", "+", "-", "@")) else v)
-                            for k, v in fila.items()} for fila in filas)
-    return Response(content="\ufeff" + salida.getvalue(), media_type="application/vnd.ms-excel; charset=utf-8",
-                    headers={"Content-Disposition": f'attachment; filename="{nombre}_excel.csv"'})
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        wb = Workbook()
+        ws = wb.active
+        ws.title = nombre[:30].capitalize()
+        if filas:
+            headers = list(filas[0].keys())
+            ws.append([h.replace("_", " ").upper() for h in headers])
+            header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+            header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+            for col in range(1, len(headers) + 1):
+                cell = ws.cell(row=1, column=col)
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal="center")
+            for f in filas:
+                ws.append([str(v) if v is not None else "" for v in f.values()])
+            for col in ws.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                col_letter = col[0].column_letter
+                ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+        salida = io.BytesIO()
+        wb.save(salida)
+        return Response(content=salida.getvalue(),
+                        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition": f'attachment; filename="{nombre}.xlsx"'})
+    except Exception:
+        salida = io.StringIO(newline="")
+        if filas:
+            claves = list(filas[0])
+            escritor = csv.DictWriter(salida, fieldnames=claves, delimiter=";", extrasaction="ignore")
+            escritor.writeheader()
+            escritor.writerows(filas)
+        return Response(content="\ufeff" + salida.getvalue(), media_type="application/vnd.ms-excel; charset=utf-8",
+                        headers={"Content-Disposition": f'attachment; filename="{nombre}.csv"'})
+
+
+def _pdf(nombre, titulo, filas):
+    try:
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib import colors
+        output = io.BytesIO()
+        doc = SimpleDocTemplate(output, pagesize=landscape(letter), rightMargin=25, leftMargin=25, topMargin=25, bottomMargin=25)
+        story = []
+        styles = getSampleStyleSheet()
+        story.append(Paragraph(f"<b>GangaClothes SaaS — {titulo}</b>", styles["Title"]))
+        story.append(Spacer(1, 12))
+        if filas:
+            headers = list(filas[0].keys())
+            data = [[h.replace("_", " ").upper() for h in headers]]
+            for f in filas[:150]:
+                data.append([str(v) if v is not None else "" for v in f.values()])
+            t = Table(data, repeatRows=1)
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1E293B')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
+            ]))
+            story.append(t)
+        doc.build(story)
+        return Response(content=output.getvalue(), media_type="application/pdf",
+                        headers={"Content-Disposition": f'attachment; filename="{nombre}.pdf"'})
+    except Exception as e:
+        return Response(content=f"Error generando PDF: {e}", status_code=500)
 
 
 def _json(nombre, datos):
@@ -204,6 +267,7 @@ def ventas(desde: date | None = None, hasta: date | None = None, sucursal_id: in
     filas = [{k: v[k] for k in ("id", "fecha", "nro_comprobante", "sucursal", "canal", "unidades", "subtotal", "descuento", "total", "ganancia")} for v in vs]
     if formato == "csv": return _csv("ventas", filas)
     if formato in ("excel", "xlsx"): return _excel("ventas", filas)
+    if formato == "pdf": return _pdf("ventas", "Reporte Oficial de Ventas", filas)
     if formato == "json": return _json("ventas", {"totales": _totales(vs), "ventas": filas})
     return {"periodo": {"desde": desde, "hasta": hasta}, "totales": _totales(vs),
             "por_periodo": _grupos(vs, periodo), "por_sucursal": _grupos(vs, lambda v: (v["sucursal_id"], v["sucursal"])),
@@ -220,6 +284,7 @@ def inventario(desde: date | None = None, hasta: date | None = None, sucursal_id
     resultado = _inventario(db, scope.tenant_id, desde, hasta, sucursal_id)
     if formato == "csv": return _csv("inventario", resultado["stock"])
     if formato in ("excel", "xlsx"): return _excel("inventario", resultado["stock"])
+    if formato == "pdf": return _pdf("inventario", "Reporte Oficial de Inventario y Existencias", resultado["stock"])
     if formato == "json": return _json("inventario", resultado)
     return resultado
 
@@ -231,6 +296,7 @@ def margen(desde: date | None = None, hasta: date | None = None, sucursal_id: in
     resultado = _margen(db, scope.tenant_id, desde, hasta, sucursal_id)
     if formato == "csv": return _csv("margen", resultado["prendas"])
     if formato in ("excel", "xlsx"): return _excel("margen", resultado["prendas"])
+    if formato == "pdf": return _pdf("margen", "Reporte de Ganancia y Margen por Prenda", resultado["prendas"])
     if formato == "json": return _json("margen", resultado)
     return resultado
 
