@@ -271,16 +271,26 @@ def ejecutar_poblamiento():
 
         print("-> 10. Configurando Prendas y Variantes (CU-09) e Inventario (CU-12)...")
         FOTOS_PRENDAS = {
-            "Blusa seda satinada": "https://images.unsplash.com/photo-1598554747436-c9293d6a588f?w=600&auto=format&fit=crop",
             "Blazer ejecutivo entallado": "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&auto=format&fit=crop",
-            "Vestido de gala noche": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=600&auto=format&fit=crop",
-            "Jean slouchy tiro alto": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&auto=format&fit=crop",
+            "Blusa seda satinada": "https://images.unsplash.com/photo-1598554747436-c9293d6a588f?w=600&auto=format&fit=crop",
+            "Camisa básica": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop",
             "Camisa lino oversize": "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop",
-            "Pantalón palazzo lino": "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600&auto=format&fit=crop",
-            "Top tejido rib": "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600&auto=format&fit=crop",
-            "Falda midi satén": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=600&auto=format&fit=crop",
             "Cardigan tejido botones": "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&auto=format&fit=crop",
+            "Chaqueta denim": "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&auto=format&fit=crop",
+            "Chaqueta ligera": "https://images.unsplash.com/photo-1544441893-675973e31985?w=600&auto=format&fit=crop",
             "Enterizo casual verano": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&auto=format&fit=crop",
+            "Falda midi satén": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=600&auto=format&fit=crop",
+            "Falda plisada": "https://images.unsplash.com/photo-1582142306909-195724d33ffc?w=600&auto=format&fit=crop",
+            "Jean recto": "https://images.unsplash.com/photo-1542272604-780c96856592?w=600&auto=format&fit=crop",
+            "Jean slouchy tiro alto": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&auto=format&fit=crop",
+            "Pantalón lino": "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=600&auto=format&fit=crop",
+            "Pantalón palazzo lino": "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600&auto=format&fit=crop",
+            "Polera clásica": "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop",
+            "Polera urbana": "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600&auto=format&fit=crop",
+            "Top tejido rib": "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600&auto=format&fit=crop",
+            "Vestido de gala noche": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=600&auto=format&fit=crop",
+            "Vestido floral": "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=600&auto=format&fit=crop",
+            "Vestido midi": "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=600&auto=format&fit=crop",
         }
         prendas_catalogo = [
             ("Blusa seda satinada", "Blusa formal de tacto suave para oficina o cóctel", "Poleras y Tops", 145.0, 65.0),
@@ -340,7 +350,7 @@ def ejecutar_poblamiento():
                     variantes_activas.append(v)
 
         for prod in db.query(Producto).all():
-            if not prod.imagen_url and prod.nombre in FOTOS_PRENDAS:
+            if prod.nombre in FOTOS_PRENDAS:
                 prod.imagen_url = FOTOS_PRENDAS[prod.nombre]
         db.flush()
 

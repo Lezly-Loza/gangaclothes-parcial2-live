@@ -589,7 +589,13 @@ class _SuperHomeScreenState extends State<SuperHomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
+            FilledButton.tonalIcon(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BitacoraSuperScreen())),
+              icon: const Icon(Icons.shield_outlined),
+              label: const Text('Consultar Bitácora de Auditoría Global'),
+            ),
+            const SizedBox(height: 10),
             FilledButton.icon(
               onPressed: recargar,
               icon: const Icon(Icons.refresh),
@@ -634,17 +640,39 @@ class _HomeScreenState extends State<HomeScreen> {
     final roles = List<String>.from(widget.sesion['roles'] ?? []);
     final permisos = List<String>.from(widget.sesion['permisos'] ?? []);
     final cliente = roles.contains('cliente');
+    final esAdmin = roles.contains('administrador');
+    final esEncargado = roles.contains('encargado');
+    final esCajero = roles.contains('cajero');
+
     final opciones = <({String nombre, IconData icono, Widget pagina})>[
+      // Opciones para cliente
       if (cliente) (nombre: 'Catálogo', icono: Icons.checkroom, pagina: const CatalogoScreen()),
+      if (cliente) (nombre: 'Asistente IA (Gemini)', icono: Icons.auto_awesome, pagina: const AsistenteIaScreen()),
       if (cliente) (nombre: 'Mis reservas', icono: Icons.event_available_outlined, pagina: const MisReservasScreen()),
       if (cliente) (nombre: 'Carrito', icono: Icons.shopping_bag_outlined, pagina: const CarritoScreen()),
       if (cliente) (nombre: 'Mis compras', icono: Icons.receipt_long_outlined, pagina: const MisComprasScreen()),
       if (cliente) (nombre: 'Mis pedidos', icono: Icons.local_shipping_outlined, pagina: const MisPedidosScreen()),
-      if (permisos.any((p) => ['prendas:ver', 'inventario:ver', 'ventas:crear', 'reservas:crear'].contains(p)))
-        (nombre: 'Catálogo sin conexión', icono: Icons.offline_pin_outlined, pagina: ModoOfflineScreen(sesion: widget.sesion, sincronizador: sincronizador)),
-      if (permisos.contains('clientes:ver')) (nombre: 'Clientes', icono: Icons.people_outline, pagina: ClientesScreen(permisos: permisos)),
-      if (permisos.contains('ventas:anular') || permisos.contains('reservas:anular'))
-        (nombre: 'Anular operación', icono: Icons.cancel_outlined, pagina: AnularOperacionScreen(permisos: permisos)),
+
+      // Opciones para personal (Admin de tienda, Encargado de sucursal, Cajero)
+      if (esAdmin || esEncargado || esCajero)
+        (nombre: 'Asistente IA (Gemini)', icono: Icons.auto_awesome, pagina: const AsistenteIaScreen()),
+      if (esAdmin || permisos.contains('sucursales:ver'))
+        (nombre: 'Red de Sucursales', icono: Icons.storefront, pagina: const SucursalesScreen()),
+      if (esAdmin || esEncargado || permisos.contains('inventario:ver'))
+        (nombre: 'Inventario y Stock', icono: Icons.inventory_2_outlined, pagina: const InventarioScreen()),
+      if (esAdmin || esCajero || permisos.contains('ventas:crear'))
+        (nombre: 'Caja y Cobros', icono: Icons.point_of_sale, pagina: const CajaCobroScreen()),
+      if (esAdmin || esEncargado || esCajero || permisos.contains('reservas:ver'))
+        (nombre: 'Reservas de Tienda', icono: Icons.event_note, pagina: const ReservasGestionScreen()),
+      if (esAdmin || esEncargado || esCajero || permisos.contains('cambios:crear'))
+        (nombre: 'Cambios de Prenda', icono: Icons.swap_horiz, pagina: const CambiosScreen()),
+      if (permisos.contains('clientes:ver') || esAdmin || esCajero)
+        (nombre: 'Clientes', icono: Icons.people_outline, pagina: ClientesScreen(permisos: permisos)),
+      if (permisos.contains('ventas:anular') || permisos.contains('reservas:anular') || esAdmin)
+        (nombre: 'Anular Operación', icono: Icons.cancel_outlined, pagina: AnularOperacionScreen(permisos: permisos)),
+
+      // Catálogo offline disponible para todos
+      (nombre: 'Catálogo sin conexión', icono: Icons.offline_pin_outlined, pagina: ModoOfflineScreen(sesion: widget.sesion, sincronizador: sincronizador)),
     ];
     if (indice >= opciones.length) indice = 0;
     return Scaffold(appBar: AppBar(title: const Marca(clara: true), actions: [IconButton(tooltip: 'Cerrar sesión',
