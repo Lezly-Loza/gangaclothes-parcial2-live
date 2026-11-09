@@ -682,6 +682,8 @@ class _HomeScreenState extends State<HomeScreen> {
         (nombre: 'Clientes', icono: Icons.people_outline, pagina: ClientesScreen(permisos: permisos)),
       if (permisos.contains('ventas:anular') || permisos.contains('reservas:anular') || esAdmin)
         (nombre: 'Anular Operación', icono: Icons.cancel_outlined, pagina: AnularOperacionScreen(permisos: permisos)),
+      if (esAdmin || esEncargado || permisos.contains('reportes:ver'))
+        (nombre: 'Reportes y Métricas', icono: Icons.insights_outlined, pagina: const ReportesScreen()),
 
       // Catálogo offline disponible para todos
       (nombre: 'Catálogo sin conexión', icono: Icons.offline_pin_outlined, pagina: ModoOfflineScreen(sesion: widget.sesion, sincronizador: sincronizador)),

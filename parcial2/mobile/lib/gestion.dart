@@ -935,3 +935,303 @@ class _CambiosScreenState extends State<CambiosScreen> {
     ),
   );
 }
+
+class ReportesScreen extends StatefulWidget {
+  const ReportesScreen({super.key});
+  @override State<ReportesScreen> createState() => _ReportesScreenState();
+}
+
+class _ReportesScreenState extends State<ReportesScreen> with SingleTickerProviderStateMixin {
+  late TabController tabCtrl;
+  Map<String, dynamic>? dashboard;
+  bool cargando = true;
+  String error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    tabCtrl = TabController(length: 3, vsync: this);
+    cargarReporte();
+  }
+
+  @override
+  void dispose() {
+    tabCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> cargarReporte() async {
+    setState(() { cargando = true; error = ''; });
+    try {
+      final res = mapa(await api.get('/reportes/dashboard'));
+      if (mounted) setState(() => dashboard = res);
+    } catch (e) {
+      if (mounted) setState(() => error = mensajeError(e));
+    } finally {
+      if (mounted) setState(() => cargando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Reportes Oficiales (CU-24)', style: TextStyle(fontSize: 16)),
+        bottom: TabBar(
+          controller: tabCtrl,
+          indicatorColor: rosa,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white60,
+          tabs: const [
+            Tab(icon: Icon(Icons.insights, size: 20), text: 'KPIs'),
+            Tab(icon: Icon(Icons.leaderboard, size: 20), text: 'Top Prendas'),
+            Tab(icon: Icon(Icons.pie_chart, size: 20), text: 'Canales y Pagos'),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Actualizar',
+            icon: const Icon(Icons.refresh),
+            onPressed: cargarReporte,
+          ),
+        ],
+      ),
+      body: cargando
+          ? const Center(child: CircularProgressIndicator())
+          : error.isNotEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.deepOrange),
+                        const SizedBox(height: 12),
+                        Text(error, textAlign: TextAlign.center),
+                        const SizedBox(height: 12),
+                        FilledButton(onPressed: cargarReporte, child: const Text('Reintentar')),
+                      ],
+                    ),
+                  ),
+                )
+              : TabBarView(
+                  controller: tabCtrl,
+                  children: [
+                    _tabKPIs(),
+                    _tabTopPrendas(),
+                    _tabCanalesYPagos(),
+                  ],
+                ),
+    );
+  }
+
+  Widget _tabKPIs() {
+    final ind = mapa(dashboard?['indicadores'] ?? {});
+    return RefreshIndicator(
+      onRefresh: cargarReporte,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _tarjetaKpi(
+                  'Ventas Totales',
+                  bs(ind['total']),
+                  Icons.monetization_on,
+                  Colors.green,
+                  '${ind['ventas'] ?? 0} ventas',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _tarjetaKpi(
+                  'Ganancia Estimada',
+                  bs(ind['ganancia']),
+                  Icons.trending_up,
+                  rosa,
+                  'Margen: ${(ind['margen_porcentaje'] as num?)?.toStringAsFixed(1) ?? '0'}%',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _tarjetaKpi(
+                  'Unidades Vendidas',
+                  '${ind['unidades'] ?? 0} uds.',
+                  Icons.checkroom,
+                  Colors.blue,
+                  'Ticket prom: ${bs(ind['ticket_promedio'])}',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _tarjetaKpi(
+                  'Alertas de Stock',
+                  '${ind['alertas_stock'] ?? 0} bajas',
+                  Icons.warning_amber,
+                  Colors.orange,
+                  'Stock total: ${ind['unidades_en_stock'] ?? 0}',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Estado de Operaciones', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.event_note, color: rosa),
+                    title: const Text('Reservas activas en tienda'),
+                    trailing: Text('${ind['reservas_activas'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                  const Divider(height: 8),
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.local_offer_outlined, color: Colors.blue),
+                    title: const Text('Promociones vigentes'),
+                    trailing: Text('${ind['promociones_vigentes'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                  const Divider(height: 8),
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.account_balance_wallet_outlined, color: Colors.purple),
+                    title: const Text('Valor de inventario (venta)'),
+                    trailing: Text(bs(ind['valor_inventario_venta']), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaKpi(String titulo, String valor, IconData icono, Color color, String pie) {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icono, color: color, size: 20),
+                const SizedBox(width: 6),
+                Expanded(child: Text(titulo, style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(valor, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4),
+            Text(pie, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tabTopPrendas() {
+    final top = mapas(dashboard?['top_prendas']);
+    if (top.isEmpty) return vacio('No hay prendas vendidas en el periodo.');
+    return RefreshIndicator(
+      onRefresh: cargarReporte,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(14),
+        itemCount: top.length,
+        itemBuilder: (ctx, i) {
+          final p = top[i];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: i == 0 ? Colors.amber : (i == 1 ? Colors.grey.shade400 : (i == 2 ? Colors.brown.shade300 : rosa)),
+                foregroundColor: Colors.white,
+                child: Text('#${i + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              title: Text('${p['etiqueta']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('${p['unidades']} uds vendidas · Ganancia: ${bs(p['ganancia'])}'),
+              trailing: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(bs(p['total']), style: const TextStyle(fontWeight: FontWeight.w900, color: rosa)),
+                  Text('${(p['participacion'] as num?)?.toStringAsFixed(1) ?? '0'}%', style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _tabCanalesYPagos() {
+    final canales = mapas(dashboard?['por_canal']);
+    final metodos = mapas(dashboard?['metodos_pago']);
+
+    return RefreshIndicator(
+      onRefresh: cargarReporte,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          titulo('Ventas por Canal'),
+          const Text('Desglose de ingresos por origen de la venta (CU-24).'),
+          const SizedBox(height: 12),
+          for (final c in canales)
+            Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                leading: Icon(
+                  c['etiqueta'] == 'movil'
+                      ? Icons.smartphone
+                      : (c['etiqueta'] == 'caja' ? Icons.point_of_sale : Icons.laptop_chromebook),
+                  color: rosa,
+                ),
+                title: Text('Canal ${c['etiqueta'].toString().toUpperCase()}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('${c['ventas']} operaciones · ${c['unidades']} prendas'),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(bs(c['total']), style: const TextStyle(fontWeight: FontWeight.w900)),
+                    Text('${(c['participacion'] as num?)?.toStringAsFixed(1) ?? '0'}%', style: const TextStyle(fontSize: 12, color: rosa, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 20),
+          titulo('Métodos de Pago'),
+          const Text('Total recaudado por modalidad de cobro.'),
+          const SizedBox(height: 12),
+          for (final m in metodos)
+            Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                leading: Icon(
+                  m['metodo'] == 'QR'
+                      ? Icons.qr_code_2
+                      : (m['metodo'] == 'EFECTIVO' ? Icons.payments_outlined : Icons.credit_card),
+                  color: Colors.teal,
+                ),
+                title: Text('Pago ${m['metodo']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('${m['pagos']} transacciones procesadas'),
+                trailing: Text(bs(m['total']), style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.teal, fontSize: 15)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

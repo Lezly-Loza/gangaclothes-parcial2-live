@@ -60,6 +60,7 @@ def chat(body: ChatIn, scope: TenantScope = Depends(require_tenant), db: Session
             "id": p.id,
             "nombre": p.nombre,
             "precio": float(precio_final),
+            "imagen_url": p.imagen_url,
             "categoria": cat.nombre if cat else "Prendas",
             "colores_disponibles": sorted(list(colores)) or ["Estándar"],
             "tallas_disponibles": sorted(list(tallas)) or ["Única"],
