@@ -93,12 +93,9 @@ export function menuParaRoles(roles: string[], permisos: string[] = [], esSuper 
     ...grupo,
     items: grupo.items.filter(
       (item) => {
-        // El superadmin tiene visibilidad total del sistema
+        // El superadmin gestiona la plataforma SaaS global (empresas, planes, bitacora)
         if (esSuper) {
-          if (item.ruta === '/admin/contratar-plan' || item.ruta === '/admin/mi-suscripcion') {
-            return false;
-          }
-          return true;
+          return ['/admin', '/admin/empresas', '/admin/planes', '/admin/bitacora'].includes(item.ruta);
         }
         // Las tiendas clientes no gestionan empresas ni planes globales
         if (item.ruta === '/admin/empresas' || item.ruta === '/admin/planes') {

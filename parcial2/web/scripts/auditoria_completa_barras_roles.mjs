@@ -58,13 +58,16 @@ async function logoutLimpio() {
 async function loginUsuario(email, password, tenant = 'luna', tipo = 'tenant') {
   await logoutLimpio();
   if (tipo === 'super') {
-    const btnSuper = page.getByRole('button', { name: 'Super', exact: true });
-    if (await btnSuper.count() > 0) {
-      await btnSuper.click();
-      await page.getByRole('button', { name: 'Iniciar sesion', exact: true }).click();
-      await page.waitForURL(/\/(admin|login)/);
-      return;
+    const chipSuper = page.locator('button.chip:has-text("Superadministrador")');
+    if (await chipSuper.count() > 0) {
+      await chipSuper.click();
+      await page.waitForTimeout(300);
     }
+    await page.locator('input[formcontrolname="email"]').fill(email);
+    await page.locator('input[formcontrolname="password"]').fill(password);
+    await page.getByRole('button', { name: 'Iniciar sesion', exact: true }).click();
+    await page.waitForURL(/\/admin/);
+    return;
   }
 
   await page.locator('input[formcontrolname="codigo_tenant"]').fill(tenant);
