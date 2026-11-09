@@ -25,10 +25,10 @@ class ChatIn(BaseModel):
 
 @router.get("/estado")
 def estado():
-    clave = os.environ.get("GEMINI_API") or os.environ.get("GEMINI_API_KEY")
+    clave = os.environ.get("GEMINI_API") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     return {
         "motor": "gemini" if clave else "sin_modelo",
-        "modelo": os.environ.get("GEMINI_MODELO", "gemini-flash-latest") if clave else None,
+        "modelo": os.environ.get("GEMINI_MODELO", "gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-flash,gemini-flash-latest") if clave else None,
         "disponible": True,
     }
 
@@ -78,46 +78,48 @@ def chat(body: ChatIn, scope: TenantScope = Depends(require_tenant), db: Session
     else:
         prendas_filtradas = prendas_filtradas[:4]
 
-    clave = os.environ.get("GEMINI_API") or os.environ.get("GEMINI_API_KEY")
+    clave = os.environ.get("GEMINI_API") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     modo = "sin_modelo"
     respuesta_texto = ""
 
     if clave:
-        try:
-            modelo = os.environ.get("GEMINI_MODELO", "gemini-flash-latest")
-            cuerpo = {
-                "systemInstruction": {
-                    "parts": [{
-                        "text": (
-                            "Eres el Asistente de compras virtual de una tienda de ropa exclusiva. "
-                            "Habla en español boliviano de manera amable, cordial y concisa. "
-                            "Recomienda amablemente las prendas disponibles dadas en los datos, mencionando sus precios en Bs."
-                        )
-                    }]
-                },
-                "contents": [{
-                    "role": "user",
-                    "parts": [{
-                        "text": json.dumps({"pregunta": body.mensaje, "prendas_disponibles": prendas_filtradas}, ensure_ascii=False)
-                    }]
-                }],
-                "generationConfig": {"temperature": 0.4, "maxOutputTokens": 350}
-            }
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
-            req = urllib.request.Request(
-                url, data=json.dumps(cuerpo).encode("utf-8"),
-                headers={"Content-Type": "application/json", "x-goog-api-key": clave},
-                method="POST"
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.load(resp)
-            parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-            texto = "\n".join(p.get("text", "") for p in parts).strip()
-            if texto:
-                respuesta_texto = texto
-                modo = "gemini"
-        except Exception:
-            modo = "sin_modelo"
+        modelos = [m.strip() for m in (os.environ.get("GEMINI_MODELO") or "gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-flash,gemini-flash-latest").split(",")]
+        cuerpo = {
+            "systemInstruction": {
+                "parts": [{
+                    "text": (
+                        "Eres el Asistente de compras virtual de una tienda de ropa exclusiva. "
+                        "Habla en español boliviano de manera amable, cordial y concisa. "
+                        "Recomienda amablemente las prendas disponibles dadas en los datos, mencionando sus precios en Bs."
+                    )
+                }]
+            },
+            "contents": [{
+                "role": "user",
+                "parts": [{
+                    "text": json.dumps({"pregunta": body.mensaje, "prendas_disponibles": prendas_filtradas}, ensure_ascii=False)
+                }]
+            }],
+            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 350}
+        }
+        for modelo in modelos:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
+                req = urllib.request.Request(
+                    url, data=json.dumps(cuerpo).encode("utf-8"),
+                    headers={"Content-Type": "application/json", "x-goog-api-key": clave},
+                    method="POST"
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.load(resp)
+                parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                texto = "\n".join(p.get("text", "") for p in parts).strip()
+                if texto:
+                    respuesta_texto = texto
+                    modo = "gemini"
+                    break
+            except Exception:
+                continue
 
     if not respuesta_texto:
         nombres = ", ".join(f"'{p['nombre']}' (Bs {p['precio']:.2f})" for p in prendas_filtradas[:2])

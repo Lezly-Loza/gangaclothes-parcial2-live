@@ -1,5 +1,10 @@
 # GangaClothes
 
+> **⚠️ IMPORTANTE PARA DESARROLLO Y DESPLIEGUE (PARCIAL 2)**:
+> Todo el desarrollo activo, la arquitectura multitenant SaaS, las pruebas E2E y los despliegues de producción en **Vercel** (`https://gangaclothes-parcial2-live.vercel.app`) y **Render** (`https://gangaclothes-parcial2-live.onrender.com`) corresponden exclusivamente a la carpeta:
+> 👉 **[`parcial2/`](./parcial2/)** (`parcial2/backend`, `parcial2/web`, `parcial2/mobile`)
+> Los directorios en la raíz (`backend/`, `web/`, `mobile/`) se conservan como referencia histórica del Parcial 1.
+
 Plataforma Inteligente de Comercio Electrónico para tienda de ropa con vestidores
 virtuales vía Realidad Aumentada. Proyecto de **Sistemas de Información II** (UAGRM)
 — Examen S2-2026, MSc. Ing. Angélica Garzón Cuéllar.
