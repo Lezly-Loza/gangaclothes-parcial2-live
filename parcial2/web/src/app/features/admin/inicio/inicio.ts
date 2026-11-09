@@ -78,15 +78,15 @@ export class AdminInicio {
     return cod.toUpperCase();
   });
 
-  private recursosTenant(): Array<[string, string]> {
+  private recursosTenant(): Array<[string, string, string]> {
     return [
-      ['Categorias',  'catalogos/categorias'],
-      ['Tallas',      'catalogos/tallas'],
-      ['Colores',     'catalogos/colores'],
-      ['Temporadas',  'catalogos/temporadas'],
-      ['Sucursales',  'sucursales'],
-      ['Proveedores', 'proveedores'],
-      ['Clientes',    'clientes'],
+      ['Categorias',  'catalogos/categorias', 'catalogos:ver'],
+      ['Tallas',      'catalogos/tallas',     'catalogos:ver'],
+      ['Colores',     'catalogos/colores',    'catalogos:ver'],
+      ['Temporadas',  'catalogos/temporadas', 'catalogos:ver'],
+      ['Sucursales',  'sucursales',           'sucursales:ver'],
+      ['Proveedores', 'proveedores',          'proveedores:ver'],
+      ['Clientes',    'clientes',             'clientes:ver'],
     ];
   }
 
@@ -113,19 +113,23 @@ export class AdminInicio {
       return;
     }
 
-    // Tenant regular: Cargar conteos y dashboard analítico
-    const recursos = this.recursosTenant();
-    const reqConteos = forkJoin(
-      recursos.map(([, ruta]) =>
-        this.http
-          .get<unknown>(`${API_URL}/${ruta}${ruta === 'clientes' ? '?q=' : ''}`)
-          .pipe(catchError(() => of(null)))
-      )
-    );
+    // Tenant regular: Cargar unicamente recursos a los que el rol del usuario tiene permiso
+    const recursos = this.recursosTenant().filter(([, , perm]) => this.sesion.tienePermiso(perm));
+    const reqConteos = recursos.length > 0
+      ? forkJoin(
+          recursos.map(([, ruta]) =>
+            this.http
+              .get<unknown>(`${API_URL}/${ruta}${ruta === 'clientes' ? '?q=' : ''}`)
+              .pipe(catchError(() => of(null)))
+          )
+        )
+      : of([]);
 
-    const reqDashboard = this.http
-      .get<{ indicadores: Indicadores; top_prendas: TopPrenda[] }>(`${API_URL}/reportes/dashboard`)
-      .pipe(catchError(() => of(null)));
+    const reqDashboard = this.sesion.tienePermiso('reportes:ver')
+      ? this.http
+          .get<{ indicadores: Indicadores; top_prendas: TopPrenda[] }>(`${API_URL}/reportes/dashboard`)
+          .pipe(catchError(() => of(null)))
+      : of(null);
 
     forkJoin({ conteos: reqConteos, dash: reqDashboard }).subscribe(({ conteos, dash }) => {
       this.fichas.set(

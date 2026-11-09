@@ -170,9 +170,15 @@
         </p>
       </div>
       <div class="hero-acciones">
-        <button type="button" class="btn btn-primario" (click)="irA('/admin/dashboard')">
-          Métricas y Analítica
-        </button>
+        @if (sesion.tienePermiso('reportes:ver')) {
+          <button type="button" class="btn btn-primario" (click)="irA('/admin/dashboard')">
+            Métricas y Analítica
+          </button>
+        } @else if (sesion.tienePermiso('ventas:crear')) {
+          <button type="button" class="btn btn-primario" (click)="irA('/admin/caja')">
+            Ir a Caja y Cobros
+          </button>
+        }
         <button type="button" class="btn btn-secundario" (click)="cargarDatos()">
           Actualizar
         </button>
@@ -337,47 +343,51 @@
             </div>
           </div>
 
-          <div class="accion-card" (click)="irA('/admin/anular')">
-            <div class="accion-icon bg-rojo">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
-              </svg>
+          @if (sesion.tienePermiso('ventas:anular') || sesion.tienePermiso('reservas:anular')) {
+            <div class="accion-card" (click)="irA('/admin/anular')">
+              <div class="accion-icon bg-rojo">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                </svg>
+              </div>
+              <div class="accion-body">
+                <h3>Anulación de Operaciones</h3>
+                <p>Protocolo de anulación con motivo obligatorio y restitución automática de existencias al stock.</p>
+                <span class="enlace-accion">Módulo de anulación →</span>
+              </div>
             </div>
-            <div class="accion-body">
-              <h3>Anulación de Operaciones</h3>
-              <p>Protocolo de anulación con motivo obligatorio y restitución automática de existencias al stock.</p>
-              <span class="enlace-accion">Módulo de anulación →</span>
-            </div>
-          </div>
+          }
 
-          <div class="accion-card" (click)="irA('/admin/reportes')">
-            <div class="accion-icon bg-morado">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10"></line>
-                <line x1="12" y1="20" x2="12" y2="4"></line>
-                <line x1="6" y1="20" x2="6" y2="14"></line>
-              </svg>
+          @if (sesion.tienePermiso('reportes:ver')) {
+            <div class="accion-card" (click)="irA('/admin/reportes')">
+              <div class="accion-icon bg-morado">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+              </div>
+              <div class="accion-body">
+                <h3>Reportes y Balances</h3>
+                <p>Generación de reportes paginados y exportación corporativa a hojas de cálculo Excel y documentos PDF.</p>
+                <span class="enlace-accion">Exportar reportes →</span>
+              </div>
             </div>
-            <div class="accion-body">
-              <h3>Reportes y Balances</h3>
-              <p>Generación de reportes paginados y exportación corporativa a hojas de cálculo Excel y documentos PDF.</p>
-              <span class="enlace-accion">Exportar reportes →</span>
-            </div>
-          </div>
 
-          <div class="accion-card" (click)="irA('/admin/dashboard')">
-            <div class="accion-icon bg-rosa">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-              </svg>
+            <div class="accion-card" (click)="irA('/admin/dashboard')">
+              <div class="accion-icon bg-rosa">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+              </div>
+              <div class="accion-body">
+                <h3>Modelos Estadísticos y Proyecciones</h3>
+                <p>Proyección trimestral basada en tendencias históricas y segmentación de clientes por frecuencia de compra.</p>
+                <span class="enlace-accion">Ver indicadores →</span>
+              </div>
             </div>
-            <div class="accion-body">
-              <h3>Modelos Estadísticos y Proyecciones</h3>
-              <p>Proyección trimestral basada en tendencias históricas y segmentación de clientes por frecuencia de compra.</p>
-              <span class="enlace-accion">Ver indicadores →</span>
-            </div>
-          </div>
+          }
 
           <div class="accion-card" (click)="irA('/modo-offline')">
             <div class="accion-icon bg-ambar">

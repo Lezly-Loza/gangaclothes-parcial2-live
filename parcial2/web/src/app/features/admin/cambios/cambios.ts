@@ -36,9 +36,10 @@ interface Cotizacion { precio_pagado: number; precio_nuevo: number; diferencia: 
             <option [ngValue]="detalle.variante_id">{{ nombreVariante(detalle.variante_id) }} · {{ detalle.cantidad }} unidad(es)</option>
           }
         </select>
-        <label class="etiqueta" for="nueva">Prenda que recibe</label>
+        <label class="etiqueta" for="nueva">Prenda que recibe o tipo de compensación</label>
         <select id="nueva" class="campo" [(ngModel)]="varianteNueva" (ngModelChange)="solicitarCotizacion()">
-          <option [ngValue]="null">Selecciona una prenda disponible</option>
+          <option [ngValue]="null">Selecciona una opción</option>
+          <option [ngValue]="-1">● Devolución monetaria en efectivo (reembolso directo al cliente en caja)</option>
           @for (fila of inventario(); track fila.variante_id) {
             @if (fila.disponible > 0) { <option [ngValue]="fila.variante_id">{{ fila.sku }} · {{ fila.prenda }} · {{ fila.talla }} · {{ fila.color }} ({{ fila.disponible }} disponibles)</option> }
           }
@@ -48,14 +49,14 @@ interface Cotizacion { precio_pagado: number; precio_nuevo: number; diferencia: 
         @if (cotizacion(); as c) {
           <div class="resultado" role="status">
             <p>Pagó por la prenda devuelta: <b>Bs {{ c.precio_pagado.toFixed(2) }}</b> · Prenda nueva: <b>Bs {{ c.precio_nuevo.toFixed(2) }}</b></p>
-            @if (c.devolver > 0) { <p><b>Devolver al cliente: Bs {{ c.devolver.toFixed(2) }}</b></p> }
+            @if (c.devolver > 0) { <p><b>Devolver al cliente: Bs {{ c.devolver.toFixed(2) }}</b> (en efectivo de caja)</p> }
             @else if (c.cobrar > 0) { <p><b>Cobrar al cliente: Bs {{ c.cobrar.toFixed(2) }}</b></p> }
             @else { <p><b>Sin diferencia de precio.</b></p> }
             <p>Plazo de la empresa: {{ c.plazo_dias }} días. {{ c.aviso }}</p>
           </div>
         }
         <label class="etiqueta" for="motivo">Motivo</label><input id="motivo" class="campo" [(ngModel)]="motivo">
-        <button class="btn rosa" (click)="cambiar(actual, varianteNueva, motivo)" [disabled]="guardando() || cotizando() || !cotizacion() || !varianteDevuelta || !varianteNueva || !motivo.trim()">{{ guardando() ? 'Procesando…' : 'Registrar cambio' }}</button>
+        <button class="btn rosa" (click)="cambiar(actual, varianteNueva, motivo)" [disabled]="guardando() || cotizando() || !cotizacion() || !varianteDevuelta || varianteNueva === null || !motivo.trim()">{{ guardando() ? 'Procesando…' : (varianteNueva === -1 ? 'Registrar devolución en efectivo' : 'Registrar cambio') }}</button>
       </section>
     }
     @if (comprobante()) { <p class="resultado">{{ comprobante() }}</p> }
@@ -87,20 +88,28 @@ export class CambioPrendaPage {
   solicitarCotizacion() {
     const version = ++this.versionCotizacion; const venta = this.venta();
     this.cotizacion.set(null); this.errorCotizacion.set('');
-    if (!venta || !this.varianteDevuelta || !this.varianteNueva) { this.cotizando.set(false); return; }
+    if (!venta || !this.varianteDevuelta || this.varianteNueva === null) { this.cotizando.set(false); return; }
     this.cotizando.set(true);
-    this.http.post<Cotizacion>(`${API_URL}/cambios/cotizar`, { venta_id: venta.id, variante_devuelta_id: this.varianteDevuelta, variante_nueva_id: this.varianteNueva }).subscribe({
+    const nuevaId = this.varianteNueva === -1 ? null : this.varianteNueva;
+    this.http.post<Cotizacion>(`${API_URL}/cambios/cotizar`, { venta_id: venta.id, variante_devuelta_id: this.varianteDevuelta, variante_nueva_id: nuevaId }).subscribe({
       next: r => { if (version === this.versionCotizacion) { this.cotizacion.set(r); this.cotizando.set(false); } },
       error: e => { if (version === this.versionCotizacion) { this.errorCotizacion.set(mensajeDeError(e, 'No se pudo calcular la diferencia')); this.cotizando.set(false); } },
     });
   }
   cambiar(item: VentaCambio, nueva: number | null, motivo: string) {
     const cotizacion = this.cotizacion();
-    if (!this.varianteDevuelta || !nueva || !motivo.trim() || !cotizacion) return;
+    if (!this.varianteDevuelta || nueva === null || !motivo.trim() || !cotizacion) return;
+    const nuevaId = nueva === -1 ? null : nueva;
     this.guardando.set(true);
-    this.http.post<{ id: number; diferencia: number; cobrar: number; devolver: number }>(`${API_URL}/cambios`, { venta_id: item.id, variante_devuelta_id: this.varianteDevuelta, variante_nueva_id: nueva, motivo: motivo.trim(), diferencia_esperada: cotizacion.diferencia }).subscribe({
-      next: r => { this.guardando.set(false); this.venta.set(null); const ajuste = r.devolver > 0 ? `Devolver al cliente Bs ${r.devolver.toFixed(2)}` : r.cobrar > 0 ? `Cobrar al cliente Bs ${r.cobrar.toFixed(2)}` : 'Sin diferencia de precio'; this.comprobante.set(`Cambio ${r.id} registrado. ${ajuste}. El dinero debe entregarse o cobrarse fuera del sistema.`); this.mostrarComprobante(); },
-      error: e => { this.guardando.set(false); this.avisos.error(mensajeDeError(e, 'No se pudo registrar el cambio')); this.solicitarCotizacion(); },
+    this.http.post<{ id: number; diferencia: number; cobrar: number; devolver: number }>(`${API_URL}/cambios`, { venta_id: item.id, variante_devuelta_id: this.varianteDevuelta, variante_nueva_id: nuevaId, motivo: motivo.trim(), diferencia_esperada: cotizacion.diferencia }).subscribe({
+      next: r => {
+        this.guardando.set(false); this.venta.set(null);
+        const accion = nuevaId === null ? 'Devolución monetaria en efectivo' : 'Cambio de prenda';
+        const ajuste = r.devolver > 0 ? `Devolver al cliente en efectivo Bs ${r.devolver.toFixed(2)}` : r.cobrar > 0 ? `Cobrar al cliente Bs ${r.cobrar.toFixed(2)}` : 'Sin diferencia de precio';
+        this.comprobante.set(`${accion} #${r.id} registrado con éxito. ${ajuste}.`);
+        this.avisos.ok(`${accion} #${r.id} registrado correctamente.`);
+      },
+      error: e => { this.guardando.set(false); this.avisos.error(mensajeDeError(e, 'No se pudo registrar la operación')); this.solicitarCotizacion(); },
     });
   }
   mostrarComprobante() { return this.comprobante(); }

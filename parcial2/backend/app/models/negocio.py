@@ -222,7 +222,7 @@ class CambioPrenda(Base, TenantMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     venta_id: Mapped[int] = mapped_column(ForeignKey("ventas.id"), nullable=False)
     variante_devuelta_id: Mapped[int] = mapped_column(ForeignKey("variantes.id"), nullable=False)
-    variante_nueva_id: Mapped[int] = mapped_column(ForeignKey("variantes.id"), nullable=False)
+    variante_nueva_id: Mapped[int | None] = mapped_column(ForeignKey("variantes.id"), nullable=True)
     diferencia: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     motivo: Mapped[str] = mapped_column(String(300), nullable=False)
     fecha: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))

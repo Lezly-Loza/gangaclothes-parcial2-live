@@ -12,6 +12,8 @@
     "test:flujos:visual": "node scripts/demo_flujos_principales.mjs --headed",
     "test:casos": "node scripts/probar_todos_los_casos_uso.mjs",
     "test:casos:visual": "node scripts/probar_todos_los_casos_uso.mjs --headed",
+    "test:barra": "node scripts/auditoria_completa_barras_roles.mjs",
+    "test:barra:visual": "node scripts/auditoria_completa_barras_roles.mjs --headed",
     "test:integracion": "node scripts/probar_integracion.mjs",
     "test:cu19-26": "node scripts/probar_cu19_26.mjs"
   },
