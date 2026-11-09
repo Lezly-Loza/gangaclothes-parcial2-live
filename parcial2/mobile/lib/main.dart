@@ -28,6 +28,16 @@ Widget pantallaSesion(Map<String, dynamic> sesion) => sesion['kind'] == 'super'
 void entrar(BuildContext context, Map<String, dynamic> sesion) => Navigator.pushAndRemoveUntil(context,
     MaterialPageRoute(builder: (_) => pantallaSesion(sesion)), (_) => false);
 
+const _cuentasDemo = [
+  (rol: 'Admin', tenant: 'luna', email: 'admin@gangaclothes.com', pass: 'Admin123'),
+  (rol: 'Encargado', tenant: 'luna', email: 'encargado@gangaclothes.com', pass: 'Encargado123'),
+  (rol: 'Cajero', tenant: 'luna', email: 'cajero@gangaclothes.com', pass: 'Cajero123'),
+  (rol: 'Sofia (Cliente)', tenant: 'luna', email: 'sofia@gangaclothes.com', pass: 'Cliente#2026'),
+  (rol: 'Diego (Cliente)', tenant: 'luna', email: 'diego@gangaclothes.com', pass: 'Cliente#2026'),
+  (rol: 'Admin Andina', tenant: 'andina', email: 'admin@andina.bo', pass: 'Admin123'),
+  (rol: 'Superadmin', tenant: '', email: 'root@plataforma.bo', pass: 'SuperSegura123'),
+];
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
   @override State<LoginScreen> createState() => _LoginScreenState();
@@ -37,6 +47,16 @@ class _LoginScreenState extends State<LoginScreen> {
   bool registro = false, ocupado = false, superadmin = false; String? error;
   final nombre = TextEditingController(); final documento = TextEditingController(); final telefono = TextEditingController();
   @override void dispose() { for (final c in [empresa, correo, clave, nombre, documento, telefono]) { c.dispose(); } super.dispose(); }
+  void usarCuenta(String tenant, String mail, String pwd) {
+    setState(() {
+      superadmin = tenant.isEmpty;
+      empresa.text = tenant;
+      correo.text = mail;
+      clave.text = pwd;
+      error = null;
+    });
+    login();
+  }
   Future<void> login() async {
     if ((!superadmin && empresa.text.trim().isEmpty) || correo.text.trim().isEmpty || clave.text.isEmpty ||
         (registro && (nombre.text.trim().isEmpty || documento.text.trim().isEmpty))) {
@@ -69,6 +89,25 @@ class _LoginScreenState extends State<LoginScreen> {
       SizedBox(height: 48, child: FilledButton(onPressed: ocupado ? null : login, child: Text(ocupado ? 'Espera…' : registro ? 'Crear cuenta' : 'Iniciar sesión'))),
       if (!superadmin) TextButton(onPressed: ocupado ? null : () => setState(() { registro = !registro; error = null; }),
         child: Text(registro ? 'Ya tengo una cuenta' : '¿Cliente nuevo? Crear cuenta')),
+      if (!registro) ...[
+        const SizedBox(height: 16),
+        const Divider(),
+        const SizedBox(height: 8),
+        const Text('Cuentas de prueba (seed):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black54)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final c in _cuentasDemo)
+              ActionChip(
+                avatar: const Icon(Icons.person, size: 16, color: rosa),
+                label: Text(c.rol, style: const TextStyle(fontSize: 12)),
+                onPressed: ocupado ? null : () => usarCuenta(c.tenant, c.email, c.pass),
+              ),
+          ],
+        ),
+      ],
     ])))));
 }
 Widget campo(String nombre, TextEditingController c, {bool secreto = false, TextInputType? tipo}) => Padding(

@@ -6,6 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 String _direccion() {
   const configurada = String.fromEnvironment('API_URL');
   if (configurada.isNotEmpty) return configurada;
+  if (kReleaseMode) {
+    return 'https://gangaclothes-parcial2-live.onrender.com/api/v1';
+  }
   return kIsWeb || defaultTargetPlatform != TargetPlatform.android
       ? 'http://127.0.0.1:8000/api/v1' : 'http://10.0.2.2:8000/api/v1';
 }
