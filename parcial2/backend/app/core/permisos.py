@@ -37,7 +37,7 @@ def codigos():
 PREDETERMINADOS = {
     "administrador": sorted(codigos()),
     "encargado": ["inventario:ver", "inventario:crear", "inventario:editar", "reservas:ver",
-                   "reservas:anular", "ventas:anular", "reportes:ver", "sucursales:ver", "proveedores:ver"],
+                   "reservas:anular", "ventas:anular", "cambios:crear", "reportes:ver", "sucursales:ver", "proveedores:ver"],
     "vendedor": ["prendas:ver", "inventario:ver", "clientes:ver", "clientes:crear",
                   "clientes:editar", "ventas:ver", "ventas:crear", "pagos:crear", "cambios:crear"],
     "cliente": ["reservas:crear", "ventas:crear"],
