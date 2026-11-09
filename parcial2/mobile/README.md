@@ -96,7 +96,7 @@ anterior. En PowerShell:
 
 ```powershell
 cd parcial2/mobile
-flutter run -d emulator-5554 --dart-define=API_URL=https://gangaclothes-parcial2.onrender.com/api/v1 --dart-define=WEB_URL=https://ganga-clothes.vercel.app
+flutter run -d emulator-5554 --dart-define=API_URL=https://gangaclothes-parcial2-live.onrender.com/api/v1 --dart-define=WEB_URL=https://gangaclothes-parcial2-live.vercel.app
 ```
 
 En «Mi empresa», las cuentas demo de Ana y del cliente usan código `luna` y
