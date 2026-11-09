@@ -29,6 +29,11 @@ export class Empresas {
   readonly guardando = signal(false);
   readonly errorFormulario = signal<string | null>(null);
 
+  readonly modalPlanAbierto = signal(false);
+  readonly empresaSeleccionada = signal<Tenant | null>(null);
+  readonly planElegido = signal<string>('profesional');
+  readonly cambiandoPlan = signal(false);
+
   readonly formulario = this.fb.nonNullable.group({
     razon_social: ['', [Validators.required, Validators.minLength(2)]],
     nit: ['', Validators.required],
@@ -96,4 +101,48 @@ export class Empresas {
   }
 
   fecha(iso: string | null | undefined) { return fechaCortaLocal(iso, true); }
+
+  abrirCambioPlan(e: Tenant) {
+    this.empresaSeleccionada.set(e);
+    const actual = this.planes().find(p => p.nombre.toLowerCase() === (e.plan_actual || '').toLowerCase())?.codigo;
+    this.planElegido.set(actual || 'profesional');
+    this.modalPlanAbierto.set(true);
+  }
+
+  cerrarModalPlan() {
+    this.modalPlanAbierto.set(false);
+    this.empresaSeleccionada.set(null);
+  }
+
+  setPlanElegido(codigo: string) {
+    this.planElegido.set(codigo);
+  }
+
+  async confirmarCambioPlan() {
+    const emp = this.empresaSeleccionada();
+    const codigo = this.planElegido();
+    if (!emp || !codigo) return;
+    this.cambiandoPlan.set(true);
+    try {
+      await firstValueFrom(this.api.asignarPlan(emp.id, codigo));
+      this.avisos.ok(`Plan de "${emp.razon_social}" actualizado a ${codigo.toUpperCase()}.`);
+      this.cerrarModalPlan();
+      await this.cargar();
+    } catch (e: any) {
+      this.avisos.error(mensajeDeError(e, 'No se pudo cambiar el plan de la empresa.'));
+    } finally {
+      this.cambiandoPlan.set(false);
+    }
+  }
+
+  async alternarEstado(e: Tenant) {
+    const nuevo = !e.activo;
+    try {
+      await firstValueFrom(this.api.actualizar(e.id, { activo: nuevo, estado: nuevo ? 'activo' : 'suspendido' }));
+      this.avisos.ok(`Empresa "${e.razon_social}" ${nuevo ? 'activada' : 'suspendida'}.`);
+      await this.cargar();
+    } catch (e: any) {
+      this.avisos.error(mensajeDeError(e, 'No se pudo actualizar el estado de la empresa.'));
+    }
+  }
 }

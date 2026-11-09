@@ -85,3 +85,30 @@ def actualizar_tenant(db: Session, tenant_id: int, data: schemas.TenantUpdateIn)
     db.commit()
     db.refresh(t)
     return t
+
+
+def cambiar_plan_tenant(db: Session, tenant_id: int, plan_codigo: str) -> Tenant:
+    tenant = obtener_tenant(db, tenant_id)
+    plan = _get_plan_by_codigo(db, plan_codigo)
+    hoy = date.today()
+    sub = (
+        db.query(Suscripcion)
+        .filter(Suscripcion.tenant_id == tenant.id, Suscripcion.estado == "activa")
+        .first()
+    )
+    if sub:
+        sub.plan_id = plan.id
+        sub.fecha_fin = hoy + timedelta(days=30)
+    else:
+        sub = Suscripcion(
+            tenant_id=tenant.id,
+            plan_id=plan.id,
+            fecha_inicio=hoy,
+            fecha_fin=hoy + timedelta(days=30),
+            estado="activa",
+        )
+        db.add(sub)
+    db.commit()
+    db.refresh(tenant)
+    return tenant
+

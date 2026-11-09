@@ -42,4 +42,5 @@ export class TenantsService {
   obtener(id: number): Observable<Tenant> { return this.http.get<Tenant>(`${API_URL}/tenants/${id}`); }
   crear(datos: TenantCreateIn): Observable<Tenant> { return this.http.post<Tenant>(`${API_URL}/tenants`, datos); }
   actualizar(id: number, parciales: Partial<Tenant>) { return this.http.patch<Tenant>(`${API_URL}/tenants/${id}`, parciales); }
+  asignarPlan(id: number, plan_codigo: string): Observable<Tenant> { return this.http.post<Tenant>(`${API_URL}/tenants/${id}/plan`, { plan_codigo }); }
 }

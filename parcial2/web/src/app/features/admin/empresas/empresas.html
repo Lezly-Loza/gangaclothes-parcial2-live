@@ -33,6 +33,7 @@
           <th>Sucursales</th>
           <th>Vence</th>
           <th>Estado</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -62,6 +63,16 @@
               <span class="estado" [class.ok]="e.activo" [class.bajo]="!e.activo">
                 {{ e.estado }}
               </span>
+            </td>
+            <td>
+              <div class="acciones-celda">
+                <button type="button" class="btn linea mini" (click)="abrirCambioPlan(e)" title="Cambiar o asignar plan">
+                  Plan
+                </button>
+                <button type="button" class="btn linea mini" [class.danger]="e.activo" (click)="alternarEstado(e)" title="Suspender o reactivar empresa">
+                  {{ e.activo ? 'Pausar' : 'Activar' }}
+                </button>
+              </div>
             </td>
           </tr>
         }
@@ -128,6 +139,33 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+}
+
+@if (modalPlanAbierto() && empresaSeleccionada(); as emp) {
+  <div class="fondo" (click)="cerrarModalPlan()">
+    <div class="modal modal-plan" (click)="$event.stopPropagation()">
+      <h2>Controlar Plan de Empresa</h2>
+      <p class="subtexto">Empresa: <b>{{ emp.razon_social }}</b> ({{ emp.codigo }})</p>
+      <div class="planes-selector">
+        @for (p of planes(); track p.id) {
+          <label class="opcion-plan" [class.seleccionado]="planElegido() === p.codigo">
+            <input type="radio" name="planElegido" [value]="p.codigo" [checked]="planElegido() === p.codigo" (change)="setPlanElegido(p.codigo)">
+            <div class="plan-info">
+              <span class="plan-nombre">{{ p.nombre }}</span>
+              <span class="plan-precio">Bs {{ p.precio_mensual }}/mes</span>
+              <span class="plan-limites">{{ p.max_sucursales }} sucursales · {{ p.max_usuarios }} usuarios · {{ p.max_productos }} productos</span>
+            </div>
+          </label>
+        }
+      </div>
+      <div class="acciones">
+        <button type="button" class="btn linea" (click)="cerrarModalPlan()">Cancelar</button>
+        <button type="button" class="btn rosa" [disabled]="cambiandoPlan()" (click)="confirmarCambioPlan()">
+          {{ cambiandoPlan() ? 'Asignando…' : 'Guardar Plan' }}
+        </button>
+      </div>
     </div>
   </div>
 }

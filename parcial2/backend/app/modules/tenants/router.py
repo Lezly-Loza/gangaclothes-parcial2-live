@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ...core.deps import get_db, require_super
@@ -78,3 +79,19 @@ def actualizar_empresa(
     db: Session = Depends(get_db),
 ):
     return service.actualizar_tenant(db, tenant_id, body)
+
+
+class AsignarPlanIn(BaseModel):
+    plan_codigo: str
+
+
+@router.post("/{tenant_id}/plan", response_model=schemas.TenantOut)
+def asignar_plan_tenant(
+    tenant_id: int,
+    body: AsignarPlanIn,
+    _: TenantScope = Depends(require_super),
+    db: Session = Depends(get_db),
+):
+    """CU-01 / CU-05: El Superadmin asigna o cambia directamente el plan de una empresa."""
+    return service.cambiar_plan_tenant(db, tenant_id, body.plan_codigo)
+

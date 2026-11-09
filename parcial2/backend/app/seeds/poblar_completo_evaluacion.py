@@ -270,6 +270,18 @@ def ejecutar_poblamiento():
         temp_verano = temps[0] if temps else None
 
         print("-> 10. Configurando Prendas y Variantes (CU-09) e Inventario (CU-12)...")
+        FOTOS_PRENDAS = {
+            "Blusa seda satinada": "https://images.unsplash.com/photo-1598554747436-c9293d6a588f?w=600&auto=format&fit=crop",
+            "Blazer ejecutivo entallado": "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&auto=format&fit=crop",
+            "Vestido de gala noche": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=600&auto=format&fit=crop",
+            "Jean slouchy tiro alto": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&auto=format&fit=crop",
+            "Camisa lino oversize": "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop",
+            "Pantalón palazzo lino": "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600&auto=format&fit=crop",
+            "Top tejido rib": "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600&auto=format&fit=crop",
+            "Falda midi satén": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=600&auto=format&fit=crop",
+            "Cardigan tejido botones": "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&auto=format&fit=crop",
+            "Enterizo casual verano": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&auto=format&fit=crop",
+        }
         prendas_catalogo = [
             ("Blusa seda satinada", "Blusa formal de tacto suave para oficina o cóctel", "Poleras y Tops", 145.0, 65.0),
             ("Blazer ejecutivo entallado", "Blazer clásico con forro interior y solapa fina", "Chaquetas y Abrigos", 290.0, 130.0),
@@ -285,6 +297,7 @@ def ejecutar_poblamiento():
 
         variantes_activas = []
         for idx, (p_nom, desc, c_nom, p_venta, p_costo) in enumerate(prendas_catalogo, start=10):
+            foto = FOTOS_PRENDAS.get(p_nom)
             p = db.query(Producto).filter_by(tenant_id=luna.id, nombre=p_nom).first()
             if not p:
                 cat = cats_dict.get(c_nom) or list(cats_dict.values())[0]
@@ -295,10 +308,15 @@ def ejecutar_poblamiento():
                     categoria_id=cat.id,
                     temporada_id=temp_verano.id if temp_verano else None,
                     precio_base=Decimal(str(p_venta)),
+                    imagen_url=foto,
                     activo=True,
                 )
                 db.add(p)
                 db.flush()
+            else:
+                if not p.imagen_url and foto:
+                    p.imagen_url = foto
+                    db.flush()
 
             # Variantes
             for t_nom in ["S", "M", "L"]:
@@ -321,6 +339,9 @@ def ejecutar_poblamiento():
                         db.flush()
                     variantes_activas.append(v)
 
+        for prod in db.query(Producto).all():
+            if not prod.imagen_url and prod.nombre in FOTOS_PRENDAS:
+                prod.imagen_url = FOTOS_PRENDAS[prod.nombre]
         db.flush()
 
         # Inventario en las 3 sucursales de Luna
