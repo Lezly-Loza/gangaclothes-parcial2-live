@@ -85,6 +85,18 @@ class _LoginScreenState extends State<LoginScreen> {
       const SizedBox(height: 20), if (!superadmin) campo('Código de empresa', empresa),
       if (registro) ...[campo('Nombre completo', nombre), campo('Documento', documento), campo('Teléfono (opcional)', telefono)],
       campo('Correo electrónico', correo, tipo: TextInputType.emailAddress), campo('Contraseña', clave, secreto: true),
+      if (ocupado) const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: Column(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 8),
+              Text('Conectando con el servidor en Render…', style: TextStyle(fontSize: 12, color: Colors.black54)),
+            ],
+          ),
+        ),
+      ),
       if (error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(error!, style: const TextStyle(color: Colors.red))),
       SizedBox(height: 48, child: FilledButton(onPressed: ocupado ? null : login, child: Text(ocupado ? 'Espera…' : registro ? 'Crear cuenta' : 'Iniciar sesión'))),
       if (!superadmin) TextButton(onPressed: ocupado ? null : () => setState(() { registro = !registro; error = null; }),

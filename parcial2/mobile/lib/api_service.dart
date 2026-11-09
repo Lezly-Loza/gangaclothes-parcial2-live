@@ -14,8 +14,8 @@ String _direccion() {
 }
 class ApiService {
   ApiService({String? baseUrl, HttpClientAdapter? adapter}) : _dio = Dio(BaseOptions(
-    baseUrl: baseUrl ?? _direccion(), connectTimeout: const Duration(seconds: 12),
-    receiveTimeout: const Duration(seconds: 20),
+    baseUrl: baseUrl ?? _direccion(), connectTimeout: const Duration(seconds: 45),
+    receiveTimeout: const Duration(seconds: 45),
   )) {
     if (adapter != null) _dio.httpClientAdapter = adapter;
     _dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
@@ -62,12 +62,19 @@ class ApiService {
 
 String mensajeError(Object error) {
   if (error is DioException) {
+    if (error.type == DioExceptionType.connectionTimeout || error.type == DioExceptionType.receiveTimeout) {
+      return 'El servidor en la nube (Render) está terminando de despertar. Por favor reintenta en unos segundos.';
+    }
     final data = error.response?.data;
     if (data is Map && data['detail'] is String) return data['detail'] as String;
-    if (error.response?.statusCode == 401) return 'La sesión venció. Vuelve a iniciar sesión.';
+    if (error.response?.statusCode == 401) return 'Correo o contraseña incorrectos.';
     if (error.response?.statusCode == 403) return 'Tu cuenta no tiene permiso para esta acción.';
-    if (error.response != null) return 'No se pudo completar la operación. Revisa los datos.';
-    return 'No se pudo conectar. Comprueba la conexión y la dirección del servidor.';
+    if (error.response?.statusCode == 404) return 'Empresa o usuario no encontrado.';
+    if (error.response?.statusCode == 502 || error.response?.statusCode == 503 || error.response?.statusCode == 504) {
+      return 'El servidor está iniciando su servicio en la nube. Espera 10 segundos y reintenta.';
+    }
+    if (error.response != null) return 'No se pudo completar la operación (${error.response?.statusCode}).';
+    return 'No se pudo conectar. Comprueba la conexión a internet.';
   }
   return 'No se pudo completar la operación. Inténtalo de nuevo.';
 }
