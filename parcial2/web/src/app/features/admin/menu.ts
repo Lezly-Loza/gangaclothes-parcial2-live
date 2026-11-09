@@ -59,7 +59,7 @@ export const MENU: GrupoMenu[] = [
     items: [
       { etiqueta: 'Reservas de Prendas', ruta: '/admin/reservas', roles: ['administrador', 'encargado'], disponible: true },
       { etiqueta: 'Caja y Cobros', ruta: '/admin/caja', roles: ['administrador', 'cajero'], disponible: true },
-      { etiqueta: 'Cambios de Prenda', ruta: '/admin/cambios', roles: ['administrador', 'cajero'], disponible: true },
+      { etiqueta: 'Cambios de Prenda', ruta: '/admin/cambios', roles: ['administrador', 'encargado', 'cajero'], disponible: true },
       { etiqueta: 'Anulación de Operaciones', ruta: '/admin/anular', roles: ['administrador', 'encargado'], disponible: true },
     ],
   },

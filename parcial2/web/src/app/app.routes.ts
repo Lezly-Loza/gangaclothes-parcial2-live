@@ -197,11 +197,11 @@ export const routes: Routes = [
       {
         path: 'caja',
         canActivate: [rolGuard],
-        data: { roles: ['administrador', 'cajero'] },
+        data: { roles: ['administrador', 'encargado', 'cajero'] },
         loadComponent: () => import('./features/caja/caja').then((m) => m.Caja),
       },
       {
-        path: 'cambios', canActivate: [rolGuard], data: { roles: ['administrador', 'cajero'] },
+        path: 'cambios', canActivate: [rolGuard], data: { roles: ['administrador', 'encargado', 'cajero'] },
         loadComponent: () => import('./features/admin/cambios/cambios').then((m) => m.CambioPrendaPage),
       },
       {
