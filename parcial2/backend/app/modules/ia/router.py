@@ -149,3 +149,4 @@ def obtener_conversacion(id: int):
 @router.delete("/conversaciones/{id}")
 def borrar_conversacion(id: int):
     return {"ok": True, "conversacion_id": id}
+

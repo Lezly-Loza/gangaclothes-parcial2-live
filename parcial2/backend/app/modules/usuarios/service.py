@@ -42,9 +42,10 @@ def crear(db: Session, tenant_id: int, data: schemas.UsuarioIn, actor_id: int | 
     exigir_capacidad(db, tenant_id, "usuarios")
     email = str(data.email).lower()
     if db.query(User).filter(User.tenant_id == tenant_id, func.lower(User.email) == email).first():
-        raise HTTPException(409, "Email ya registrado en el tenant")
+        raise HTTPException(409, f"Ya existe un usuario con correo '{email}' en este tenant")
+    rol_str = data.rol or (_roles_solicitados(data)[0] if _roles_solicitados(data) else "vendedor")
     user = User(tenant_id=tenant_id, nombre=data.nombre, email=email,
-                password_hash=hash_password(data.password), rol="", activo=True, estado="activo")
+                password_hash=hash_password(data.password), rol=rol_str, activo=True, estado="activo")
     db.add(user)
     db.flush()
     seguridad.asignar_roles(db, user, _roles_solicitados(data))
