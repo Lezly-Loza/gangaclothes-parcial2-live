@@ -34,7 +34,9 @@ export class Login {
   readonly mostrarCuentasDemo = CUENTAS_DEMO.length > 0;
   readonly cuentasDemo = CUENTAS_DEMO;
   readonly enviando = signal(false);
+  readonly esperandoServidor = signal(false);
   readonly error = signal<string | null>(null);
+  private temporizadorEspera: any = null;
 
   /** Parcial 2: el superadmin entra sin codigo de empresa. */
   readonly modoSuper = signal(false);
@@ -66,6 +68,7 @@ export class Login {
       email: cuenta.email,
       password: cuenta.password,
     });
+    this.enviar();
   }
 
   /** Lleva el correo ya escrito a la pantalla de recuperacion. */
@@ -88,15 +91,27 @@ export class Login {
 
     const { email, password, codigo_tenant } = this.formulario.getRawValue();
     this.enviando.set(true);
+    this.esperandoServidor.set(false);
+    clearTimeout(this.temporizadorEspera);
+    this.temporizadorEspera = setTimeout(() => {
+      if (this.enviando()) {
+        this.esperandoServidor.set(true);
+      }
+    }, 3500);
+
     const codigo = this.modoSuper() ? undefined : (codigo_tenant || undefined);
     this.auth.login(email, password, codigo).subscribe({
       next: () => {
+        clearTimeout(this.temporizadorEspera);
         this.enviando.set(false);
+        this.esperandoServidor.set(false);
         const volverA = this.ruta.snapshot.queryParamMap.get('volverA');
         this.router.navigateByUrl(volverA || this.auth.rutaInicial());
       },
       error: (err) => {
+        clearTimeout(this.temporizadorEspera);
         this.enviando.set(false);
+        this.esperandoServidor.set(false);
         this.error.set(
           err.status === 401
             ? 'Correo o contrasena incorrectos.'

@@ -77,6 +77,11 @@
         <button type="submit" class="btn bloque" [disabled]="enviando()">
           {{ enviando() ? 'Verificando…' : 'Iniciar sesion' }}
         </button>
+        @if (esperandoServidor()) {
+          <p class="ayuda-servidor" style="color: var(--gris); font-size: 12px; margin-top: 8px; text-align: center;">
+            El servidor gratuito en la nube está despertando (puede demorar hasta 30 segundos). Conectando…
+          </p>
+        }
       </form>
 
       <p class="nuevo">
