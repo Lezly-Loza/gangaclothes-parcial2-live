@@ -31,7 +31,7 @@ export class Login {
   /** Se pasa al registro para que el cliente nuevo vuelva a donde estaba. */
   readonly volverA = this.ruta.snapshot.queryParamMap.get('volverA');
 
-  readonly mostrarCuentasDemo = enLocal() && CUENTAS_DEMO.length > 0;
+  readonly mostrarCuentasDemo = CUENTAS_DEMO.length > 0;
   readonly cuentasDemo = CUENTAS_DEMO;
   readonly enviando = signal(false);
   readonly error = signal<string | null>(null);

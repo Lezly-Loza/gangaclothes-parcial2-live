@@ -41,6 +41,12 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    try:
+        from .seeds.poblar_completo_evaluacion import ejecutar_poblamiento
+        ejecutar_poblamiento()
+    except Exception as e:
+        import logging
+        logging.getLogger("uvicorn.error").warning("Error ejecutando poblar_completo_evaluacion: %s", e)
     from .modules.respaldos.programacion import iniciar
     detener, hilo = iniciar()
     try:
