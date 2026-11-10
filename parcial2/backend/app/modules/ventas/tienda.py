@@ -9,7 +9,6 @@ from ...models import (CarritoCliente, CitaReserva, Cliente, Color, DatosComplem
     DetalleVenta, Envio, Inventario, Pago, PrendaFavorita, PrendaResena, Producto, Reserva, Sucursal, Talla, User, Variante, Venta)
 from ..productos.promociones import precio_promocional
 from ..reservas import service as reservas
-from . import schemas, service
 from .envios import _salida as salida_envio
 
 router = APIRouter(prefix='/tienda', tags=['Portal cliente'])
@@ -144,24 +143,7 @@ def quitar(vid: int, scope: TenantScope = Depends(cliente_scope), db: Session = 
 
 @router.post('/carrito/comprar')
 def comprar(body: CompraIn, scope: TenantScope = Depends(cliente_scope), db: Session = Depends(get_db)):
-    c = cliente(db, scope)
-    cart = db.query(CarritoCliente).filter_by(tenant_id=scope.tenant_id, cliente_id=c.id).with_for_update().first()
-    if not cart or not cart.items: raise HTTPException(409, 'El carrito está vacío')
-    if body.direccion is not None and (len(body.direccion.strip()) < 3 or body.latitud is None or body.longitud is None):
-        raise HTTPException(422, 'Indica dirección y coordenadas válidas para el envío')
-    sucursal(db, scope.tenant_id, cart.sucursal_id)
-    for i in cart.items: variante_publicada(db, scope.tenant_id, i['variante_id'])
-    data = schemas.VentaIn(sucursal_id=cart.sucursal_id, cliente_id=c.id, forma_pago='EN_LINEA',
-                           items=cart.items, uuid_operacion=str(uuid4()))
-    def finalizar(venta):
-        if body.direccion is not None:
-            db.add(Envio(tenant_id=scope.tenant_id, venta_id=venta.id, direccion=body.direccion.strip(),
-                         latitud=body.latitud, longitud=body.longitud, referencia=body.referencia,
-                         telefono_contacto=body.telefono, estado='pendiente'))
-        db.delete(cart)
-    resultado = service.registrar_venta(db, scope.tenant_id, data, scope.user_id,
-                                        simular_pago=True, antes_de_guardar=finalizar)
-    return {'codigo': resultado.codigo, 'total': resultado.total, 'mensaje': 'Compra de prueba registrada. No se cobró dinero.'}
+    raise HTTPException(422, 'Elige tarjeta de prueba o QR en el carrito para pagar')
 
 @router.post('/reservas', status_code=201)
 def crear_reserva(body: ReservaIn, scope: TenantScope = Depends(cliente_scope), db: Session = Depends(get_db)):

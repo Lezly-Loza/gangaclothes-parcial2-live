@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flutter_tts/flutter_tts.dart';
 import 'api_service.dart';
 import 'estilo.dart';
 import 'main.dart' show api;
@@ -96,20 +98,58 @@ class _AnularOperacionScreenState extends State<AnularOperacionScreen> {
 }
 
 class AsistenteIaScreen extends StatefulWidget {
-  const AsistenteIaScreen({super.key});
+  const AsistenteIaScreen({super.key, this.admin = false});
+  final bool admin;
   @override State<AsistenteIaScreen> createState() => _AsistenteIaScreenState();
 }
 class _AsistenteIaScreenState extends State<AsistenteIaScreen> {
-  final List<Map<String, dynamic>> mensajes = [
-    {
-      'remitente': 'asistente',
-      'texto': '¡Hola! Soy tu asistente de compras con Inteligencia Artificial Gemini. ¿Buscas alguna prenda en especial, sugerencias para una ocasión o consultar tallas y precios?',
-      'prendas': [],
-    }
-  ];
+  late final List<Map<String, dynamic>> mensajes;
   final mensajeCtrl = TextEditingController();
   bool enviando = false;
+  bool escuchando = false;
+  String? errorVoz;
+  final stt.SpeechToText voz = stt.SpeechToText();
+  final FlutterTts lector = FlutterTts();
   final ScrollController scroll = ScrollController();
+
+  @override void initState() {
+    super.initState();
+    mensajes = [{'remitente': 'asistente', 'texto': widget.admin
+      ? 'Soy tu asistente administrativo. Pregúntame por ventas e inventario.'
+      : '¡Hola! Soy tu asistente de compras con Inteligencia Artificial Gemini. ¿Buscas alguna prenda en especial, sugerencias para una ocasión o consultar tallas y precios?',
+      'prendas': []}];
+  }
+
+  Future<void> escuchar() async {
+    if (escuchando) { await voz.stop(); if (mounted) setState(() => escuchando = false); return; }
+    bool disponible;
+    try {
+      disponible = await voz.initialize(
+        onStatus: (estado) { if (mounted && (estado == 'done' || estado == 'notListening')) setState(() => escuchando = false); },
+        onError: (_) { if (mounted) setState(() { escuchando = false; errorVoz = 'No se pudo reconocer la voz. Puedes escribir tu pregunta.'; }); });
+    } catch (_) {
+      if (mounted) setState(() => errorVoz = 'No se pudo iniciar el micrófono. Puedes escribir tu pregunta.');
+      return;
+    }
+    if (!disponible) { if (mounted) setState(() => errorVoz = 'El reconocimiento de voz no está disponible en este dispositivo.'); return; }
+    final locales = await voz.locales();
+    final espanoles = locales.where((l) => l.localeId.toLowerCase().startsWith('es')).toList();
+    final idioma = espanoles.isEmpty ? null : (espanoles.where((l) => l.localeId.toLowerCase().contains('bo')).firstOrNull ?? espanoles.first).localeId;
+    if (mounted) setState(() { escuchando = true; errorVoz = null; });
+    await voz.listen(listenOptions: stt.SpeechListenOptions(localeId: idioma), onResult: (resultado) {
+      if (mounted) setState(() {
+        mensajeCtrl.text = resultado.recognizedWords;
+        mensajeCtrl.selection = TextSelection.collapsed(offset: mensajeCtrl.text.length);
+      });
+    });
+  }
+
+  Future<void> leer(String texto) async {
+    await lector.stop();
+    await lector.setLanguage('es-ES');
+    await lector.setSpeechRate(0.48);
+    await lector.speak(texto);
+  }
 
   Future<void> enviar([String? textoDirecto]) async {
     final txt = textoDirecto ?? mensajeCtrl.text.trim();
@@ -121,7 +161,7 @@ class _AsistenteIaScreenState extends State<AsistenteIaScreen> {
     });
     _bajar();
     try {
-      final r = mapa(await api.post('/ia/chat', {'mensaje': txt}));
+      final r = mapa(await api.post('/ia/chat', {'mensaje': txt, 'origen': widget.admin ? 'admin' : 'cliente'}));
       if (mounted) {
         setState(() {
           mensajes.add({
@@ -156,6 +196,8 @@ class _AsistenteIaScreenState extends State<AsistenteIaScreen> {
   }
 
   @override void dispose() {
+    voz.stop();
+    lector.stop();
     mensajeCtrl.dispose();
     scroll.dispose();
     super.dispose();
@@ -197,6 +239,7 @@ class _AsistenteIaScreenState extends State<AsistenteIaScreen> {
                             ),
                           ),
                         ),
+                        if (!esUsuario) IconButton(tooltip: 'Escuchar respuesta', icon: const Icon(Icons.volume_up_outlined), onPressed: () => leer('${m['texto']}')),
                       ],
                     ),
                     if (prendas.isNotEmpty) ...[
@@ -252,18 +295,25 @@ class _AsistenteIaScreenState extends State<AsistenteIaScreen> {
           ),
         ),
         if (enviando) const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: LinearProgressIndicator(color: rosa)),
+        if (errorVoz != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(errorVoz!, style: const TextStyle(color: Colors.red))),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Row(
             children: [
-              ActionChip(avatar: const Icon(Icons.flash_on, size: 14, color: rosa), label: const Text('Ropa formal', style: TextStyle(fontSize: 11)), onPressed: () => enviar('Recomiéndame ropa formal de oficina')),
-              const SizedBox(width: 6),
-              ActionChip(avatar: const Icon(Icons.local_florist, size: 14, color: rosa), label: const Text('Prendas de verano', style: TextStyle(fontSize: 11)), onPressed: () => enviar('¿Qué prendas frescas de verano tienen?')),
-              const SizedBox(width: 6),
-              ActionChip(avatar: const Icon(Icons.celebration, size: 14, color: rosa), label: const Text('Vestidos de noche', style: TextStyle(fontSize: 11)), onPressed: () => enviar('Busco vestidos de noche elegantes')),
-              const SizedBox(width: 6),
-              ActionChip(avatar: const Icon(Icons.local_offer, size: 14, color: rosa), label: const Text('Promociones', style: TextStyle(fontSize: 11)), onPressed: () => enviar('¿Qué ofertas o promociones tienen activas?')),
+              if (widget.admin) ...[
+                ActionChip(avatar: const Icon(Icons.point_of_sale, size: 14, color: rosa), label: const Text('Ventas', style: TextStyle(fontSize: 11)), onPressed: () => enviar('Resume las ventas confirmadas')),
+                const SizedBox(width: 6),
+                ActionChip(avatar: const Icon(Icons.inventory_2_outlined, size: 14, color: rosa), label: const Text('Stock bajo', style: TextStyle(fontSize: 11)), onPressed: () => enviar('¿Cuántas variantes tienen stock bajo?')),
+              ] else ...[
+                ActionChip(avatar: const Icon(Icons.flash_on, size: 14, color: rosa), label: const Text('Ropa formal', style: TextStyle(fontSize: 11)), onPressed: () => enviar('Recomiéndame ropa formal de oficina')),
+                const SizedBox(width: 6),
+                ActionChip(avatar: const Icon(Icons.local_florist, size: 14, color: rosa), label: const Text('Prendas de verano', style: TextStyle(fontSize: 11)), onPressed: () => enviar('¿Qué prendas frescas de verano tienen?')),
+                const SizedBox(width: 6),
+                ActionChip(avatar: const Icon(Icons.celebration, size: 14, color: rosa), label: const Text('Vestidos de noche', style: TextStyle(fontSize: 11)), onPressed: () => enviar('Busco vestidos de noche elegantes')),
+                const SizedBox(width: 6),
+                ActionChip(avatar: const Icon(Icons.local_offer, size: 14, color: rosa), label: const Text('Promociones', style: TextStyle(fontSize: 11)), onPressed: () => enviar('¿Qué ofertas o promociones tienen activas?')),
+              ],
             ],
           ),
         ),
@@ -275,11 +325,13 @@ class _AsistenteIaScreenState extends State<AsistenteIaScreen> {
               Expanded(
                 child: TextField(
                   controller: mensajeCtrl,
-                  decoration: const InputDecoration(hintText: 'Pregunta a Gemini AI sobre moda…', isDense: true),
+                  decoration: InputDecoration(hintText: widget.admin ? 'Pregunta sobre ventas o inventario…' : 'Pregunta a Gemini AI sobre moda…', isDense: true),
                   onSubmitted: (_) => enviar(),
                 ),
               ),
               const SizedBox(width: 8),
+              IconButton(tooltip: escuchando ? 'Detener dictado' : 'Dictar pregunta',
+                icon: Icon(escuchando ? Icons.mic : Icons.mic_none, color: rosa), onPressed: escuchar),
               IconButton.filled(
                 style: IconButton.styleFrom(backgroundColor: rosa),
                 icon: const Icon(Icons.send, color: Colors.white),

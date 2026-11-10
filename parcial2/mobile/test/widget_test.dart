@@ -6,6 +6,7 @@ import 'package:gangaclothes_mobile/api_service.dart';
 import 'package:gangaclothes_mobile/producto_local_dao.dart';
 import 'package:gangaclothes_mobile/operaciones_offline.dart';
 import 'package:gangaclothes_mobile/tienda.dart';
+import 'package:gangaclothes_mobile/gestion.dart';
 import 'package:dio/dio.dart';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -33,6 +34,17 @@ void main() {
     expect(find.text('Nombre completo'), findsOneWidget);
     expect(find.text('Documento'), findsOneWidget);
   });
+  test('el formulario de tarjeta valida Luhn antes de enviar', () {
+    expect(tarjetaPruebaValida('4242 4242 4242 4242'), isTrue);
+    expect(tarjetaPruebaValida('4000 0000 0000 0002'), isTrue);
+    expect(tarjetaPruebaValida('4242 4242 4242 4241'), isFalse);
+  });
+  testWidgets('el asistente administrativo muestra dictado y lectura', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: AsistenteIaScreen(admin: true)));
+    expect(find.textContaining('asistente administrativo'), findsOneWidget);
+    expect(find.byTooltip('Dictar pregunta'), findsOneWidget);
+    expect(find.byTooltip('Escuchar respuesta'), findsOneWidget);
+  });
   testWidgets('superadministrador entra sin código de empresa y consulta plataforma', (tester) async {
     final adapter = ApiAcceso();
     app.api = ApiService(baseUrl: 'http://localhost/api/v1', adapter: adapter);
@@ -49,9 +61,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(adapter.rutas, contains('/auth/super/login'));
     expect(adapter.enviado, isNot(contains('codigo_tenant')));
-    expect(find.text('Plataforma'), findsOneWidget);
-    expect(find.text('Planes y precios'), findsOneWidget);
-    expect(find.text('Plan de prueba'), findsOneWidget);
+    expect(find.text('Superadministrador'), findsOneWidget);
+    expect(find.text('1 Empresas Registradas'), findsOneWidget);
+    await tester.tap(find.text('Planes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Plan de prueba'), findsWidgets);
     app.api = ApiService();
   });
   test('acceso de empresa envía código de tenant y conserva sesión', () async {

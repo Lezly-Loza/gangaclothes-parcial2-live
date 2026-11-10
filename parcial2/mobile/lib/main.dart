@@ -667,7 +667,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Opciones para personal (Admin de tienda, Encargado de sucursal, Cajero)
       if (esAdmin || esEncargado || esCajero)
-        (nombre: 'Asistente IA (Gemini)', icono: Icons.auto_awesome, pagina: const AsistenteIaScreen()),
+        (nombre: 'Asistente IA (Gemini)', icono: Icons.auto_awesome, pagina: const AsistenteIaScreen(admin: true)),
       if (esAdmin || permisos.contains('sucursales:ver'))
         (nombre: 'Red de Sucursales', icono: Icons.storefront, pagina: const SucursalesScreen()),
       if (esAdmin || esEncargado || permisos.contains('inventario:ver'))

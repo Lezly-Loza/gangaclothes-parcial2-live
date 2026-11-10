@@ -75,6 +75,8 @@ tr.falta td {
   border-radius: 13px;
   padding: 16px;
 }
+.qr-pendiente { margin: 14px 0; padding: 12px; border: 1px solid var(--linea); border-radius: 10px; text-align: center; }
+.qr-imagen { display: block; width: min(100%, 220px); height: auto; margin: 8px auto; }
 .nota {
   font-size: 11.5px;
   color: var(--gris);

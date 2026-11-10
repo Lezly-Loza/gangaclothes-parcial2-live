@@ -1,6 +1,5 @@
 """Módulo de Inteligencia Artificial y Asistente de Compras Multitenant (CU-28)."""
 import json
-import os
 import urllib.request
 from typing import Any
 
@@ -9,11 +8,63 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ...core.database import TenantScope
+from ...core.config import get_settings
 from ...core.deps import get_db, require_tenant
-from ...models import Categoria, Color, Inventario, Producto, Talla, Variante
+from ...models import Categoria, Color, Inventario, Producto, Talla, Variante, Venta
 from ..productos.promociones import precio_promocional
 
 router = APIRouter(prefix="/ia", tags=["Inteligencia Artificial y Asistente"])
+
+
+def _clave_gemini():
+    config = get_settings()
+    return config.gemini_api or config.gemini_api_key or config.google_api_key
+
+
+def _modelos_gemini():
+    return [m.strip() for m in get_settings().gemini_modelo.split(',') if m.strip()]
+
+
+def _chat_admin(body, scope, db):
+    if not (set(scope.roles) & {'admin', 'administrador', 'encargado', 'cajero'}):
+        raise HTTPException(403, 'El asistente administrativo requiere una cuenta de personal')
+    ventas = db.query(Venta).filter_by(tenant_id=scope.tenant_id, estado='CONFIRMADA').all()
+    inventario = db.query(Inventario).filter_by(tenant_id=scope.tenant_id).all()
+    datos = {
+        'ventas_confirmadas': len(ventas),
+        'ingresos_confirmados_bs': round(sum(float(v.total) for v in ventas), 2),
+        'variantes_con_stock_bajo': sum(1 for i in inventario if i.stock - i.reservado <= i.stock_min),
+    }
+    clave = _clave_gemini()
+    respuesta = None
+    if clave:
+        cuerpo = {
+            'systemInstruction': {'parts': [{'text':
+                'Eres un asistente para el personal de una tienda de ropa. Responde en español boliviano, de forma breve. Usa solo las cifras agregadas proporcionadas; no inventes datos ni detalles de clientes.'}]},
+            'contents': [{'role': 'user', 'parts': [{'text': json.dumps(
+                {'pregunta': body.mensaje, 'indicadores': datos}, ensure_ascii=False)}]}],
+            'generationConfig': {'thinkingConfig': {'thinkingLevel': 'low'}},
+        }
+        for modelo in _modelos_gemini():
+            try:
+                req = urllib.request.Request(
+                    f'https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent',
+                    data=json.dumps(cuerpo).encode('utf-8'),
+                    headers={'Content-Type': 'application/json', 'x-goog-api-key': clave}, method='POST')
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.load(resp)
+                respuesta = '\n'.join(p.get('text', '') for p in data.get('candidates', [{}])[0].get('content', {}).get('parts', [])).strip()
+                if respuesta:
+                    break
+            except Exception:
+                continue
+    modo = 'gemini' if respuesta else 'sin_modelo'
+    if not respuesta:
+        respuesta = (f"Hay {datos['ventas_confirmadas']} ventas confirmadas por Bs "
+            f"{datos['ingresos_confirmados_bs']:.2f} y {datos['variantes_con_stock_bajo']} "
+            'variantes con stock bajo. El modelo no respondió; revisa los reportes para más detalle.')
+    return {'conversacion_id': body.conversacion_id or 1, 'titulo': 'Asistente administrativo',
+            'respuesta': respuesta, 'modo': modo, 'consultas': [], 'prendas': [], 'datos': datos}
 
 
 class ChatIn(BaseModel):
@@ -25,16 +76,18 @@ class ChatIn(BaseModel):
 
 @router.get("/estado")
 def estado():
-    clave = os.environ.get("GEMINI_API") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    clave = _clave_gemini()
     return {
         "motor": "gemini" if clave else "sin_modelo",
-        "modelo": os.environ.get("GEMINI_MODELO", "gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-flash,gemini-flash-latest") if clave else None,
+        "modelo": ','.join(_modelos_gemini()) if clave else None,
         "disponible": True,
     }
 
 
 @router.post("/chat")
 def chat(body: ChatIn, scope: TenantScope = Depends(require_tenant), db: Session = Depends(get_db)):
+    if body.origen == 'admin':
+        return _chat_admin(body, scope, db)
     tid = scope.tenant_id
     productos = db.query(Producto).filter_by(tenant_id=tid, activo=True).all()
 
@@ -79,12 +132,12 @@ def chat(body: ChatIn, scope: TenantScope = Depends(require_tenant), db: Session
     else:
         prendas_filtradas = prendas_filtradas[:4]
 
-    clave = os.environ.get("GEMINI_API") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    clave = _clave_gemini()
     modo = "sin_modelo"
     respuesta_texto = ""
 
     if clave:
-        modelos = [m.strip() for m in (os.environ.get("GEMINI_MODELO") or "gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-flash,gemini-flash-latest").split(",")]
+        modelos = _modelos_gemini()
         cuerpo = {
             "systemInstruction": {
                 "parts": [{
@@ -101,7 +154,7 @@ def chat(body: ChatIn, scope: TenantScope = Depends(require_tenant), db: Session
                     "text": json.dumps({"pregunta": body.mensaje, "prendas_disponibles": prendas_filtradas}, ensure_ascii=False)
                 }]
             }],
-            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 350}
+            "generationConfig": {"thinkingConfig": {"thinkingLevel": "low"}}
         }
         for modelo in modelos:
             try:

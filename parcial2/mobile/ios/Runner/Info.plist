@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>El asistente usa el micrófono cuando dictas una consulta.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>El asistente convierte tu voz en texto para responder tu consulta.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

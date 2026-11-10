@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'api_service.dart';
 import 'estilo.dart';
@@ -164,9 +166,14 @@ class CarritoScreen extends StatefulWidget {
 }
 class _CarritoScreenState extends State<CarritoScreen> {
   Map<String, dynamic>? carrito; bool cargando = true, ocupado = false; String error = ''; bool delivery = false;
+  String metodo = 'tarjeta';
+  Map<String, dynamic>? qr;
+  Timer? consultaQr;
+  bool consultandoQr = false;
+  final numeroTarjeta = TextEditingController();
   final direccion = TextEditingController(), latitud = TextEditingController(), longitud = TextEditingController(), telefono = TextEditingController(), referencia = TextEditingController();
   @override void initState() { super.initState(); cargar(); }
-  @override void dispose() { for (final c in [direccion, latitud, longitud, telefono, referencia]) { c.dispose(); } super.dispose(); }
+  @override void dispose() { consultaQr?.cancel(); for (final c in [direccion, latitud, longitud, telefono, referencia, numeroTarjeta]) { c.dispose(); } super.dispose(); }
   Future<void> cargar() async { try { final r = await api.get('/tienda/carrito'); if (mounted) setState(() { carrito = r == null ? null : mapa(r); error = ''; }); }
     catch (e) { if (mounted) setState(() => error = mensajeError(e)); }
     finally { if (mounted) setState(() => cargando = false); } }
@@ -183,27 +190,61 @@ class _CarritoScreenState extends State<CarritoScreen> {
     if (delivery && (direccion.text.trim().length < 3 || double.tryParse(latitud.text) == null || double.tryParse(longitud.text) == null)) {
       aviso(context, 'Indica la dirección y las coordenadas del envío.'); return;
     }
-    final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(title: const Text('Confirmar compra de prueba'),
-      content: const Text('El pago es simulado y no se cobrará dinero. Se descontará el stock y la venta aparecerá en los reportes.'),
+    if (metodo == 'tarjeta' && !tarjetaPruebaValida(numeroTarjeta.text)) {
+      aviso(context, 'Usa una tarjeta de prueba válida. 4242 4242 4242 4242 aprueba y 4000 0000 0000 0002 rechaza.'); return;
+    }
+    final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(title: const Text('Confirmar pago de prueba'),
+      content: Text(metodo == 'tarjeta' ? 'Stripe comprobará la tarjeta de prueba. No se cobrará dinero real.'
+          : 'Se generará un QR y la compra quedará pendiente hasta confirmar el pago.'),
       actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Volver')),
         FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Confirmar'))]));
     if (ok != true) return;
     setState(() => ocupado = true);
-    try { final r = mapa(await api.post('/tienda/carrito/comprar', delivery ? {'direccion': direccion.text.trim(),
-      'latitud': double.parse(latitud.text), 'longitud': double.parse(longitud.text), 'telefono': telefono.text.trim(), 'referencia': referencia.text.trim()} : {}));
-      if (mounted) { setState(() => carrito = null); await mostrarComprobante(r); }
+    try {
+      final entrega = delivery ? {'direccion': direccion.text.trim(), 'latitud': double.parse(latitud.text),
+        'longitud': double.parse(longitud.text), 'telefono': telefono.text.trim(), 'referencia': referencia.text.trim()} : <String, dynamic>{};
+      if (metodo == 'tarjeta') {
+        final r = mapa(await api.post('/pagos/tarjeta', {...entrega, 'numero_tarjeta': numeroTarjeta.text}));
+        if (mounted) { setState(() => carrito = null); await mostrarComprobante(r); }
+      } else {
+        final r = mapa(await api.post('/pagos/qr', entrega));
+        if (mounted) {
+          setState(() { qr = r; error = ''; });
+          consultaQr?.cancel();
+          consultaQr = Timer.periodic(const Duration(seconds: 4), (_) => consultarQr());
+        }
+      }
     } catch (e) { if (mounted) aviso(context, mensajeError(e)); }
     finally { if (mounted) setState(() => ocupado = false); }
   }
+  Future<void> consultarQr() async {
+    final actual = qr;
+    if (actual == null || consultandoQr) return;
+    consultandoQr = true;
+    try {
+      final r = mapa(await api.get('/pagos/qr/${actual['qr_id']}'));
+      if (!mounted) return;
+      setState(() { qr = {...actual, ...r}; error = ''; });
+      if (r['aprobado'] == true) {
+        consultaQr?.cancel();
+        setState(() { qr = null; carrito = null; });
+        await mostrarComprobante(r);
+      } else if (r['rechazado'] == true) {
+        consultaQr?.cancel();
+        setState(() { qr = null; error = 'El QR venció o fue anulado. Puedes intentar otra vez.'; });
+      }
+    } catch (e) { if (mounted) setState(() => error = mensajeError(e)); }
+    finally { consultandoQr = false; }
+  }
   Future<void> mostrarComprobante(Map<String, dynamic> r) => showDialog<void>(context: context, builder: (c) => AlertDialog(
-    title: const Text('Compra de prueba registrada'), content: Text('Código: ${r['codigo']}\nTotal: ${bs(r['total'])}\nNo se cobró dinero real.'),
+    title: const Text('Pago de prueba confirmado'), content: Text('Código: ${r['codigo']}\nTotal: ${bs(r['total'])}\nNo se cobró dinero real.'),
     actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Aceptar'))]));
   @override Widget build(BuildContext context) {
     final lineas = mapas(carrito?['detalle']);
     return ListView(padding: const EdgeInsets.all(18), children: [titulo('Carrito'),
       if (cargando) const Center(child: CircularProgressIndicator())
       else if (error.isNotEmpty) Column(children: [Text(error), TextButton(onPressed: cargar, child: const Text('Reintentar'))])
-      else if (lineas.isEmpty) vacio('Tu carrito está vacío. Agrega prendas desde el catálogo.')
+      else if (lineas.isEmpty && qr == null) vacio('Tu carrito está vacío. Agrega prendas desde el catálogo.')
       else ...[Text('Sucursal: ${carrito?['sucursal']}'), for (final l in lineas) Card(child: Padding(padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${l['prenda']}', style: const TextStyle(fontWeight: FontWeight.bold)),
           Text('${l['talla']} · ${l['color']} · ${bs(l['subtotal'])}'),
@@ -216,11 +257,32 @@ class _CarritoScreenState extends State<CarritoScreen> {
           campoTienda('Dirección', direccion), campoTienda('Referencia (opcional)', referencia), campoTienda('Teléfono (opcional)', telefono),
           campoTienda('Latitud', latitud, numero: true), campoTienda('Longitud', longitud, numero: true)],
         const SizedBox(height: 15), Text('Total de prendas: ${bs(carrito?['total'])}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-        const SizedBox(height: 10), const Text('Pago simulado: no ingreses datos de tarjeta ni se cobrará dinero real.'),
-        const SizedBox(height: 10), FilledButton(onPressed: ocupado || lineas.any((l) => l['alcanza'] == false) ? null : confirmarVenta,
-          child: const Text('Confirmar compra de prueba'))],
+        const SizedBox(height: 10), DropdownButtonFormField<String>(initialValue: metodo,
+          decoration: const InputDecoration(labelText: 'Método de pago'),
+          items: const [DropdownMenuItem(value: 'tarjeta', child: Text('Tarjeta Stripe (prueba)')),
+            DropdownMenuItem(value: 'qr', child: Text('QR BCP'))],
+          onChanged: qr != null || ocupado ? null : (v) => setState(() => metodo = v ?? 'tarjeta')),
+        if (metodo == 'tarjeta') ...[const SizedBox(height: 10), campoTienda('Número de tarjeta de prueba', numeroTarjeta, numero: true),
+          const Text('4242 4242 4242 4242 aprueba · 4000 0000 0000 0002 rechaza. Solo tarjetas de prueba.', style: TextStyle(fontSize: 12))],
+        if (qr != null) ...[const SizedBox(height: 12),
+          if ((qr?['imagen_base64'] ?? '').toString().isNotEmpty) Center(child: Image.memory(base64Decode('${qr!['imagen_base64']}'), width: 220, height: 220)),
+          Text('QR ${qr?['estado']} · vence ${qr?['expira']}'),
+          TextButton(onPressed: consultarQr, child: const Text('Consultar estado'))],
+        const SizedBox(height: 10), FilledButton(onPressed: ocupado || qr != null || lineas.any((l) => l['alcanza'] == false) ? null : confirmarVenta,
+          child: Text(metodo == 'qr' ? 'Generar QR' : 'Pagar con tarjeta de prueba'))],
     ]);
   }
+}
+bool tarjetaPruebaValida(String numero) {
+  final digitos = numero.replaceAll(RegExp(r'\s+'), '');
+  if (!RegExp(r'^\d{13,19}$').hasMatch(digitos)) return false;
+  var suma = 0; var doble = false;
+  for (final caracter in digitos.split('').reversed) {
+    var n = int.parse(caracter);
+    if (doble) { n *= 2; if (n > 9) n -= 9; }
+    suma += n; doble = !doble;
+  }
+  return suma % 10 == 0;
 }
 Widget campoTienda(String label, TextEditingController c, {bool numero = false}) => Padding(padding: const EdgeInsets.only(bottom: 10),
   child: TextField(controller: c, keyboardType: numero ? const TextInputType.numberWithOptions(decimal: true, signed: true) : null,

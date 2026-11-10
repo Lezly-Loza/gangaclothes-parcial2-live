@@ -2,7 +2,7 @@
 <main class="pagina">
   <div class="encabezado"><h1>Carrito</h1><p class="nota">Revisa tus prendas y la sucursal antes de confirmar.</p></div>
   @if (compra(); as c) {
-    <section class="ticket"><h2>Compra de prueba registrada</h2><p>Código: <b>{{ c.codigo }}</b> · Total: Bs {{ moneda(c.total) }}</p><p>No se cobró dinero real. Conserva el código para consultar la operación.</p><p><a routerLink="/mis-compras">Ver mis compras</a> · <a routerLink="/mis-envios">Ver mis pedidos</a> · <a routerLink="/catalogo">Seguir comprando</a></p></section>
+    <section class="ticket"><h2>Pago de prueba confirmado</h2><p>Código: <b>{{ c.codigo }}</b> · Total: Bs {{ moneda(c.total) }}</p><p>No se cobró dinero real. Conserva el código para consultar la operación.</p><p><a routerLink="/mis-compras">Ver mis compras</a> · <a routerLink="/mis-envios">Ver mis pedidos</a> · <a routerLink="/catalogo">Seguir comprando</a></p></section>
   } @else if (cargando()) { <p>Cargando…</p> }
   @else if (!carrito()?.detalle?.length) { <section class="ticket"><p>Tu carrito está vacío.</p><a routerLink="/catalogo">Elegir prendas del catálogo</a></section> }
   @else { @if (carrito(); as c) {
@@ -23,8 +23,23 @@
         <label>Longitud<input class="campo" type="number" [value]="longitud()" (input)="longitud.set($any($event.target).value)" /></label>
       }
       <div class="fila total"><span>Total de prendas</span><b>Bs {{ moneda(c.total) }}</b></div>
-      <p class="nota">Pago simulado para pruebas: no ingreses datos de tarjeta y no se cobrará dinero real. Al confirmar se descontará el stock.</p>
-      <button class="btn rosa bloque" type="button" [disabled]="ocupado()" (click)="comprar()">{{ ocupado() ? 'Registrando…' : 'Confirmar compra de prueba' }}</button></aside></div>
+      <h3>Método de pago</h3>
+      <label><input type="radio" name="metodo" [checked]="metodo() === 'tarjeta'" [disabled]="!!qr()" (change)="metodo.set('tarjeta')" /> Tarjeta Stripe (prueba)</label><br>
+      <label><input type="radio" name="metodo" [checked]="metodo() === 'qr'" [disabled]="!!qr()" (change)="metodo.set('qr')" /> QR BCP</label>
+      @if (metodo() === 'tarjeta') {
+        <label>Número de tarjeta de prueba<input class="campo" inputmode="numeric" autocomplete="off" [value]="numeroTarjeta()" (input)="numeroTarjeta.set($any($event.target).value)" /></label>
+        <p class="nota">4242 4242 4242 4242 aprueba · 4000 0000 0000 0002 rechaza. Solo tarjetas de prueba.</p>
+      }
+      @if (qr(); as q) {
+        <div class="qr-pendiente">
+          <h3>Esperando confirmación del QR</h3>
+          @if (q.imagen_base64) { <img class="qr-imagen" [src]="'data:image/png;base64,' + q.imagen_base64" alt="QR de pago BCP" /> }
+          <p>Estado: {{ q.estado }} · Vence: {{ q.expira }}</p>
+          <button type="button" class="btn linea" (click)="consultarQr()">Consultar ahora</button>
+        </div>
+      }
+      <p class="nota">Las tarjetas usan Stripe en modo prueba; el QR se confirma al consultar al banco o al simulador configurado. No se mueve dinero real en esta demo.</p>
+      <button class="btn rosa bloque" type="button" [disabled]="ocupado() || !!qr()" (click)="comprar()">{{ ocupado() ? 'Procesando…' : metodo() === 'qr' ? 'Generar QR' : 'Pagar con tarjeta de prueba' }}</button></aside></div>
   } }
   @if (error()) { <p class="error-servidor">{{ error() }}</p> }
 </main>

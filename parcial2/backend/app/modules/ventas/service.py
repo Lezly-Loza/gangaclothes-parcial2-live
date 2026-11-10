@@ -23,7 +23,7 @@ def _out(venta, db=None):
                             estado=venta.estado, comprobante=f"Comprobante {venta.codigo}", items=items)
 
 
-def registrar_venta(db: Session, tenant_id: int, data: schemas.VentaIn, usuario_id: int | None = None, *, simular_pago: bool = False, antes_de_guardar=None):
+def registrar_venta(db: Session, tenant_id: int, data: schemas.VentaIn, usuario_id: int | None = None, *, simular_pago: bool = False, antes_de_guardar=None, cobrador=None, metodo_pago=None):
     if data.uuid_operacion:
         anterior = db.query(Venta).filter_by(tenant_id=tenant_id, uuid_operacion=data.uuid_operacion).first()
         if anterior:
@@ -72,10 +72,11 @@ def registrar_venta(db: Session, tenant_id: int, data: schemas.VentaIn, usuario_
                   uuid_operacion=data.uuid_operacion, origen="PRESENCIAL" if data.monto_recibido is not None else "EN_LINEA", forma_pago=data.forma_pago,
                   total=total, estado="CONFIRMADA")
     venta.validarCobrarYGuardar(db, [(inv, item.cantidad) for item, _, inv, _, _ in items])
-    cobro = ({"aprobado": True, "referencia": f"SIM-{uuid4().hex[:12]}"} if simular_pago else pasarela.crear_cobro(total)) if data.forma_pago == "EN_LINEA" else {"aprobado": True, "referencia": None}
+    cobro = (cobrador(venta.id, total) if cobrador else
+             ({"aprobado": True, "referencia": f"SIM-{uuid4().hex[:12]}"} if simular_pago else pasarela.crear_cobro(total))) if data.forma_pago == "EN_LINEA" else {"aprobado": True, "referencia": None}
     if not cobro["aprobado"]:
         db.rollback()
-        raise HTTPException(402, "Pago rechazado")
+        raise HTTPException(402, cobro.get("motivo") or "Pago rechazado")
     for item, variante, inv, precio, promo in items:
         inv.validarStockYGuardar(db, "VENTA", item.cantidad)
         detalle = DetalleVenta(tenant_id=tenant_id, venta_id=venta.id, variante_id=variante.id,
@@ -88,7 +89,7 @@ def registrar_venta(db: Session, tenant_id: int, data: schemas.VentaIn, usuario_
         db.add(MovimientoInventario(tenant_id=tenant_id, sucursal_id=data.sucursal_id,
                                     variante_id=variante.id, tipo="VENTA", cantidad=item.cantidad,
                                     motivo=venta.codigo, usuario_id=usuario_id))
-    db.add(Pago(tenant_id=tenant_id, venta_id=venta.id, metodo=data.forma_pago, monto=total,
+    db.add(Pago(tenant_id=tenant_id, venta_id=venta.id, metodo=metodo_pago or data.forma_pago, monto=total,
                 referencia_pasarela=cobro["referencia"], estado="APROBADO"))
     if reserva is not None:
         reserva.estado = "ATENDIDA"
