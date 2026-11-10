@@ -320,7 +320,7 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           titulo('Red de Sucursales'),
-          const Text('Tiendas físicas de la empresa habilitadas para inventario y retiros (CU-10).'),
+          const Text('Tiendas físicas de la empresa habilitadas para inventario y retiros.'),
           const SizedBox(height: 14),
           if (cargando) const Center(child: CircularProgressIndicator())
           else if (error.isNotEmpty) Text(error, style: const TextStyle(color: Colors.deepOrange))
@@ -410,7 +410,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           titulo('Inventario por Sucursal'),
-          const Text('Control de existencias y alertas de stock mínimo (CU-12).'),
+          const Text('Control de existencias y alertas de stock mínimo.'),
           const SizedBox(height: 12),
           if (sucursales.isNotEmpty) ...[
             DropdownButtonFormField<int>(
@@ -551,7 +551,7 @@ class _ReservasGestionScreenState extends State<ReservasGestionScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           titulo('Reservas de Sucursal'),
-          const Text('Atención de reservas en tienda física (CU-14).'),
+          const Text('Atención de reservas en tienda física.'),
           const SizedBox(height: 12),
           if (sucursales.isNotEmpty) ...[
             DropdownButtonFormField<int>(
@@ -661,7 +661,7 @@ class _BitacoraSuperScreenState extends State<BitacoraSuperScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           titulo('Auditoría y Seguridad'),
-          const Text('Registro de eventos, modificaciones y accesos en la plataforma (CU-06).'),
+          const Text('Registro de eventos, modificaciones y accesos en la plataforma.'),
           const SizedBox(height: 14),
           if (cargando) const Center(child: CircularProgressIndicator())
           else if (error.isNotEmpty) Text(error, style: const TextStyle(color: Colors.deepOrange))
@@ -793,7 +793,7 @@ class _CajaCobroScreenState extends State<CajaCobroScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         titulo('Caja y Cobros'),
-        const Text('Emisión de comprobante de venta en mostrador (CU-15).'),
+        const Text('Emisión de comprobante de venta en mostrador.'),
         const SizedBox(height: 14),
         if (sucursales.isNotEmpty)
           DropdownButtonFormField<int>(
@@ -897,7 +897,7 @@ class _CambiosScreenState extends State<CambiosScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         titulo('Cambios de Prenda'),
-        const Text('Gestión de garantía de cambio en ventana de 7 días (CU-16).'),
+        const Text('Gestión de garantía de cambio en ventana de 7 días.'),
         const SizedBox(height: 14),
         campoTienda('Código de Venta (ej: VEN-2611-SOF1)', codigoCtrl),
         const SizedBox(height: 8),
@@ -976,7 +976,7 @@ class _ReportesScreenState extends State<ReportesScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reportes Oficiales (CU-24)', style: TextStyle(fontSize: 16)),
+        title: const Text('Reportes y Métricas Oficiales', style: TextStyle(fontSize: 16)),
         bottom: TabBar(
           controller: tabCtrl,
           indicatorColor: rosa,
@@ -1187,7 +1187,7 @@ class _ReportesScreenState extends State<ReportesScreen> with SingleTickerProvid
         padding: const EdgeInsets.all(16),
         children: [
           titulo('Ventas por Canal'),
-          const Text('Desglose de ingresos por origen de la venta (CU-24).'),
+          const Text('Desglose de ingresos por origen de la venta.'),
           const SizedBox(height: 12),
           for (final c in canales)
             Card(
