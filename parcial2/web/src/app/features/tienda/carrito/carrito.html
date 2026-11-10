@@ -1,8 +1,19 @@
-﻿<app-barra-tienda />
+<app-barra-tienda />
 <main class="pagina">
   <div class="encabezado"><h1>Carrito</h1><p class="nota">Revisa tus prendas y la sucursal antes de confirmar.</p></div>
   @if (compra(); as c) {
-    <section class="ticket"><h2>Pago de prueba confirmado</h2><p>Código: <b>{{ c.codigo }}</b> · Total: Bs {{ moneda(c.total) }}</p><p>No se cobró dinero real. Conserva el código para consultar la operación.</p><p><a routerLink="/mis-compras">Ver mis compras</a> · <a routerLink="/mis-envios">Ver mis pedidos</a> · <a routerLink="/catalogo">Seguir comprando</a></p></section>
+    <section class="ticket">
+      <h2>Pago de prueba confirmado</h2>
+      <p>Código: <b>{{ c.codigo }}</b> · Total: Bs {{ moneda(c.total) }}</p>
+      <p>No se cobró dinero real. Conserva el código para consultar la operación.</p>
+      <div class="acciones-comprobante" style="margin: 14px 0; display: flex; gap: 10px; flex-wrap: wrap;">
+        @if (c.venta_id) {
+          <button type="button" class="btn rosa" (click)="imprimirComprobante()">Imprimir comprobante</button>
+          <button type="button" class="btn linea" (click)="descargarComprobante()">Descargar PDF</button>
+        }
+      </div>
+      <p><a routerLink="/mis-compras">Ver mis compras</a> · <a routerLink="/mis-envios">Ver mis pedidos</a> · <a routerLink="/catalogo">Seguir comprando</a></p>
+    </section>
   } @else if (cargando()) { <p>Cargando…</p> }
   @else if (!carrito()?.detalle?.length) { <section class="ticket"><p>Tu carrito está vacío.</p><a routerLink="/catalogo">Elegir prendas del catálogo</a></section> }
   @else { @if (carrito(); as c) {

@@ -1,24 +1,27 @@
-﻿import { HttpClient } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { API_URL } from '../../../core/api';
 import { mensajeDeError } from '../../../core/errores.interceptor';
 import { moneda } from '../../../shared/formato';
 import { BarraTienda } from '../../../shared/tienda/barra-tienda';
+import { Comprobantes } from '../../../shared/comprobante';
 
 interface Linea { id: number; prenda: string; talla: string; color: string; cantidad: number; precio_final: number; subtotal: number; disponible: number; alcanza: boolean; }
 interface CarritoDatos { sucursal: string; unidades: number; total: number; detalle: Linea[]; }
 interface QrDatos { qr_id: string; venta_id: number; estado: string; pendiente: boolean; aprobado: boolean; rechazado: boolean; imagen_base64: string; expira: string; codigo?: string; total?: number; }
+interface CompraExitosa { codigo: string; total: number; venta_id?: number; }
 
 @Component({ selector: 'app-carrito', imports: [RouterLink, BarraTienda], templateUrl: './carrito.html', styleUrl: './carrito.css' })
 export class Carrito implements OnDestroy {
   private http = inject(HttpClient);
+  private comprobantes = inject(Comprobantes);
   readonly moneda = moneda;
   readonly carrito = signal<CarritoDatos | null>(null);
   readonly cargando = signal(true);
   readonly ocupado = signal(false);
   readonly error = signal<string | null>(null);
-  readonly compra = signal<{codigo: string; total: number} | null>(null);
+  readonly compra = signal<CompraExitosa | null>(null);
   readonly metodo = signal<'tarjeta' | 'qr'>('tarjeta');
   readonly numeroTarjeta = signal('');
   readonly qr = signal<QrDatos | null>(null);
@@ -64,14 +67,14 @@ export class Carrito implements OnDestroy {
     const body = this.delivery() ? { direccion: this.direccion(), latitud: Number(this.latitud()), longitud: Number(this.longitud()), referencia: this.referencia() || null, telefono: this.telefono() || null } : {};
     this.ocupado.set(true); this.error.set(null);
     const esQr = this.metodo() === 'qr';
-    this.http.post<QrDatos | {codigo: string; total: number}>(`${API_URL}/pagos/${esQr ? 'qr' : 'tarjeta'}`,
+    this.http.post<QrDatos | CompraExitosa>(`${API_URL}/pagos/${esQr ? 'qr' : 'tarjeta'}`,
       esQr ? body : {...body, numero_tarjeta: this.numeroTarjeta()}).subscribe({
       next: r => {
         if (esQr) {
           this.qr.set(r as QrDatos);
           this.detenerConsultaQr();
           this.consultaQrId = window.setInterval(() => this.consultarQr(), 4000);
-        } else { this.compra.set(r as {codigo: string; total: number}); this.carrito.set(null); }
+        } else { this.compra.set(r as CompraExitosa); this.carrito.set(null); }
         this.ocupado.set(false);
       },
       error: e => { this.error.set(mensajeDeError(e, 'No se pudo procesar el pago.')); this.ocupado.set(false); },
@@ -85,7 +88,7 @@ export class Carrito implements OnDestroy {
       next: r => {
         this.qr.set({...actual, ...r}); this.error.set(null);
         if (r.aprobado) {
-          this.detenerConsultaQr(); this.compra.set({codigo: r.codigo!, total: r.total!});
+          this.detenerConsultaQr(); this.compra.set({codigo: r.codigo!, total: r.total!, venta_id: r.venta_id});
           this.carrito.set(null); this.qr.set(null);
         } else if (r.rechazado) {
           this.detenerConsultaQr(); this.qr.set(null);
@@ -95,6 +98,14 @@ export class Carrito implements OnDestroy {
       },
       error: e => { this.error.set(mensajeDeError(e, 'No se pudo consultar el QR.')); this.consultandoQr = false; },
     });
+  }
+  imprimirComprobante(): void {
+    const vId = this.compra()?.venta_id;
+    if (vId) this.comprobantes.imprimir(vId);
+  }
+  descargarComprobante(): void {
+    const c = this.compra();
+    if (c?.venta_id) this.comprobantes.descargar(c.venta_id, c.codigo);
   }
   private tarjetaValida(valor: string): boolean {
     const digitos = valor.replace(/\s/g, '');

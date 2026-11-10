@@ -48,6 +48,11 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
     try { await canal.invokeMethod('solicitarPermiso'); }
     on MissingPluginException { throw StateError('Los avisos del sistema están disponibles en Android.'); }
   }
+  static Future<void> notificar(String titulo, String texto) async {
+    try {
+      await canal.invokeMethod('mostrar', {'titulo': titulo, 'texto': texto});
+    } catch (_) {}
+  }
   @override void dispose() {
     _cerrado = true; WidgetsBinding.instance.removeObserver(this); _conexion.cancel(); super.dispose();
   }

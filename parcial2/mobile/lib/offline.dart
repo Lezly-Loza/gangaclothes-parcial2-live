@@ -133,9 +133,19 @@ class _ModoOfflineScreenState extends State<ModoOfflineScreen> {
       ] else vacio('Todavía no hay una copia descargada para esta cuenta.'),
       const SizedBox(height: 20), const Text('Operaciones locales', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
       const Text('La app intenta sincronizar al recuperar internet o al abrirla de nuevo.'),
-      TextButton.icon(onPressed: () async { try { await Sincronizador.solicitarPermiso(); if (context.mounted) aviso(context, 'Revisa el permiso de notificaciones de Android.'); }
-        catch (_) { if (context.mounted) aviso(context, 'Los avisos del sistema están disponibles en Android.'); } },
-        icon: const Icon(Icons.notifications_outlined), label: const Text('Activar avisos en Android')),
+      TextButton.icon(onPressed: () async {
+        try {
+          await Sincronizador.solicitarPermiso();
+          await Sincronizador.notificar(
+            'GangaClothes: Avisos Activados',
+            'Recibirás notificaciones al confirmar ventas y reservas.',
+          );
+          if (context.mounted) aviso(context, '¡Avisos activados y notificación de prueba enviada!');
+        } catch (_) {
+          if (context.mounted) aviso(context, 'Los avisos del sistema están disponibles en Android.');
+        }
+      },
+      icon: const Icon(Icons.notifications_active_outlined), label: const Text('Activar y probar avisos en Android')),
       FilledButton(onPressed: ocupado || operaciones.isEmpty ? null : sincronizar, child: const Text('Sincronizar pendientes')),
       if (operaciones.isEmpty) vacio('No hay operaciones guardadas.'),
       for (final op in operaciones) Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

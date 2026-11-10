@@ -9,6 +9,7 @@ import { SucursalActual } from '../../core/sucursal-actual';
 import { OpcionFiltro, SelectorEstado } from '../../shared/estado/selector-estado';
 import { fechaLocal, fechaSinZona, moneda } from '../../shared/formato';
 import { SelectorSucursal } from '../../shared/sucursal/selector-sucursal';
+import { Comprobantes } from '../../shared/comprobante';
 
 type Metodo = 'efectivo' | 'tarjeta' | 'qr';
 
@@ -147,6 +148,7 @@ const centavos = (n: number) => Math.round(n * 100) / 100;
 export class Caja {
   private http = inject(HttpClient);
   private avisos = inject(Notificaciones);
+  private comprobantes = inject(Comprobantes);
   readonly sesion = inject(SesionStore);
   readonly sucursal = inject(SucursalActual);
 
@@ -399,7 +401,16 @@ export class Caja {
     this.operacionCaja = null;
   }
 
-  imprimirComprobante(): void { window.print(); }
+  imprimirComprobante(): void {
+    const vId = this.cobro()?.comprobante.venta_id;
+    if (vId) this.comprobantes.imprimir(vId);
+    else window.print();
+  }
+
+  descargarComprobante(): void {
+    const c = this.cobro()?.comprobante;
+    if (c?.venta_id) this.comprobantes.descargar(c.venta_id, c.nro_comprobante);
+  }
 
   /** Identifica la venta armada: si no cambio, se reintenta el pago sobre la misma venta. */
   private firma(): string {

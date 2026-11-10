@@ -4,8 +4,8 @@ from uuid import uuid4
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from ...models import (CambioPrenda, Cliente, DescuentoVenta, DetalleReserva, DetalleVenta, Envio, Inventario, MovimientoInventario,
-                       Pago, Reserva, Sucursal, Variante, Venta)
+from ...models import (CambioPrenda, Cliente, Color, DescuentoVenta, DetalleReserva, DetalleVenta, Envio, Inventario, MovimientoInventario,
+                       Pago, Producto, Reserva, Sucursal, Talla, Tenant, User, Variante, Venta)
 from ..pasarela import service as pasarela
 from ..productos.promociones import precio_promocional
 from . import schemas
@@ -124,3 +124,78 @@ def anular_venta(db: Session, tenant_id: int, id: int, motivo: str, usuario_id: 
                                     cantidad=item.cantidad, motivo=f"Anulación {venta.codigo}", usuario_id=usuario_id))
     db.commit()
     return _out(venta, db)
+
+
+def comprobante(db: Session, tenant_id: int, id: int, usuario_id: int | None = None, roles: list[str] | None = None) -> dict:
+    venta = db.query(Venta).filter_by(tenant_id=tenant_id, id=id).first()
+    if not venta:
+        raise HTTPException(404, "Venta no encontrada")
+
+    # Si es cliente, validar que la venta le pertenezca
+    if roles and "cliente" in roles and "ventas:ver" not in roles and "administrador" not in roles and "encargado" not in roles and "cajero" not in roles:
+        comprador = db.query(Cliente).filter_by(tenant_id=tenant_id, user_id=usuario_id).first()
+        if not comprador or (venta.cliente_id != comprador.id and venta.usuario_id != usuario_id):
+            raise HTTPException(403, "No autorizado para consultar este comprobante")
+
+    tenant = db.query(Tenant).filter_by(id=tenant_id).first()
+    sucursal = db.query(Sucursal).filter_by(tenant_id=tenant_id, id=venta.sucursal_id).first()
+    cliente_obj = db.query(Cliente).filter_by(tenant_id=tenant_id, id=venta.cliente_id).first() if venta.cliente_id else None
+    cajero_obj = db.query(User).filter_by(tenant_id=tenant_id, id=venta.usuario_id).first() if venta.usuario_id else None
+    pago = db.query(Pago).filter_by(tenant_id=tenant_id, venta_id=venta.id).order_by(Pago.id.desc()).first()
+
+    items = []
+    total_descuento = 0.0
+    for d in db.query(DetalleVenta).filter_by(tenant_id=tenant_id, venta_id=venta.id).all():
+        var = db.query(Variante).filter_by(tenant_id=tenant_id, id=d.variante_id).first()
+        prod = db.query(Producto).filter_by(tenant_id=tenant_id, id=var.producto_id).first() if var else None
+        talla = db.query(Talla).filter_by(tenant_id=tenant_id, id=var.talla_id).first() if var and var.talla_id else None
+        color = db.query(Color).filter_by(tenant_id=tenant_id, id=var.color_id).first() if var and var.color_id else None
+        desc = db.query(DescuentoVenta).filter_by(tenant_id=tenant_id, detalle_venta_id=d.id).first()
+        descuento_monto = float(desc.descuento) if desc else 0.0
+        total_descuento += descuento_monto
+        items.append({
+            'sku': var.sku if var else '—',
+            'prenda': prod.nombre if prod else 'Prenda',
+            'talla': talla.nombre if talla else 'U',
+            'color': color.nombre if color else '—',
+            'cantidad': d.cantidad,
+            'precio_unitario': float(d.precio_unitario),
+            'subtotal': float(d.subtotal),
+            'descuento': descuento_monto,
+        })
+
+    fecha_dt = venta.fecha.strftime('%d/%m/%Y %H:%M') if venta.fecha else '—'
+
+    return {
+        'id': venta.id,
+        'codigo': venta.codigo,
+        'fecha': venta.fecha.isoformat() if venta.fecha else None,
+        'fecha_formateada': fecha_dt,
+        'estado': venta.estado,
+        'origen': venta.origen,
+        'forma_pago': pago.metodo if pago else venta.forma_pago,
+        'total': float(venta.total),
+        'descuento': total_descuento,
+        'empresa': tenant.razon_social if tenant else 'GangaClothes SaaS',
+        'sucursal': {
+            'id': sucursal.id if sucursal else None,
+            'nombre': sucursal.nombre if sucursal else '—',
+            'direccion': sucursal.direccion if sucursal else '—',
+        },
+        'cliente': {
+            'id': cliente_obj.id if cliente_obj else None,
+            'nombre': cliente_obj.nombre if cliente_obj else 'Cliente General',
+            'documento': cliente_obj.documento if cliente_obj else '—',
+        },
+        'cajero': {
+            'id': cajero_obj.id if cajero_obj else None,
+            'nombre': cajero_obj.nombre if cajero_obj else 'Sistema',
+            'email': cajero_obj.email if cajero_obj else None,
+        },
+        'pago': {
+            'metodo': pago.metodo if pago else venta.forma_pago,
+            'monto': float(pago.monto) if pago else float(venta.total),
+            'referencia': pago.referencia_pasarela if pago else None,
+        },
+        'items': items,
+    }

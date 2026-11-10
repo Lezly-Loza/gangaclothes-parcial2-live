@@ -64,9 +64,9 @@ def pagar_tarjeta(db: Session, scope, body):
         forma_pago='EN_LINEA', items=list(cart.items), uuid_operacion=str(uuid4()))
     venta = ventas.registrar_venta(db, scope.tenant_id, data, scope.user_id,
         cobrador=cobrar, metodo_pago='TARJETA', antes_de_guardar=finalizar)
-    return {'aprobado': True, 'codigo': venta.codigo, 'total': venta.total,
+    return {'aprobado': True, 'codigo': venta.codigo, 'total': float(venta.total),
             'metodo': 'tarjeta', 'referencia': resultado_pasarela['referencia'],
-            'simulado': resultado_pasarela['simulado']}
+            'simulado': resultado_pasarela['simulado'], 'venta_id': venta.id}
 
 
 def _pago_pendiente(db: Session, scope, comprador):
@@ -157,7 +157,7 @@ def resolver_qr(db: Session, scope, qr_id: str, *, estado=None):
     if pago.estado == 'APROBADO':
         return {'aprobado': True, 'pendiente': False, 'rechazado': False,
                 'estado': 'P', 'qr_id': qr_id, 'codigo': venta.codigo,
-                'total': float(venta.total)}
+                'total': float(venta.total), 'venta_id': venta.id}
     if pago.estado == 'RECHAZADO':
         return {'aprobado': False, 'pendiente': False, 'rechazado': True,
                 'estado': 'V', 'qr_id': qr_id}

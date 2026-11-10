@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'api_service.dart';
 import 'estilo.dart';
 import 'main.dart' show api;
+import 'sincronizador.dart';
 
 Widget imagenPrenda(dynamic url, {double icono = 34}) {
   final texto = url?.toString() ?? '';
@@ -236,9 +237,16 @@ class _CarritoScreenState extends State<CarritoScreen> {
     } catch (e) { if (mounted) setState(() => error = mensajeError(e)); }
     finally { consultandoQr = false; }
   }
-  Future<void> mostrarComprobante(Map<String, dynamic> r) => showDialog<void>(context: context, builder: (c) => AlertDialog(
-    title: const Text('Pago de prueba confirmado'), content: Text('Código: ${r['codigo']}\nTotal: ${bs(r['total'])}\nNo se cobró dinero real.'),
-    actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Aceptar'))]));
+  Future<void> mostrarComprobante(Map<String, dynamic> r) async {
+    await Sincronizador.notificar(
+      'Compra confirmada: ${r['codigo']}',
+      'Total: ${bs(r['total'])}. Tu compra se registró con éxito.',
+    );
+    if (!mounted) return;
+    return showDialog<void>(context: context, builder: (c) => AlertDialog(
+      title: const Text('Pago de prueba confirmado'), content: Text('Código: ${r['codigo']}\nTotal: ${bs(r['total'])}\nNo se cobró dinero real.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Aceptar'))]));
+  }
   @override Widget build(BuildContext context) {
     final lineas = mapas(carrito?['detalle']);
     return ListView(padding: const EdgeInsets.all(18), children: [titulo('Carrito'),
