@@ -424,6 +424,74 @@ def ejecutar_poblamiento():
             db.add(DetalleVenta(tenant_id=luna.id, venta_id=v_diego.id, variante_id=var_diego.id, cantidad=1, precio_unitario=var_diego.precio, subtotal=var_diego.precio))
             db.add(Pago(tenant_id=luna.id, venta_id=v_diego.id, metodo="EFECTIVO", monto=var_diego.precio, referencia_pasarela="EF-CAJA-001", estado="APROBADO"))
 
+        print("-> 12.1. Generando Historial de Ventas de 4 meses para Reportes y Top 10 por Sucursal...")
+        ventas_historicas_plan = [
+            # Mes 1 (hace 10 a 28 días)
+            (10, 0, 0, 5, "QR", "PRESENCIAL"),        # Equipetrol
+            (14, 0, 1, 8, "EFECTIVO", "PRESENCIAL"),  # Equipetrol
+            (18, 0, 2, 6, "TARJETA", "EN_LINEA"),     # Equipetrol
+            (21, 1, 3, 10, "QR", "PRESENCIAL"),       # Centro
+            (24, 1, 4, 4, "EFECTIVO", "PRESENCIAL"),  # Centro
+            (27, 2, 5, 7, "TARJETA", "EN_LINEA"),     # Urubó
+            # Mes 2 (hace 35 a 58 días)
+            (35, 0, 6, 9, "QR", "PRESENCIAL"),        # Equipetrol
+            (42, 0, 7, 5, "EFECTIVO", "PRESENCIAL"),  # Equipetrol
+            (48, 1, 8, 12, "TARJETA", "EN_LINEA"),    # Centro
+            (52, 1, 9, 6, "QR", "PRESENCIAL"),        # Centro
+            (55, 2, 10, 8, "EFECTIVO", "PRESENCIAL"), # Urubó
+            (58, 2, 11, 4, "TARJETA", "EN_LINEA"),    # Urubó
+            # Mes 3 (hace 65 a 88 días)
+            (65, 0, 12, 11, "QR", "PRESENCIAL"),      # Equipetrol
+            (70, 0, 13, 7, "EFECTIVO", "PRESENCIAL"), # Equipetrol
+            (74, 1, 14, 9, "TARJETA", "EN_LINEA"),    # Centro
+            (78, 1, 15, 14, "QR", "PRESENCIAL"),      # Centro
+            (82, 2, 16, 5, "EFECTIVO", "PRESENCIAL"), # Urubó
+            (86, 2, 17, 6, "TARJETA", "EN_LINEA"),    # Urubó
+            # Mes 4 (hace 95 a 115 días)
+            (95, 0, 18, 8, "QR", "PRESENCIAL"),       # Equipetrol
+            (100, 1, 19, 6, "EFECTIVO", "PRESENCIAL"),# Centro
+            (105, 2, 0, 5, "TARJETA", "EN_LINEA"),    # Urubó
+            (112, 0, 3, 7, "QR", "PRESENCIAL"),       # Equipetrol
+        ]
+        for h_idx, (dias_atras, s_idx, v_idx, cant, met, orig) in enumerate(ventas_historicas_plan, start=1):
+            cod_h = f"VEN-HIST-{h_idx:03d}"
+            v_exist = db.query(Venta).filter_by(tenant_id=luna.id, codigo=cod_h).first()
+            if not v_exist and len(sucs_luna) > s_idx and len(variantes_activas) > v_idx:
+                target_var = variantes_activas[v_idx]
+                target_suc = sucs_luna[s_idx]
+                tot_h = target_var.precio * cant
+                v_h = Venta(
+                    tenant_id=luna.id,
+                    codigo=cod_h,
+                    sucursal_id=target_suc.id,
+                    usuario_id=cajero.id,
+                    cliente_id=sofia.id if h_idx % 2 == 0 else diego.id,
+                    origen=orig,
+                    forma_pago=met,
+                    fecha=now - timedelta(days=dias_atras),
+                    total=tot_h,
+                    estado="CONFIRMADA",
+                )
+                db.add(v_h)
+                db.flush()
+                db.add(DetalleVenta(
+                    tenant_id=luna.id,
+                    venta_id=v_h.id,
+                    variante_id=target_var.id,
+                    cantidad=cant,
+                    precio_unitario=target_var.precio,
+                    subtotal=tot_h,
+                ))
+                db.add(Pago(
+                    tenant_id=luna.id,
+                    venta_id=v_h.id,
+                    metodo=met,
+                    monto=tot_h,
+                    referencia_pasarela=f"PAG-{cod_h}",
+                    estado="APROBADO",
+                ))
+        db.flush()
+
         print("-> 13. Configurando Reservas en Linea (CU-14)...")
         reservas_defs = [
             ("RES-2611-001", sofia.id, sucs_luna[0].id, variantes_activas[2].id, "PENDIENTE", now + timedelta(hours=36)),
