@@ -29,12 +29,9 @@ void entrar(BuildContext context, Map<String, dynamic> sesion) => Navigator.push
     MaterialPageRoute(builder: (_) => pantallaSesion(sesion)), (_) => false);
 
 const _cuentasDemo = [
-  (rol: 'Admin', tenant: 'luna', email: 'admin@gangaclothes.com', pass: 'Admin123'),
-  (rol: 'Encargado', tenant: 'luna', email: 'encargado@gangaclothes.com', pass: 'Encargado123'),
-  (rol: 'Cajero', tenant: 'luna', email: 'cajero@gangaclothes.com', pass: 'Cajero123'),
-  (rol: 'Sofia (Cliente)', tenant: 'luna', email: 'sofia@gangaclothes.com', pass: 'Cliente#2026'),
-  (rol: 'Diego (Cliente)', tenant: 'luna', email: 'diego@gangaclothes.com', pass: 'Cliente#2026'),
-  (rol: 'Admin Andina', tenant: 'andina', email: 'admin@andina.bo', pass: 'Admin123'),
+  (rol: 'Ana (Admin)', tenant: 'luna', email: 'ana@boutique-luna.bo', pass: 'Luna12345'),
+  (rol: 'Cliente Luna', tenant: 'luna', email: 'cliente@boutique-luna.bo', pass: 'Luna12345'),
+  (rol: 'Encargado Luna', tenant: 'luna', email: 'encargado@boutique-luna.bo', pass: 'Luna12345'),
   (rol: 'Superadmin', tenant: '', email: 'root@plataforma.bo', pass: 'SuperSegura123'),
 ];
 
@@ -92,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 8),
-              Text('Conectando con el servidor en Render…', style: TextStyle(fontSize: 12, color: Colors.black54)),
+              Text('Conectando con el servidor…', style: TextStyle(fontSize: 12, color: Colors.black54)),
             ],
           ),
         ),

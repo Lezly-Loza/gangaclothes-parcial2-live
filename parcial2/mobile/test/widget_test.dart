@@ -77,6 +77,14 @@ void main() {
     expect(sesion['tenant_codigo'], 'luna');
     expect((await servicio.sesionGuardada())?['kind'], 'tenant');
   });
+  test('una sesión de otro backend no se reutiliza en el servidor local', () async {
+    final anterior = ApiService(baseUrl: 'https://servidor-anterior/api/v1', adapter: ApiAcceso());
+    await anterior.login({'codigo_tenant': 'luna', 'email': 'cliente@boutique-luna.bo', 'password': 'clave-prueba'});
+    final local = ApiService(baseUrl: 'http://10.0.2.2:8001/api/v1', adapter: ApiAcceso());
+    expect(await local.sesionGuardada(), isNull);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('access_token'), isNull);
+  });
   test('las copias offline se separan por empresa y usuario y reemplazan la selección', () async {
     final a = ProductoLocalDao(tenantId: 1, userId: 1);
     final b = ProductoLocalDao(tenantId: 1, userId: 2);
@@ -111,7 +119,8 @@ void main() {
     app.api = ApiService();
   });
   test('operaciones pendientes se aíslan por cuenta y conservan su identificador al sincronizar', () async {
-    SharedPreferences.setMockInitialValues({'last_session': jsonEncode({'tenant_id': 1, 'user_id': 1, 'access_token': 'prueba'})});
+    SharedPreferences.setMockInitialValues({'last_session': jsonEncode({'tenant_id': 1, 'user_id': 1, 'access_token': 'prueba'}),
+      'access_token': 'prueba', 'session_api_url': 'http://localhost/api/v1'});
     final adapter = ApiDePrueba();
     final servicio = ApiService(baseUrl: 'http://localhost/api/v1', adapter: adapter);
     final cola = OperacionesOffline(tenantId: 1, userId: 1, api: servicio);
@@ -140,7 +149,8 @@ void main() {
     expect(adapter.rutas.where((r) => r == '/offline/sincronizar').length, 2);
   });
   test('un conflicto queda visible y una falla de red conserva el pendiente', () async {
-    SharedPreferences.setMockInitialValues({'last_session': jsonEncode({'tenant_id': 7, 'user_id': 9, 'access_token': 'prueba'})});
+    SharedPreferences.setMockInitialValues({'last_session': jsonEncode({'tenant_id': 7, 'user_id': 9, 'access_token': 'prueba'}),
+      'access_token': 'prueba', 'session_api_url': 'http://localhost/api/v1'});
     final adapter = ApiDePrueba()..codigoHttp = 409;
     final servicio = ApiService(baseUrl: 'http://localhost/api/v1', adapter: adapter);
     final cola = OperacionesOffline(tenantId: 7, userId: 9, api: servicio);
@@ -157,7 +167,8 @@ void main() {
     expect((await cola.listar()).last['estado'], 'pendiente');
   });
   test('sincronizar y guardar simultáneamente no pierde operaciones de la misma cuenta', () async {
-    SharedPreferences.setMockInitialValues({'last_session': jsonEncode({'tenant_id': 7, 'user_id': 9, 'access_token': 'prueba'})});
+    SharedPreferences.setMockInitialValues({'last_session': jsonEncode({'tenant_id': 7, 'user_id': 9, 'access_token': 'prueba'}),
+      'access_token': 'prueba', 'session_api_url': 'http://localhost/api/v1'});
     final adapter = ApiDePrueba();
     final servicio = ApiService(baseUrl: 'http://localhost/api/v1', adapter: adapter);
     final primera = OperacionesOffline(tenantId: 7, userId: 9, api: servicio);
