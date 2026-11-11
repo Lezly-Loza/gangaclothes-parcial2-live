@@ -20,12 +20,13 @@ import {
   isoLocal,
 } from '../reportes.service';
 
-type Periodo = '7' | '30' | '90';
+type Periodo = '7' | '30' | '90' | '120';
 
 const PERIODOS: OpcionFiltro<Periodo>[] = [
   { valor: '7', etiqueta: '7 dias' },
   { valor: '30', etiqueta: '30 dias' },
-  { valor: '90', etiqueta: '90 dias' },
+  { valor: '90', etiqueta: '90 dias (3 meses)' },
+  { valor: '120', etiqueta: '120 dias (4 meses)' },
 ];
 
 /**
@@ -48,7 +49,7 @@ export class Dashboard {
   readonly moneda = moneda;
   readonly pct = porcentaje;
 
-  readonly periodo = signal<Periodo>('30');
+  readonly periodo = signal<Periodo>('120');
   /** null = todas las sucursales. */
   readonly sucursalId = signal<number | null>(null);
 

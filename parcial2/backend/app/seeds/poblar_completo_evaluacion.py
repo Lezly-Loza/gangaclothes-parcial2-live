@@ -424,34 +424,46 @@ def ejecutar_poblamiento():
             db.add(DetalleVenta(tenant_id=luna.id, venta_id=v_diego.id, variante_id=var_diego.id, cantidad=1, precio_unitario=var_diego.precio, subtotal=var_diego.precio))
             db.add(Pago(tenant_id=luna.id, venta_id=v_diego.id, metodo="EFECTIVO", monto=var_diego.precio, referencia_pasarela="EF-CAJA-001", estado="APROBADO"))
 
-        print("-> 12.1. Generando Historial de Ventas de 4 meses para Reportes y Top 10 por Sucursal...")
+        print("-> 12.1. Generando Historial de Ventas de 5 meses para Reportes y Top 10 por Sucursal...")
         ventas_historicas_plan = [
-            # Mes 1 (hace 10 a 28 días)
-            (10, 0, 0, 5, "QR", "PRESENCIAL"),        # Equipetrol
-            (14, 0, 1, 8, "EFECTIVO", "PRESENCIAL"),  # Equipetrol
-            (18, 0, 2, 6, "TARJETA", "EN_LINEA"),     # Equipetrol
-            (21, 1, 3, 10, "QR", "PRESENCIAL"),       # Centro
-            (24, 1, 4, 4, "EFECTIVO", "PRESENCIAL"),  # Centro
-            (27, 2, 5, 7, "TARJETA", "EN_LINEA"),     # Urubó
-            # Mes 2 (hace 35 a 58 días)
-            (35, 0, 6, 9, "QR", "PRESENCIAL"),        # Equipetrol
-            (42, 0, 7, 5, "EFECTIVO", "PRESENCIAL"),  # Equipetrol
-            (48, 1, 8, 12, "TARJETA", "EN_LINEA"),    # Centro
-            (52, 1, 9, 6, "QR", "PRESENCIAL"),        # Centro
-            (55, 2, 10, 8, "EFECTIVO", "PRESENCIAL"), # Urubó
-            (58, 2, 11, 4, "TARJETA", "EN_LINEA"),    # Urubó
-            # Mes 3 (hace 65 a 88 días)
-            (65, 0, 12, 11, "QR", "PRESENCIAL"),      # Equipetrol
-            (70, 0, 13, 7, "EFECTIVO", "PRESENCIAL"), # Equipetrol
-            (74, 1, 14, 9, "TARJETA", "EN_LINEA"),    # Centro
-            (78, 1, 15, 14, "QR", "PRESENCIAL"),      # Centro
-            (82, 2, 16, 5, "EFECTIVO", "PRESENCIAL"), # Urubó
-            (86, 2, 17, 6, "TARJETA", "EN_LINEA"),    # Urubó
-            # Mes 4 (hace 95 a 115 días)
-            (95, 0, 18, 8, "QR", "PRESENCIAL"),       # Equipetrol
-            (100, 1, 19, 6, "EFECTIVO", "PRESENCIAL"),# Centro
-            (105, 2, 0, 5, "TARJETA", "EN_LINEA"),    # Urubó
-            (112, 0, 3, 7, "QR", "PRESENCIAL"),       # Equipetrol
+            # Noviembre 2026 (hace 1 a 10 días)
+            (2, 0, 0, 4, "QR", "PRESENCIAL"),         # Equipetrol
+            (5, 1, 1, 6, "EFECTIVO", "PRESENCIAL"),   # Centro
+            (8, 2, 2, 5, "TARJETA", "EN_LINEA"),      # Urubó
+            (9, 0, 3, 7, "QR", "PRESENCIAL"),         # Equipetrol
+
+            # Octubre 2026 (hace 15 a 40 días)
+            (15, 0, 4, 8, "EFECTIVO", "PRESENCIAL"),  # Equipetrol
+            (20, 1, 5, 10, "QR", "PRESENCIAL"),       # Centro
+            (25, 2, 6, 6, "TARJETA", "EN_LINEA"),     # Urubó
+            (32, 0, 7, 7, "EFECTIVO", "PRESENCIAL"),  # Equipetrol
+            (38, 1, 8, 9, "QR", "PRESENCIAL"),        # Centro
+
+            # Septiembre 2026 (hace 45 a 70 días)
+            (46, 2, 9, 5, "TARJETA", "EN_LINEA"),     # Urubó
+            (52, 0, 10, 11, "QR", "PRESENCIAL"),      # Equipetrol
+            (58, 1, 11, 8, "EFECTIVO", "PRESENCIAL"), # Centro
+            (64, 2, 12, 6, "TARJETA", "EN_LINEA"),    # Urubó
+            (69, 0, 13, 9, "QR", "PRESENCIAL"),       # Equipetrol
+
+            # Agosto 2026 (hace 75 a 100 días)
+            (76, 1, 14, 12, "EFECTIVO", "PRESENCIAL"),# Centro
+            (82, 2, 15, 7, "TARJETA", "EN_LINEA"),    # Urubó
+            (88, 0, 16, 8, "QR", "PRESENCIAL"),       # Equipetrol
+            (94, 1, 17, 10, "EFECTIVO", "PRESENCIAL"),# Centro
+            (99, 2, 18, 5, "TARJETA", "EN_LINEA"),    # Urubó
+
+            # Julio 2026 (hace 105 a 130 días)
+            (106, 0, 19, 9, "QR", "PRESENCIAL"),      # Equipetrol
+            (112, 1, 0, 8, "EFECTIVO", "PRESENCIAL"), # Centro
+            (118, 2, 1, 6, "TARJETA", "EN_LINEA"),    # Urubó
+            (124, 0, 2, 10, "QR", "PRESENCIAL"),      # Equipetrol
+            (130, 1, 3, 7, "EFECTIVO", "PRESENCIAL"), # Centro
+
+            # Junio 2026 (hace 135 a 155 días)
+            (138, 2, 4, 6, "TARJETA", "EN_LINEA"),    # Urubó
+            (145, 0, 5, 8, "QR", "PRESENCIAL"),       # Equipetrol
+            (152, 1, 6, 9, "EFECTIVO", "PRESENCIAL"), # Centro
         ]
         for h_idx, (dias_atras, s_idx, v_idx, cant, met, orig) in enumerate(ventas_historicas_plan, start=1):
             cod_h = f"VEN-HIST-{h_idx:03d}"

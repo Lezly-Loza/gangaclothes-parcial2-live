@@ -65,7 +65,7 @@ export class Reportes {
 
   // ---- filtros ----
   readonly reporte = signal<NombreReporte>('ventas');
-  readonly desde = signal(isoLocal(29));
+  readonly desde = signal(isoLocal(120));
   readonly hasta = signal(isoLocal());
   readonly sucursalId = signal<number | null>(null);
   readonly canal = signal<string | null>(null);
