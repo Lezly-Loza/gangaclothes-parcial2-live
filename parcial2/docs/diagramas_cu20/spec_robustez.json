@@ -1,0 +1,59 @@
+{
+  "proyecto": "GangaClothes SaaS",
+  "actores": [{"id": "CAJ", "nombre": ["Cajero"]}],
+  "cus": [
+    {"id": "CU-20", "nombre": "Registrar venta de contado sin conexión",
+     "actores": ["CAJ"], "plataforma": "web"}
+  ],
+
+  "comunicacion_rica": {
+    "CU-20": {
+      "W": 1780, "H": 1180,
+      "actor": {"nombre": "Cajero", "x": 90, "y": 560},
+
+      "nodos": [
+        {"id": "UI",   "tipo": "boundary", "nombre": "CajaPage",       "x": 430,  "y": 560},
+        {"id": "CTR",  "tipo": "control",  "nombre": "OfflineService", "x": 870,  "y": 560},
+
+        {"id": "IDB",  "tipo": "entity",   "nombre": ["IndexedDB", "operaciones"], "x": 1400, "y": 110},
+        {"id": "INV",  "tipo": "entity",   "nombre": "Inventario",     "x": 1450, "y": 320},
+        {"id": "VTA",  "tipo": "entity",   "nombre": "Venta",          "x": 1450, "y": 540},
+        {"id": "DET",  "tipo": "entity",   "nombre": "DetalleVenta",   "x": 1450, "y": 740},
+        {"id": "PAG",  "tipo": "entity",   "nombre": "Pago",           "x": 1450, "y": 940},
+        {"id": "OPL",  "tipo": "entity",   "nombre": "OperacionLog",   "x": 1130, "y": 1080}
+      ],
+
+      "mensajes": [
+        {"num": "1",      "de": "A",   "a": "UI",   "texto": "cobrar()"},
+        {"num": "1.1",    "de": "UI",  "a": "CTR",  "texto": "encolarVentaCaja(datos)"},
+        {"num": "1.2",    "de": "CTR", "a": "IDB",  "texto": "add(op, estado='pendiente')"},
+        {"num": "1.2.1",  "de": "IDB", "a": "CTR",  "texto": "uuid_operacion", "tipo": "ret"},
+        {"num": "1.3",    "de": "CTR", "a": "UI",   "texto": "operacionPendiente", "tipo": "ret"},
+        {"num": "1.4",    "de": "UI",  "a": "A",    "texto": "mostrarVentaEnLocal", "tipo": "ret"},
+
+        {"num": "2",      "de": "A",   "a": "UI",   "texto": "toggleOffline() / sincronizarCola()"},
+        {"num": "2.1",    "de": "UI",  "a": "CTR",  "texto": "sincronizarPendientes()"},
+        {"num": "2.2",    "de": "CTR", "a": "INV",  "texto": "validarStockYGuardar(db,'VENTA',cant)"},
+        {"num": "2.2.1",  "de": "INV", "a": "CTR",  "texto": "stockRetenido", "tipo": "ret"},
+        {"num": "2.3",    "de": "CTR", "a": "VTA",  "texto": "validarCobrarYGuardar(db, inv)"},
+        {"num": "2.3.1",  "de": "VTA", "a": "CTR",  "texto": "ventaCreada (V-XXX)", "tipo": "ret"},
+        {"num": "2.4",    "de": "CTR", "a": "DET",  "texto": "add(DetalleVenta)"},
+        {"num": "2.5",    "de": "CTR", "a": "PAG",  "texto": "add(Pago)"},
+        {"num": "2.6",    "de": "CTR", "a": "OPL",  "texto": "add(OperacionLog, CONFIRMADA)"},
+        {"num": "2.7",    "de": "CTR", "a": "IDB",  "texto": "actualizarOperacion(confirmada)"},
+        {"num": "2.8",    "de": "CTR", "a": "UI",   "texto": "ventaConfirmada", "tipo": "ret"},
+        {"num": "2.9",    "de": "UI",  "a": "A",    "texto": "mostrarComprobanteOficial", "tipo": "ret"},
+
+        {"num": "3",      "de": "A",   "a": "UI",   "texto": "sincronizarCola() [otro cajero gano stock]", "flujo": "alt"},
+        {"num": "3.1",    "de": "UI",  "a": "CTR",  "texto": "sincronizar(op)", "flujo": "alt"},
+        {"num": "3.2",    "de": "CTR", "a": "INV",  "texto": "validarStockYGuardar(db,'VENTA',cant)", "flujo": "alt"},
+        {"num": "3.2.1",  "de": "INV", "a": "CTR",  "texto": "HTTPException 409 Stock insuficiente", "tipo": "ret", "flujo": "alt"},
+        {"num": "3.3",    "de": "CTR", "a": "VTA",  "texto": "validarYRevertirStock(db, inv, motivo)", "flujo": "alt"},
+        {"num": "3.3.1",  "de": "VTA", "a": "CTR",  "texto": "ventaRechazada", "tipo": "ret", "flujo": "alt"},
+        {"num": "3.4",    "de": "CTR", "a": "IDB",  "texto": "actualizarOperacion(conflicto, error)", "flujo": "alt"},
+        {"num": "3.5",    "de": "CTR", "a": "UI",   "texto": "ventaRechazadaDTO", "tipo": "ret", "flujo": "alt"},
+        {"num": "3.6",    "de": "UI",  "a": "A",    "texto": "mostrarPagoRechazado", "tipo": "ret", "flujo": "alt"}
+      ]
+    }
+  }
+}

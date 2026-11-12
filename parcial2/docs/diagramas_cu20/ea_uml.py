@@ -382,16 +382,14 @@ def comunicacion_rica(titulo, actor_dict, nodos, mensajes, W=1200, H=680):
         # Offset perpendicular pequeño para que la flecha no pise el cable.
         mx += nx * 12
         my += ny * 12
-        text = f"{m['num']}: {m['texto']}"
+        es_ret = m.get("tipo") == "ret"
+        col = m.get("color") or ("#B32D13" if m.get("flujo") == "alt" else "#1A1A1A")
+        flecha_txt = " <--" if es_ret else " -->"
+        text = f"{m['num']}: {m['texto']}{flecha_txt}"
         wmsg = tw(text, 10.5, False) + 12
+        italico = es_ret
         b += f'<rect x="{mx-wmsg/2:.1f}" y="{my-14:.1f}" width="{wmsg:.1f}" height="16" fill="#FFFFFF" opacity="0.95"/>'
-        b += T(mx, my - 2, text, 10.5, False, True, "middle", "#1A1A1A")
-        # flecha debajo del texto, paralela al cable
-        sx = mx - 22 * ux
-        sy = my + 10 - 22 * uy
-        ex = mx + 22 * ux
-        ey = my + 10 + 22 * uy
-        b += f'<line x1="{sx:.1f}" y1="{sy:.1f}" x2="{ex:.1f}" y2="{ey:.1f}" stroke="#1A1A1A" stroke-width="1.5" marker-end="url(#arrSolid)"/>'
+        b += T(mx, my - 2, text, 10.5, False, italico, "middle", col)
     return svg(W, H, b)
 
 

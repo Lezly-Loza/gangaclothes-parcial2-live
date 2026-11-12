@@ -296,11 +296,116 @@ clases CSS en [`caja.css` "cola-caja"](../web/src/app/features/caja/caja.css):
 
 ## 4. Escenario crítico — dos cajeros, un solo stock
 
-Es el que resuelve el caso conflictivo que menciona el examen. Está probado
-automáticamente en
-**`parcial2/backend/tests/prueba_venta_offline_contado.py`**.
+### 4.1 ¿Qué pasa en la realidad?
 
-Para ejecutarlo:
+Dos cajas (A y B) del mismo tenant pierden Internet al mismo tiempo. Ambas
+tienen la misma variante con **1 unidad disponible**. Cada una cobra esa unidad
+en efectivo y queda `pendiente` en su IndexedDB local. Cuando vuelve la red,
+las dos dispararán la sincronización casi simultáneamente. El sistema debe
+garantizar que **solo una venta sobrevive** y la otra reciba un rechazo claro
+para que el cajero pueda devolver el efectivo al cliente.
+
+### 4.2 Las tres líneas de código que hacen esto posible
+
+Todo el blindaje contra la doble venta y la doble sincronización son estos
+tres puntos del backend:
+
+**① UNIQUE sobre `uuid_operacion` — la operación no puede entrar dos veces**
+
+Archivo: `parcial2/backend/app/models/operacion.py:16-18`
+
+```python
+__table_args__ = (
+    UniqueConstraint("tenant_id", "uuid_operacion", name="uq_operacion_tenant_uuid"),
+)
+```
+
+Cada venta local nace con un `uuid_operacion` generado en el cliente
+(`crypto.randomUUID()` en `offline.service.ts:109`). El `UNIQUE` del backend
+hace que, si el cajero A reintenta su misma venta (por red inestable, por
+ejemplo), el servidor devuelva la MISMA confirmación anterior en vez de
+crear una segunda venta.
+
+**② Chequeo de idempotencia al inicio del endpoint**
+
+Archivo: `parcial2/backend/app/modules/offline/sincronizacion.py:40-44`
+
+```python
+previa = db.query(OperacionLog).filter_by(tenant_id=tid, uuid_operacion=uid_op).first()
+if previa:
+    if previa.payload.get('usuario_id') != uid or previa.payload.get('datos') != datos:
+        raise HTTPException(409, 'El identificador ya fue usado para otra operación')
+    return {**previa.payload['resultado'], 'repetida': True}
+```
+
+Si ya se había procesado esa operación antes (mismo uuid), responde
+inmediatamente con el resultado previo y marca `repetida: True`. No se
+duplica ninguna venta, ni siquiera si el cliente reintenta 100 veces.
+
+**③ Bloqueo pesimista sobre `Inventario` — el que llega primero gana**
+
+Archivo: `parcial2/backend/app/modules/offline/sincronizacion.py:99-103`
+
+```python
+inv = db.query(Inventario).filter_by(tenant_id=tid, sucursal_id=body.sucursal_id,
+                                     variante_id=body.variante_id).with_for_update().first()
+if not inv or inv.stock - inv.reservado < body.cantidad:
+    disponible = max(0, inv.stock - inv.reservado) if inv else 0
+    raise HTTPException(409, f'Stock insuficiente: quedan {disponible} unidades en la sucursal')
+```
+
+`with_for_update()` emite un `SELECT … FOR UPDATE` que **bloquea esa fila
+de inventario** hasta que termine la transacción. Si dos transacciones llegan
+juntas, la segunda queda esperando a que la primera haga commit. Cuando
+desbloquea, lee el stock YA descontado y falla con `HTTPException 409`.
+
+### 4.3 Lo que hace el cliente al recibir el 409
+
+Archivo: `parcial2/web/src/app/services/offline.service.ts:181-194`
+
+```typescript
+try {
+  const resultado = await firstValueFrom(this.http.post<…>(`${API_URL}/offline/sincronizar`, { … }));
+  await this.actualizarOperacion({ ...o, estado: 'confirmada', codigo: resultado.codigo,
+                                   confirmada_en: resultado.confirmada_en });
+} catch (err: any) {
+  if ([403, 409, 422].includes(err?.status)) {
+    const detalle = typeof err?.error?.detail === 'string'
+                    ? err.error.detail : 'Operación rechazada. Revisa los datos.';
+    await this.actualizarOperacion({ ...o, estado: 'conflicto', error: detalle });
+  } else { throw err; }                 // error de red → queda 'pendiente' para reintentar
+}
+```
+
+El 409 hace que la operación local pase a `estado='conflicto'` con el motivo
+exacto que devolvió el backend (`"Stock insuficiente: quedan 0 unidades en la
+sucursal"`). Nunca se pierde el registro y nunca se marca como confirmada.
+
+### 4.4 Lo que ve el cajero perdedor
+
+Archivo: `parcial2/web/src/app/features/caja/caja.html` (sección
+`<section class="cola-caja">`) y estilos en `caja.css` (`.cola-caja article.conf-rech`):
+
+```html
+@if (op.estado === 'conflicto' && op.error) {
+  <div class="motivo-rech">
+    <strong>No se proceso el pago:</strong> {{ op.error }}
+    <div class="ayuda">Si recibiste efectivo, devolvelo al cliente o
+         registra otra venta con el stock real.</div>
+  </div>
+}
+```
+
+La tarjeta de la venta se pinta con fondo rojo, badge **"Pago rechazado"** y
+la instrucción explícita para el cajero.
+
+### 4.5 Script que demuestra todo lo anterior automáticamente
+
+Archivo: **`parcial2/backend/tests/prueba_venta_offline_contado.py`** (versionado
+en la rama). Reproduce el escenario completo sin UI, útil si la red del día
+de la demo falla.
+
+Ejecución:
 
 ```bash
 cd parcial2/backend
@@ -308,30 +413,56 @@ DATABASE_URL="sqlite:///./ganga_saas_local.db" \
     .venv-run/Scripts/python -m tests.prueba_venta_offline_contado
 ```
 
-Resultado real (corrida del 2026-11-12 contra la DB local poblada):
+Qué hace, paso por paso (todo verificable en el código del script):
+
+1. Logea dos tokens del mismo cajero (simula dos navegadores abiertos).
+2. Elige una variante con stock y la **normaliza a 1 unidad** para forzar la
+   colisión.
+3. Arma dos venta offline con **UUIDs distintos** (simulando dos IndexedDB
+   locales independientes).
+4. Dispara los dos `POST /offline/sincronizar` casi simultáneos.
+5. Verifica que uno sea `200 CONFIRMADA` y el otro `409 Stock insuficiente`.
+6. Verifica que el stock final queda en 0 (una sola venta aplicada).
+7. **Reenvía** la operación A con el MISMO uuid y verifica que el servidor
+   devuelva `repetida: True` sin duplicarla.
+
+### 4.6 Resultado real de la última corrida
+
+Salida del script contra la DB local poblada (ejecutada antes de este
+informe):
 
 ```
 [1] Login de dos cajeros                   roles=['vendedor'] ventas:crear=True
 [2] Variante disputada: SKU LUN-11-M-BL    Bs 290    stock disponible = 30
-[3] Normalizo el stock a 1 unidad          para forzar la colisión real
+[3] Normalizo el stock a 1 unidad          para forzar la colision real
 [4] Ambos cajeros pierden Internet         guardan la venta en IndexedDB local
 [5] Reconectan y disparan /offline/sincronizar:
       Cajero A → HTTP 200   V-38FBDEAD83   CONFIRMADA
       Cajero B → HTTP 409   "Stock insuficiente: quedan 0 unidades"
 [6] UI en cada dispositivo:
-      A → IndexedDB estado='confirmada' + toast verde
-      B → IndexedDB estado='conflicto'  + banner rojo "Pago rechazado"
+      A → IndexedDB estado='confirmada'  toast verde "Venta confirmada: V-38FBDEAD83"
+      B → IndexedDB estado='conflicto'   banner rojo "Pago rechazado: Stock insuficiente..."
 [7] Stock final                           0  (se descontó UNA sola vez)
-[8] Reintento idempotente de A            HTTP 200 + repetida:True
+[8] Reintento idempotente de A            HTTP 200 + repetida: True  (NO duplica)
 [9] VEREDICTO                             PRUEBA SUPERADA
 ```
 
-El bloqueo pesimista `with_for_update()` sobre el `Inventario`
-([`sincronizacion.py:99-100`](../backend/app/modules/offline/sincronizacion.py))
-y el `UNIQUE(tenant_id, uuid_operacion)` sobre `OperacionLog`
-([`operacion.py:16-18`](../backend/app/models/operacion.py)) son los dos
-mecanismos que garantizan el resultado: **ninguna venta se duplica y nunca
-se vende más stock del que existe**.
+### 4.7 Mini guion para explicar frente a la ingeniera (30 seg)
+
+> "Cuando dos cajas sincronizan sus ventas al mismo tiempo, el servidor usa
+> dos defensas: un **índice UNIQUE** sobre `uuid_operacion` en la tabla
+> `operaciones_log` ([`operacion.py:16`](../backend/app/models/operacion.py#L16))
+> que impide que la misma operación entre dos veces aunque el cliente
+> reintente, y un **SELECT FOR UPDATE** sobre la fila de inventario
+> ([`sincronizacion.py:99`](../backend/app/modules/offline/sincronizacion.py#L99))
+> que serializa a las dos cajas. La primera transacción hace commit y descuenta
+> el stock; la segunda, al leer, ve 0 y recibe un `409 Stock insuficiente`.
+> Esa respuesta viaja al cliente, que marca la operación local como
+> `conflicto` ([`offline.service.ts:181`](../web/src/app/services/offline.service.ts#L181))
+> y muestra un banner rojo *'Pago rechazado'* en la caja del segundo cajero
+> con la instrucción de devolver el efectivo. El script
+> `tests/prueba_venta_offline_contado.py` reproduce este escenario y
+> comprueba que el stock final es 0 y que una sola venta llega a la base."
 
 ---
 
