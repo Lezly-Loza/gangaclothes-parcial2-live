@@ -177,6 +177,143 @@ def dep_line(p1, p2, label=None, color="#7A6A50", marker="arrOpen", dash=True, o
 R_SYM = 24
 
 
+def colaboracion_uml(titulo, actor_dict, nodos, mensajes, W=1200, H=720):
+    """Diagrama de comunicacion UML estandar (estilo Rosenberg / ICONIX).
+
+    - Objetos como rectangulos con '`:ClassName`' subrayado.
+    - Lineas de asociacion entre objetos (sin flecha en la linea).
+    - Cada mensaje es una flecha chica junto a la linea, con '`num: texto`'.
+    - La numeracion muestra el orden; 1.1, 1.2 son sub-pasos de 1.
+    """
+    b = frame(W, H, titulo)
+    ax = actor_dict.get("x", 70)
+    ay = actor_dict.get("y", H / 2)
+    b += actor(ax, ay - 22, {"nombre": actor_dict["nombre"]})
+
+    # Rectangulos de objeto UML
+    rect = {"A": (ax - 10, ay - 10, 20, 20)}  # posicion ficticia del actor
+    pos = {"A": (ax + 14, ay + 22)}
+    for n in nodos:
+        name_lines = n["nombre"] if isinstance(n["nombre"], list) else [n["nombre"]]
+        # formato ':Clase' en la parte superior
+        full = [f":{name_lines[0]}"] + name_lines[1:]
+        w_box = max(130, max(tw(ln, 11.5, True) for ln in full) + 22)
+        h_box = 24 + 15 * len(full)
+        x = n["x"] - w_box / 2
+        y = n["y"] - h_box / 2
+        rect[n["id"]] = (x, y, w_box, h_box)
+        pos[n["id"]] = (n["x"], n["y"])
+
+    # 1) Lineas de asociacion (solo donde hay mensajes)
+    conect = set()
+    for m in mensajes:
+        d, a = m["de"], m["a"]
+        conect.add((d, a) if d < a else (a, d))
+    for (d, a) in conect:
+        x1, y1 = pos[d]; x2, y2 = pos[a]
+        dx, dy = x2 - x1, y2 - y1
+        L = math.hypot(dx, dy) or 1
+        ux, uy = dx / L, dy / L
+        if d != "A":
+            r = rect[d]
+            p1 = clip_rect(r[0], r[1], r[2], r[3], x2, y2)
+        else:
+            p1 = (x1, y1)
+        if a != "A":
+            r = rect[a]
+            p2 = clip_rect(r[0], r[1], r[2], r[3], x1, y1)
+        else:
+            p2 = (x2, y2)
+        b += f'<line x1="{p1[0]:.1f}" y1="{p1[1]:.1f}" x2="{p2[0]:.1f}" y2="{p2[1]:.1f}" stroke="#4A4A4A" stroke-width="1.2"/>'
+
+    # 2) Rectangulos de objeto
+    for n in nodos:
+        x, y, w, h = rect[n["id"]]
+        name_lines = n["nombre"] if isinstance(n["nombre"], list) else [n["nombre"]]
+        full = [f":{name_lines[0]}"] + name_lines[1:]
+        # Color segun estereotipo ICONIX: boundary=celeste, control=rosado, entity=verde
+        col_map = {"boundary": ("#DCEBFA", "#AECDEC", "#17375E"),
+                   "control":  ("#FBE4E1", "#F3CBC5", "#8B2E26"),
+                   "entity":   ("#E9F4E5", "#CFE6C8", "#2E4D28")}
+        light, dark, tcol = col_map.get(n.get("tipo"), ("#F5F5F5", "#CCCCCC", "#222"))
+        gradid = f"gObj_{slug(n['id'])}"
+        b += (f'<defs><linearGradient id="{gradid}" x1="0" y1="0" x2="0" y2="1">'
+              f'<stop offset="0" stop-color="{light}"/><stop offset="1" stop-color="{dark}"/></linearGradient></defs>')
+        b += f'<rect x="{x:.1f}" y="{y:.1f}" width="{w}" height="{h}" fill="url(#{gradid})" stroke="#555555" stroke-width="1.3" rx="2"/>'
+        if n.get("estereotipo"):
+            b += T(x + w / 2, y + 13, f"«{n['estereotipo']}»", 9.5, False, True, "middle", tcol)
+            y0 = y + 27
+        else:
+            y0 = y + 17
+        for j, ln in enumerate(full):
+            ty = y0 + j * 15
+            b += T(x + w / 2, ty, ln, 11.5, True, False, "middle", tcol)
+            # Subrayado del nombre (UML object)
+            wln = tw(ln, 11.5, True)
+            b += f'<line x1="{x + w / 2 - wln / 2:.1f}" y1="{ty + 2}" x2="{x + w / 2 + wln / 2:.1f}" y2="{ty + 2}" stroke="{tcol}" stroke-width="1"/>'
+
+    # 3) Mensajes: flechas pequenas junto a cada linea, con label '1: metodo()'
+    totales = defaultdict(int)
+    for m in mensajes:
+        totales[tuple(sorted([m["de"], m["a"]]))] += 1
+    indices = defaultdict(int)
+    for m in mensajes:
+        d, a = m["de"], m["a"]
+        key = tuple(sorted([d, a]))
+        total = totales[key]
+        k = indices[key]
+        indices[key] = k + 1
+        # obtener los puntos clipeados contra los rectangulos
+        xd, yd = pos[d]; xa, ya = pos[a]
+        if d == "A":
+            pd = (xd, yd)
+        else:
+            r = rect[d]
+            pd = clip_rect(r[0], r[1], r[2], r[3], xa, ya)
+        if a == "A":
+            pa = (xa, ya)
+        else:
+            r = rect[a]
+            pa = clip_rect(r[0], r[1], r[2], r[3], xd, yd)
+        dx, dy = pa[0] - pd[0], pa[1] - pd[1]
+        L = math.hypot(dx, dy) or 1
+        ux, uy = dx / L, dy / L
+        # perpendicular "hacia arriba" por defecto
+        nx, ny = -uy, ux
+        if ny > 0:
+            nx, ny = -nx, -ny
+        # Mensaje k del edge: alterno lado (k par arriba, k impar abajo) y
+        # separo tambien a lo largo del cable. Asi 2 mensajes nunca se tapan.
+        lado = 1 if (k % 2 == 0) else -1
+        if total <= 1:
+            t = 0.5
+        elif total == 2:
+            # ambos al centro, pero cada uno en un lado opuesto
+            t = 0.5
+        else:
+            t = 0.25 + k * (0.5 / max(1, total - 1))
+        bx = pd[0] + ux * (t * L)
+        by = pd[1] + uy * (t * L)
+        sep = 24
+        bx += nx * sep * lado
+        by += ny * sep * lado
+        # flecha pequena (la dibujo centrada en bx,by, longitud 30px apuntando en direccion del mensaje)
+        fx1 = bx - ux * 15
+        fy1 = by - uy * 15
+        fx2 = bx + ux * 15
+        fy2 = by + uy * 15
+        b += f'<line x1="{fx1:.1f}" y1="{fy1:.1f}" x2="{fx2:.1f}" y2="{fy2:.1f}" stroke="#222" stroke-width="1.5" marker-end="url(#arrSolid)"/>'
+        # label del mensaje
+        text = f"{m['num']}: {m['texto']}"
+        wmsg = tw(text, 10.5, False) + 10
+        # posicion del texto por encima (o debajo) segun el lado del mensaje
+        tx = bx + nx * 14 * lado
+        ty = by + ny * 14 * lado + 4
+        b += f'<rect x="{tx-wmsg/2:.1f}" y="{ty-13:.1f}" width="{wmsg:.1f}" height="14" fill="#FFFFFF" opacity="0.92"/>'
+        b += T(tx, ty - 2, text, 10.5, False, True, "middle", "#111")
+    return svg(W, H, b)
+
+
 def comunicacion_rica(titulo, actor_dict, nodos, mensajes, W=1200, H=680):
     """Comunicacion con N participantes y N mensajes. `nodos`: lista de
     {id, tipo: boundary|control|entity, nombre, x, y}. `mensajes`:
@@ -734,6 +871,14 @@ def generar(spec, ACT, CU, out, solo=None, ciclo=None):
                                       d["actor"], d["nodos"], d["mensajes"],
                                       d.get("W", 1200), d.get("H", 700)),
                     "Comunicación", f"{cid}: {cu['nombre']} (rica)")
+    if quiere("colaboracion_uml") and spec.get("colaboracion_uml"):
+        for cid, d in spec["colaboracion_uml"].items():
+            cu = CUd.get(cid, {"nombre": cid})
+            guardar(f"{cid}_colaboracion_uml.svg",
+                    colaboracion_uml(f"col {cid}: {cu['nombre']} — Diagrama de Comunicación",
+                                     d["actor"], d["nodos"], d["mensajes"],
+                                     d.get("W", 1200), d.get("H", 720)),
+                    "Comunicación UML", f"{cid}: {cu['nombre']}")
     return hechos
 
 

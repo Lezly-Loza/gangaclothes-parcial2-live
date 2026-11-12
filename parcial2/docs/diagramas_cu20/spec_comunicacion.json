@@ -1,0 +1,39 @@
+{
+  "proyecto": "GangaClothes SaaS",
+  "actores": [{"id": "CAJ", "nombre": "Cajero"}],
+  "cus": [
+    {"id": "CU-20", "nombre": "Registrar venta de contado sin conexión",
+     "actores": ["CAJ"], "plataforma": "web"}
+  ],
+
+  "colaboracion_uml": {
+    "CU-20": {
+      "W": 1320, "H": 780,
+      "actor": {"nombre": "Cajero", "x": 90, "y": 390},
+
+      "nodos": [
+        {"id": "CajaPage",       "tipo": "boundary", "nombre": "CajaPage",             "x": 360,  "y": 220},
+        {"id": "OfflineService", "tipo": "control",  "nombre": "OfflineService",       "x": 720,  "y": 220},
+        {"id": "OperacionLocal", "tipo": "entity",   "nombre": "OperacionLocal",       "x": 1080, "y": 220},
+        {"id": "Sincronizacion", "tipo": "control",  "nombre": "sincronizacion.py",    "x": 720,  "y": 560},
+        {"id": "VentasService",  "tipo": "control",  "nombre": "ventas.service",       "x": 1080, "y": 560},
+        {"id": "Venta",          "tipo": "entity",   "nombre": "Venta",                "x": 1080, "y": 710},
+        {"id": "Inventario",     "tipo": "entity",   "nombre": "Inventario",           "x": 720,  "y": 710}
+      ],
+
+      "mensajes": [
+        {"num": "1",   "de": "A",             "a": "CajaPage",       "texto": "cobrar()"},
+        {"num": "2",   "de": "CajaPage",      "a": "OfflineService", "texto": "encolarVentaCaja(datos)"},
+        {"num": "3",   "de": "OfflineService","a": "OperacionLocal", "texto": "crear(uuid, estado='pendiente')"},
+        {"num": "4",   "de": "A",             "a": "CajaPage",       "texto": "toggleOffline()  [vuelve la red]"},
+        {"num": "5",   "de": "CajaPage",      "a": "OfflineService", "texto": "sincronizarCola()"},
+        {"num": "6",   "de": "OfflineService","a": "Sincronizacion", "texto": "POST /offline/sincronizar"},
+        {"num": "6.1", "de": "Sincronizacion","a": "Inventario",     "texto": "SELECT FOR UPDATE"},
+        {"num": "6.2", "de": "Sincronizacion","a": "VentasService",  "texto": "registrar_venta(...)"},
+        {"num": "6.3", "de": "VentasService", "a": "Venta",          "texto": "crear(codigo, total)"},
+        {"num": "6.4", "de": "VentasService", "a": "Inventario",     "texto": "stock -= cantidad"},
+        {"num": "7",   "de": "OfflineService","a": "OperacionLocal", "texto": "actualizar(estado='confirmada')"}
+      ]
+    }
+  }
+}
