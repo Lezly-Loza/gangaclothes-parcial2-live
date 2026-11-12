@@ -147,6 +147,40 @@ def _generar_gemini(clave, pregunta, datos):
     raise ultimo_error or ValueError('Ningún modelo de Gemini respondió')
 
 
+def _top_por_sucursal(db, tid, vs, limite=10):
+    """Top-N prendas por sucursal para el período (CU-28, reporte generativo).
+
+    Lee los detalles de cada venta del periodo, agrupa por sucursal y prenda,
+    y devuelve el ranking ordenado por unidades vendidas. Es la pieza que
+    responde la pregunta en lenguaje natural "los N productos mas vendidos
+    agrupados por sucursal": aqui se calcula el ranking real y Gemini solo
+    lo redacta en lenguaje natural.
+    """
+    from ...models import DetalleVenta, Producto, Variante
+    por_suc = defaultdict(lambda: defaultdict(lambda: {'unidades': 0, 'ingreso': 0.0}))
+    for v in vs:
+        for d in db.query(DetalleVenta).filter_by(tenant_id=tid, venta_id=v['id']).all():
+            var = db.query(Variante).filter_by(tenant_id=tid, id=d.variante_id).first()
+            if not var:
+                continue
+            prod = db.query(Producto).filter_by(tenant_id=tid, id=var.producto_id).first()
+            if not prod:
+                continue
+            cubo = por_suc[(v['sucursal_id'], v['sucursal'])][prod.nombre]
+            cubo['unidades'] += d.cantidad
+            cubo['ingreso'] += float(d.subtotal)
+    salida = []
+    for (sid, nombre), prendas in por_suc.items():
+        ranking = sorted(
+            ({'prenda': k, 'unidades': val['unidades'], 'ingreso_bs': round(val['ingreso'], 2)}
+             for k, val in prendas.items()),
+            key=lambda x: (-x['unidades'], -x['ingreso_bs']),
+        )[:limite]
+        salida.append({'sucursal_id': sid, 'sucursal': nombre, 'top': ranking})
+    salida.sort(key=lambda x: x['sucursal'])
+    return salida
+
+
 @router.post('/generativo')
 def generativo(body: ReporteGenerativoIn, scope: TenantScope = Depends(require_permiso('reportes:ver')), db: Session = Depends(get_db)):
     desde, hasta = reportes._periodo(body.desde, body.hasta)
@@ -156,7 +190,8 @@ def generativo(body: ReporteGenerativoIn, scope: TenantScope = Depends(require_p
              'ventas': reportes._totales(vs), 'inventario': inventario['totales'],
              'por_dia': reportes._grupos(vs, lambda v: (v['fecha_local'].isoformat(), v['fecha_local'].isoformat())),
              'por_sucursal': reportes._grupos(vs, lambda v: (v['sucursal_id'], v['sucursal'])),
-             'por_canal': reportes._grupos(vs, lambda v: (v['canal'], v['canal']))}
+             'por_canal': reportes._grupos(vs, lambda v: (v['canal'], v['canal'])),
+             'top_prendas_por_sucursal': _top_por_sucursal(db, scope.tenant_id, vs, limite=10)}
     clave = _clave_gemini()
     if clave:
         try:

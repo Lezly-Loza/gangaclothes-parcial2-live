@@ -105,6 +105,26 @@ export class OfflineService {
       req.onerror = () => reject(req.error);
     }); } finally { db.close(); }
   }
+  /**
+   * Encola una venta desde la caja sin exigir que haya catálogo descargado.
+   * La valida el backend al sincronizar: si el stock o el precio cambiaron,
+   * queda en `conflicto` con el detalle real del servidor.
+   */
+  async encolarVentaCaja(datos: Omit<OperacionLocal, 'uuid_operacion' | 'estado' | 'error' | 'codigo' | 'cuenta' | 'confirmada_en'>): Promise<string> {
+    const db = await this.abrir(); const cuenta = this.clave();
+    const uuid = crypto.randomUUID();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction('operaciones', 'readwrite');
+        const nueva: OperacionLocal = { ...datos, uuid_operacion: uuid, cuenta, estado: 'pendiente', error: null, codigo: null, confirmada_en: null };
+        tx.objectStore('operaciones').add(nueva, `${cuenta}:${uuid}`);
+        tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
+      });
+    } finally { db.close(); }
+    this.revision.update(n => n + 1);
+    return uuid;
+  }
+
   async guardarOperacion(datos: Omit<OperacionLocal, 'uuid_operacion' | 'estado' | 'error' | 'codigo' | 'cuenta' | 'confirmada_en'>): Promise<void> {
     const db = await this.abrir(); const cuenta = this.clave();
     try { await new Promise<void>((resolve, reject) => {

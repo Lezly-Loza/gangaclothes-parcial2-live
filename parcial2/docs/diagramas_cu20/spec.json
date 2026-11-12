@@ -1,0 +1,158 @@
+{
+  "proyecto": "GangaClothes SaaS",
+  "numerar_pasos": true,
+  "stack": {
+    "web": {"ui": ": Angular 18 (PWA)", "servicio": ": HttpClient + IndexedDB"},
+    "router": ": FastAPI Router",
+    "service": ": sincronizacion.py",
+    "bd": ": SQLite / PostgreSQL"
+  },
+  "actores": [
+    {"id": "CAJ", "nombre": "Cajero"}
+  ],
+  "cus": [
+    {"id": "CU-20", "nombre": "Registrar venta de contado sin conexión",
+     "actores": ["CAJ"], "plataforma": "web", "ciclo": 2, "paquete": "P-OFF"}
+  ],
+
+  "comunicacion": {
+    "CU-20": {
+      "boundary": "CajaPage",
+      "control": "OfflineService",
+      "entity": "OperacionLocal",
+      "mensajes": [
+        "clic Cobrar()",
+        "cobrar()",
+        "encolarVentaCaja(datos)",
+        "add(operaciones, op)",
+        "uuid_operacion",
+        "toastVentaLocal()"
+      ]
+    }
+  },
+
+  "analisis": {
+    "CU-20": {
+      "boundary": {
+        "nombre": "CajaPage",
+        "atributos": ["lineas", "modoOffline", "ventasPendientes", "recibido"],
+        "operaciones": ["cobrar()", "toggleOffline()", "sincronizarCola()", "cargarPendientes()"]
+      },
+      "control": {
+        "nombre": "OfflineService",
+        "atributos": ["revision: Signal"],
+        "operaciones": [
+          "encolarVentaCaja(datos)",
+          "sincronizarPendientes()",
+          "sincronizar(op)",
+          "actualizarOperacion(op)"
+        ]
+      },
+      "entidades": [
+        {"nombre": "OperacionLocal",
+         "atributos": ["uuid_operacion", "tipo", "sucursal_id", "variante_id", "cantidad",
+                       "precio_unitario", "monto_recibido", "fecha_local", "estado",
+                       "error", "codigo", "confirmada_en", "cuenta"]},
+        {"nombre": "OperacionLog",
+         "atributos": ["uuid_operacion [UQ]", "tipo", "estado", "payload", "sincronizado_at"]},
+        {"nombre": "Venta",
+         "atributos": ["codigo", "sucursal_id", "usuario_id", "uuid_operacion",
+                       "forma_pago", "total", "estado", "fecha"]},
+        {"nombre": "Inventario",
+         "atributos": ["sucursal_id", "variante_id", "stock", "reservado", "stock_min"]}
+      ]
+    }
+  },
+
+  "secuencia": {
+    "CU-20": {
+      "cadena": {
+        "ui": "CajaPage",
+        "servicio": "OfflineService",
+        "ruta": "/offline/sincronizar",
+        "service_py": "sincronizacion.py",
+        "tablas": "operaciones_log, ventas, inventarios",
+        "plataforma": "web"
+      },
+      "pasos": [
+        ["A", "U", "clic Cobrar (modoOffline=ON)"],
+        ["U", "U", "cobrar()", "self"],
+        ["U", "S", "encolarVentaCaja(datos)"],
+        ["S", "S", "crypto.randomUUID()", "self"],
+        ["S", "B", "IndexedDB.add(operaciones, OperacionLocal{pendiente})"],
+        ["S", "U", "uuid_operacion", "ret"],
+        ["U", "A", "toast \"Venta registrada en local\"", "ret"],
+
+        ["A", "U", "chip apaga local  →  modo=red"],
+        ["U", "S", "sincronizarCola()"],
+        ["S", "S", "sincronizarPendientes()", "self"],
+        ["S", "R", "POST /offline/sincronizar"],
+        ["R", "V", "sincronizar(body, scope, db)"],
+        ["V", "B", "SELECT OperacionLog por uuid_operacion"],
+        ["B", "V", "null (no existe aún)", "ret"],
+        ["V", "B", "SELECT Variante.precio actual"],
+        ["V", "B", "SELECT Inventario FOR UPDATE"],
+        ["B", "V", "stock - reservado", "ret"],
+
+        ["V", "B", "INSERT OperacionLog(estado=CONFIRMADA, uuid)"],
+        ["V", "B", "ventas.service.registrar_venta(...)"],
+        ["B", "V", "Venta.codigo = V-XXXXXXXX", "ret"],
+        ["V", "R", "{codigo, estado=CONFIRMADA}", "ret"],
+        ["R", "S", "200 OK", "ret"],
+        ["S", "S", "actualizarOperacion(estado=confirmada)", "self"],
+        ["S", "U", "revision + 1", "ret"],
+        ["U", "A", "toast verde \"Venta confirmada: V-XXX\"", "ret"]
+      ],
+      "marcos": [
+        ["opt", "[chip en LOCAL]", 1, 7],
+        ["alt", "[stock suficiente]", 16, 25, 18]
+      ]
+    }
+  },
+
+  "columnas_clases": 4,
+  "clases_por_grupo": false,
+  "clases": [
+    {"nombre": "CajaPage",        "grupo": "Frontend", "pos": [0, 0],
+     "atributos": ["lineas", "modoOffline", "ventasPendientes", "recibido"]},
+    {"nombre": "OfflineService",  "grupo": "Frontend", "pos": [1, 0],
+     "atributos": ["revision"]},
+    {"nombre": "OperacionLocal",  "grupo": "Frontend", "pos": [2, 0],
+     "atributos": ["uuid_operacion", "tipo", "sucursal_id", "variante_id",
+                   "cantidad", "precio_unitario", "monto_recibido",
+                   "fecha_local", "estado", "error", "codigo", "cuenta"]},
+    {"nombre": "sincronizacion",  "grupo": "Backend",  "pos": [3, 0],
+     "atributos": ["POST /offline/sincronizar", "sincronizar(body, scope, db)"]},
+    {"nombre": "OperacionLog",    "grupo": "Backend",  "pos": [3, 1],
+     "atributos": ["id [PK]", "uuid_operacion [UQ]", "tipo", "estado",
+                   "payload", "sincronizado_at"]},
+    {"nombre": "ventas_service",  "grupo": "Backend",  "pos": [2, 1],
+     "atributos": ["registrar_venta(tenant_id, body, user_id)"]},
+    {"nombre": "Venta",           "grupo": "Backend",  "pos": [1, 1],
+     "atributos": ["id [PK]", "codigo", "sucursal_id [FK]", "usuario_id [FK]",
+                   "uuid_operacion", "forma_pago", "total", "estado", "fecha"]},
+    {"nombre": "DetalleVenta",    "grupo": "Backend",  "pos": [0, 2],
+     "atributos": ["id [PK]", "venta_id [FK]", "variante_id [FK]",
+                   "cantidad", "precio_unitario", "subtotal"]},
+    {"nombre": "Pago",            "grupo": "Backend",  "pos": [1, 2],
+     "atributos": ["id [PK]", "venta_id [FK]", "metodo", "monto", "estado"]},
+    {"nombre": "Inventario",      "grupo": "Backend",  "pos": [2, 2],
+     "atributos": ["id [PK]", "sucursal_id [FK]", "variante_id [FK]",
+                   "stock", "reservado", "stock_min"]},
+    {"nombre": "Variante",        "grupo": "Backend",  "pos": [3, 2],
+     "atributos": ["id [PK]", "producto_id [FK]", "sku", "precio"]}
+  ],
+  "relaciones": [
+    {"de": "CajaPage",       "a": "OfflineService", "mult": ["1", "1"],   "tipo": "asociacion"},
+    {"de": "OfflineService", "a": "OperacionLocal", "mult": ["1", "0..*"],"tipo": "composicion"},
+    {"de": "OfflineService", "a": "sincronizacion", "mult": ["1", "1"],   "tipo": "asociacion"},
+    {"de": "sincronizacion", "a": "OperacionLog",   "mult": ["1", "0..*"],"tipo": "asociacion"},
+    {"de": "sincronizacion", "a": "ventas_service", "mult": ["1", "1"],   "tipo": "asociacion"},
+    {"de": "ventas_service", "a": "Venta",          "mult": ["1", "0..*"],"tipo": "asociacion"},
+    {"de": "Venta",          "a": "DetalleVenta",   "mult": ["1", "1..*"],"tipo": "composicion"},
+    {"de": "Venta",          "a": "Pago",           "mult": ["1", "1..*"],"tipo": "composicion"},
+    {"de": "DetalleVenta",   "a": "Variante",       "mult": ["*", "1"],   "tipo": "asociacion"},
+    {"de": "Inventario",     "a": "Variante",       "mult": ["*", "1"],   "tipo": "asociacion"},
+    {"de": "ventas_service", "a": "Inventario",     "mult": ["1", "0..*"],"tipo": "asociacion"}
+  ]
+}

@@ -306,3 +306,66 @@ tr.excede:hover {
 .acciones-comprobante .btn {
   flex: 1 1 140px;
 }
+
+/* ---------- Chip de red discreto (CU-20) ---------- */
+.chip-red {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 6px;
+  background: rgba(241, 245, 249, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  font-size: 11px;
+  color: #64748b;
+  opacity: 0.65;
+  transition: opacity .2s;
+  z-index: 20;
+  backdrop-filter: blur(4px);
+}
+.chip-red:hover { opacity: 1; }
+.chip-red.off { background: rgba(254, 243, 199, 0.85); border-color: rgba(217, 119, 6, 0.4); color: #92400e; opacity: 0.9; }
+.chip-red .mini-sw { position: relative; display: inline-block; width: 26px; height: 14px; }
+.chip-red .mini-sw input { opacity: 0; width: 0; height: 0; }
+.chip-red .pista { position: absolute; cursor: pointer; inset: 0; background: #d1d5db; border-radius: 999px; transition: .2s; }
+.chip-red .pelota { position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; background: white; border-radius: 50%; transition: .2s; }
+.chip-red input:checked + .pista { background: #16a34a; }
+.chip-red input:checked + .pista .pelota { transform: translateX(12px); }
+.chip-red .chip-txt { text-transform: uppercase; letter-spacing: .3px; font-weight: 600; font-size: 10px; }
+.chip-red .chip-cnt {
+  background: #475569; color: white; padding: 0 6px; border-radius: 999px;
+  font-size: 10px; font-weight: 700; min-width: 16px; text-align: center;
+}
+.chip-red.off .chip-cnt { background: #d97706; }
+.chip-red .chip-btn {
+  background: none; border: none; cursor: pointer; font-size: 14px;
+  color: #475569; padding: 0 2px; line-height: 1;
+}
+.chip-red .chip-btn:hover { color: #0f172a; }
+.chip-red .chip-btn:disabled { opacity: 0.5; cursor: wait; }
+
+.cola-caja {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  padding: 14px;
+  margin: 10px 0 16px;
+}
+.cola-caja h2 { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+.cola-caja article { padding: 10px 12px; margin: 6px 0; background: white; border-radius: 8px; border-left: 3px solid #f59e0b; }
+.cola-caja article.conf { border-left-color: #16a34a; background: #f0fdf4; }
+.cola-caja article.conf-rech { border-left-color: #dc2626; background: #fef2f2; }
+.cola-caja .linea { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.cola-caja .detalle { font-size: 12px; color: #64748b; margin-top: 2px; }
+.cola-caja .pin { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; color: white; }
+.cola-caja .pin.pend { background: #f59e0b; }
+.cola-caja .pin.ok   { background: #16a34a; }
+.cola-caja .pin.err  { background: #dc2626; }
+.cola-caja .motivo-rech {
+  margin-top: 6px; padding: 8px; background: #fee2e2; border-radius: 6px;
+  color: #991b1b; font-weight: 600; font-size: 12px;
+}
+.cola-caja .motivo-rech .ayuda { color: #64748b; font-weight: 400; margin-top: 3px; }
