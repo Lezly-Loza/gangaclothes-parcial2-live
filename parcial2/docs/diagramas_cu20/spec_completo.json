@@ -1,0 +1,1279 @@
+{
+    "proyecto":  "GangaClothes SaaS",
+    "numerar_pasos":  true,
+    "actores":  [
+                    {
+                        "id":  "CAJ",
+                        "nombre":  "Cajero"
+                    }
+                ],
+    "cus":  [
+                {
+                    "id":  "CU-20",
+                    "nombre":  "Registrar venta de contado sin conexión",
+                    "actores":  [
+                                    "CAJ"
+                                ],
+                    "plataforma":  "web",
+                    "ciclo":  2
+                }
+            ],
+    "comunicacion_rica":  {
+                              "CU-20":  {
+                                            "W":  1680,
+                                            "H":  1260,
+                                            "actor":  {
+                                                          "nombre":  "Cajero",
+                                                          "x":  70,
+                                                          "y":  500
+                                                      },
+                                            "nodos":  [
+                                                          {
+                                                              "id":  "CajaPage",
+                                                              "tipo":  "boundary",
+                                                              "nombre":  "CajaPage",
+                                                              "x":  330,
+                                                              "y":  250
+                                                          },
+                                                          {
+                                                              "id":  "OfflineService",
+                                                              "tipo":  "control",
+                                                              "nombre":  "OfflineService",
+                                                              "x":  690,
+                                                              "y":  250
+                                                          },
+                                                          {
+                                                              "id":  "IndexedDB",
+                                                              "tipo":  "entity",
+                                                              "nombre":  [
+                                                                             "IndexedDB",
+                                                                             "operaciones"
+                                                                         ],
+                                                              "x":  1030,
+                                                              "y":  250
+                                                          },
+                                                          {
+                                                              "id":  "Router",
+                                                              "tipo":  "boundary",
+                                                              "nombre":  [
+                                                                             "POST",
+                                                                             "/offline/sincronizar"
+                                                                         ],
+                                                              "x":  330,
+                                                              "y":  770
+                                                          },
+                                                          {
+                                                              "id":  "sincronizacion",
+                                                              "tipo":  "control",
+                                                              "nombre":  "sincronizacion.py",
+                                                              "x":  690,
+                                                              "y":  770
+                                                          },
+                                                          {
+                                                              "id":  "VentasService",
+                                                              "tipo":  "control",
+                                                              "nombre":  "ventas.service",
+                                                              "x":  1050,
+                                                              "y":  770
+                                                          },
+                                                          {
+                                                              "id":  "OperacionLog",
+                                                              "tipo":  "entity",
+                                                              "nombre":  "OperacionLog",
+                                                              "x":  1430,
+                                                              "y":  350
+                                                          },
+                                                          {
+                                                              "id":  "Variante",
+                                                              "tipo":  "entity",
+                                                              "nombre":  "Variante / Producto",
+                                                              "x":  1430,
+                                                              "y":  550
+                                                          },
+                                                          {
+                                                              "id":  "Producto",
+                                                              "tipo":  "entity",
+                                                              "nombre":  "Producto",
+                                                              "x":  1430,
+                                                              "y":  650
+                                                          },
+                                                          {
+                                                              "id":  "Inventario",
+                                                              "tipo":  "entity",
+                                                              "nombre":  "Inventario",
+                                                              "x":  1430,
+                                                              "y":  870
+                                                          },
+                                                          {
+                                                              "id":  "Venta",
+                                                              "tipo":  "entity",
+                                                              "nombre":  "Venta",
+                                                              "x":  1430,
+                                                              "y":  1010
+                                                          },
+                                                          {
+                                                              "id":  "DetalleVenta",
+                                                              "tipo":  "entity",
+                                                              "nombre":  "DetalleVenta",
+                                                              "x":  1430,
+                                                              "y":  1150
+                                                          },
+                                                          {
+                                                              "id":  "Pago",
+                                                              "tipo":  "entity",
+                                                              "nombre":  "Pago",
+                                                              "x":  1430,
+                                                              "y":  1290
+                                                          },
+                                                          {
+                                                              "id":  "Navegador",
+                                                              "tipo":  "boundary",
+                                                              "nombre":  "Navegador (online)",
+                                                              "x":  330,
+                                                              "y":  500
+                                                          }
+                                                      ],
+                                            "mensajes":  [
+                                                             {
+                                                                 "num":  "1",
+                                                                 "de":  "A",
+                                                                 "a":  "CajaPage",
+                                                                 "texto":  "Cobrar con modoOffline=ON"
+                                                             },
+                                                             {
+                                                                 "num":  "1.1",
+                                                                 "de":  "CajaPage",
+                                                                 "a":  "OfflineService",
+                                                                 "texto":  "encolarVentaCaja(datos)"
+                                                             },
+                                                             {
+                                                                 "num":  "1.1.1",
+                                                                 "de":  "OfflineService",
+                                                                 "a":  "IndexedDB",
+                                                                 "texto":  "guarda operación con UUID pendiente"
+                                                             },
+                                                             {
+                                                                 "num":  "1.1.2",
+                                                                 "de":  "OfflineService",
+                                                                 "a":  "CajaPage",
+                                                                 "texto":  "devuelve UUID"
+                                                             },
+                                                             {
+                                                                 "num":  "1.2",
+                                                                 "de":  "CajaPage",
+                                                                 "a":  "A",
+                                                                 "texto":  "toast: venta local"
+                                                             },
+                                                             {
+                                                                 "num":  "2",
+                                                                 "de":  "A",
+                                                                 "a":  "CajaPage",
+                                                                 "texto":  "apaga modo offline"
+                                                             },
+                                                             {
+                                                                 "num":  "2.1",
+                                                                 "de":  "CajaPage",
+                                                                 "a":  "OfflineService",
+                                                                 "texto":  "sincronizarCola()"
+                                                             },
+                                                             {
+                                                                 "num":  "2.2",
+                                                                 "de":  "OfflineService",
+                                                                 "a":  "IndexedDB",
+                                                                 "texto":  "lee cola pendiente/conflicto"
+                                                             },
+                                                             {
+                                                                 "num":  "2.3",
+                                                                 "de":  "OfflineService",
+                                                                 "a":  "Router",
+                                                                 "texto":  "POST /offline/sincronizar (por operación)"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4",
+                                                                 "de":  "Router",
+                                                                 "a":  "sincronizacion",
+                                                                 "texto":  "sincronizar(body, scope, db)"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4.1",
+                                                                 "de":  "sincronizacion",
+                                                                 "a":  "OperacionLog",
+                                                                 "texto":  "busca UUID (idempotencia)"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4.2",
+                                                                 "de":  "sincronizacion",
+                                                                 "a":  "Variante",
+                                                                 "texto":  "valida variante y precio"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4.2.1",
+                                                                 "de":  "sincronizacion",
+                                                                 "a":  "Producto",
+                                                                 "texto":  "valida producto y promoción"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4.3",
+                                                                 "de":  "sincronizacion",
+                                                                 "a":  "Inventario",
+                                                                 "texto":  "bloquea y valida stock"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4.4",
+                                                                 "de":  "sincronizacion",
+                                                                 "a":  "VentasService",
+                                                                 "texto":  "registrar_venta(..., UUID)"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4.4.1",
+                                                                 "de":  "VentasService",
+                                                                 "a":  "Venta",
+                                                                 "texto":  "crea venta + UUID"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4.4.2",
+                                                                 "de":  "VentasService",
+                                                                 "a":  "DetalleVenta",
+                                                                 "texto":  "crea detalle"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4.4.3",
+                                                                 "de":  "VentasService",
+                                                                 "a":  "Pago",
+                                                                 "texto":  "crea pago efectivo"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4.4.4",
+                                                                 "de":  "VentasService",
+                                                                 "a":  "Inventario",
+                                                                 "texto":  "descuenta stock + movimiento"
+                                                             },
+                                                             {
+                                                                 "num":  "2.4.5",
+                                                                 "de":  "sincronizacion",
+                                                                 "a":  "OperacionLog",
+                                                                 "texto":  "guarda resultado confirmado"
+                                                             },
+                                                             {
+                                                                 "num":  "2.5",
+                                                                 "de":  "sincronizacion",
+                                                                 "a":  "Router",
+                                                                 "texto":  "retorna código y confirmada_en"
+                                                             },
+                                                             {
+                                                                 "num":  "2.6",
+                                                                 "de":  "Router",
+                                                                 "a":  "OfflineService",
+                                                                 "texto":  "200 resultado o 409/403/422"
+                                                             },
+                                                             {
+                                                                 "num":  "2.7",
+                                                                 "de":  "OfflineService",
+                                                                 "a":  "IndexedDB",
+                                                                 "texto":  "actualiza estado; red caída conserva pendiente"
+                                                             },
+                                                             {
+                                                                 "num":  "2.8",
+                                                                 "de":  "OfflineService",
+                                                                 "a":  "CajaPage",
+                                                                 "texto":  "revision++; notifica"
+                                                             },
+                                                             {
+                                                                 "num":  "2.9",
+                                                                 "de":  "CajaPage",
+                                                                 "a":  "A",
+                                                                 "texto":  "toast: código o conflicto"
+                                                             },
+                                                             {
+                                                                 "num":  "2.0",
+                                                                 "de":  "Navegador",
+                                                                 "a":  "OfflineService",
+                                                                 "texto":  "evento online / pestaña visible"
+                                                             }
+                                                         ]
+                                        }
+                          },
+    "columnas_clases":  7,
+    "clases_destacadas":  [
+                              "CajaPage",
+                              "OfflineService",
+                              "OperacionLocal",
+                              "sincronizacion",
+                              "ventas_service",
+                              "OperacionLog",
+                              "Venta",
+                              "DetalleVenta",
+                              "Pago",
+                              "Inventario",
+                              "Variante",
+                              "Sucursal",
+                              "User"
+                          ],
+    "clases":  [
+                   {
+                       "nombre":  "Tenant",
+                       "grupo":  "SaaS",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "codigo [UQ]",
+                                         "razon_social",
+                                         "nit",
+                                         "correo",
+                                         "activo",
+                                         "estado"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Plan",
+                       "grupo":  "SaaS",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "codigo [UQ]",
+                                         "nombre",
+                                         "precio_mensual",
+                                         "max_sucursales",
+                                         "max_usuarios",
+                                         "activo"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Suscripcion",
+                       "grupo":  "SaaS",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "plan_id [FK]",
+                                         "fecha_inicio",
+                                         "fecha_fin",
+                                         "estado"
+                                     ]
+                   },
+                   {
+                       "nombre":  "SuperAdmin",
+                       "grupo":  "SaaS",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "email [UQ]",
+                                         "password_hash",
+                                         "activo"
+                                     ]
+                   },
+                   {
+                       "nombre":  "User",
+                       "grupo":  "Seguridad",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "email",
+                                         "password_hash",
+                                         "nombre",
+                                         "rol",
+                                         "activo",
+                                         "estado"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Rol",
+                       "grupo":  "Seguridad",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "codigo",
+                                         "nombre",
+                                         "permisos"
+                                     ]
+                   },
+                   {
+                       "nombre":  "UsuarioRol",
+                       "grupo":  "Seguridad",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "user_id [FK]",
+                                         "rol_id [FK]"
+                                     ]
+                   },
+                   {
+                       "nombre":  "PerfilUsuario",
+                       "grupo":  "Seguridad",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "user_id [FK]",
+                                         "telefono",
+                                         "direccion"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Bitacora",
+                       "grupo":  "Seguridad",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "usuario_id [FK]",
+                                         "accion",
+                                         "modulo",
+                                         "nivel",
+                                         "detalle",
+                                         "ip"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Sucursal",
+                       "grupo":  "Operacion",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "codigo",
+                                         "nombre",
+                                         "ciudad",
+                                         "direccion",
+                                         "activo"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Categoria",
+                       "grupo":  "Catalogo",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "nombre"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Talla",
+                       "grupo":  "Catalogo",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "nombre"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Color",
+                       "grupo":  "Catalogo",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "nombre",
+                                         "codigo_hex"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Temporada",
+                       "grupo":  "Catalogo",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "nombre",
+                                         "fecha_inicio",
+                                         "fecha_fin"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Producto",
+                       "grupo":  "Catalogo",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "nombre",
+                                         "descripcion",
+                                         "categoria_id [FK]",
+                                         "temporada_id [FK]",
+                                         "precio_base",
+                                         "imagen_url",
+                                         "activo"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Variante",
+                       "grupo":  "Catalogo",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "producto_id [FK]",
+                                         "talla_id [FK]",
+                                         "color_id [FK]",
+                                         "sku [UQ]",
+                                         "precio",
+                                         "activo"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Promocion",
+                       "grupo":  "Promociones",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "producto_id [FK]",
+                                         "tipo",
+                                         "valor",
+                                         "desde",
+                                         "hasta"
+                                     ]
+                   },
+                   {
+                       "nombre":  "DescuentoVenta",
+                       "grupo":  "Promociones",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "detalle_venta_id [FK]",
+                                         "descuento"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Inventario",
+                       "grupo":  "Inventario",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "sucursal_id [FK]",
+                                         "variante_id [FK]",
+                                         "stock",
+                                         "reservado",
+                                         "stock_min",
+                                         "stock_max"
+                                     ]
+                   },
+                   {
+                       "nombre":  "MovimientoInventario",
+                       "grupo":  "Inventario",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "inventario_id [FK]",
+                                         "tipo",
+                                         "cantidad",
+                                         "motivo",
+                                         "fecha"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Cliente",
+                       "grupo":  "Clientes",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "user_id [FK]",
+                                         "nombre",
+                                         "documento",
+                                         "telefono",
+                                         "correo"
+                                     ]
+                   },
+                   {
+                       "nombre":  "CarritoCliente",
+                       "grupo":  "Clientes",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "cliente_id [FK]",
+                                         "variante_id [FK]",
+                                         "cantidad"
+                                     ]
+                   },
+                   {
+                       "nombre":  "PrendaFavorita",
+                       "grupo":  "Clientes",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "cliente_id [FK]",
+                                         "producto_id [FK]"
+                                     ]
+                   },
+                   {
+                       "nombre":  "PrendaResena",
+                       "grupo":  "Clientes",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "cliente_id [FK]",
+                                         "producto_id [FK]",
+                                         "puntuacion",
+                                         "comentario"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Reserva",
+                       "grupo":  "Reservas",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "codigo",
+                                         "sucursal_id [FK]",
+                                         "cliente_id [FK]",
+                                         "origen",
+                                         "fecha_limite",
+                                         "estado"
+                                     ]
+                   },
+                   {
+                       "nombre":  "DetalleReserva",
+                       "grupo":  "Reservas",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "reserva_id [FK]",
+                                         "variante_id [FK]",
+                                         "cantidad"
+                                     ]
+                   },
+                   {
+                       "nombre":  "CitaReserva",
+                       "grupo":  "Reservas",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "reserva_id [FK]",
+                                         "fecha_hora_prueba"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Venta",
+                       "grupo":  "Ventas",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "codigo",
+                                         "sucursal_id [FK]",
+                                         "usuario_id [FK]",
+                                         "cliente_id [FK]",
+                                         "uuid_operacion",
+                                         "origen",
+                                         "forma_pago",
+                                         "total",
+                                         "estado",
+                                         "fecha"
+                                     ]
+                   },
+                   {
+                       "nombre":  "DetalleVenta",
+                       "grupo":  "Ventas",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "venta_id [FK]",
+                                         "variante_id [FK]",
+                                         "cantidad",
+                                         "precio_unitario",
+                                         "subtotal"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Pago",
+                       "grupo":  "Ventas",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "venta_id [FK]",
+                                         "metodo",
+                                         "monto",
+                                         "referencia_pasarela",
+                                         "estado"
+                                     ]
+                   },
+                   {
+                       "nombre":  "CambioPrenda",
+                       "grupo":  "Ventas",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "venta_id [FK]",
+                                         "variante_devuelta_id [FK]",
+                                         "variante_nueva_id [FK]",
+                                         "diferencia",
+                                         "motivo",
+                                         "fecha"
+                                     ]
+                   },
+                   {
+                       "nombre":  "OperacionLog",
+                       "grupo":  "Offline (CU-20)",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "uuid_operacion [UQ]",
+                                         "tipo",
+                                         "estado",
+                                         "payload",
+                                         "sincronizado_at"
+                                     ]
+                   },
+                   {
+                       "nombre":  "CajaPage",
+                       "grupo":  "Offline (CU-20)",
+                       "atributos":  [
+                                         "«boundary» Angular",
+                                         "lineas",
+                                         "modoOffline",
+                                         "ventasPendientes",
+                                         "recibido"
+                                     ]
+                   },
+                   {
+                       "nombre":  "OfflineService",
+                       "grupo":  "Offline (CU-20)",
+                       "atributos":  [
+                                         "«control» Angular",
+                                         "revision: Signal"
+                                     ]
+                   },
+                   {
+                       "nombre":  "OperacionLocal",
+                       "grupo":  "Offline (CU-20)",
+                       "atributos":  [
+                                         "«entity» IndexedDB",
+                                         "uuid_operacion",
+                                         "tipo",
+                                         "sucursal_id",
+                                         "variante_id",
+                                         "cantidad",
+                                         "precio_unitario",
+                                         "monto_recibido",
+                                         "fecha_local",
+                                         "estado"
+                                     ]
+                   },
+                   {
+                       "nombre":  "sincronizacion",
+                       "grupo":  "Offline (CU-20)",
+                       "atributos":  [
+                                         "«control» FastAPI",
+                                         "POST /offline/sincronizar"
+                                     ]
+                   },
+                   {
+                       "nombre":  "ventas_service",
+                       "grupo":  "Offline (CU-20)",
+                       "atributos":  [
+                                         "«control» service.py",
+                                         "registrar_venta(...)"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Proveedor",
+                       "grupo":  "Compras",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "razon_social",
+                                         "nit",
+                                         "contacto",
+                                         "telefono",
+                                         "correo"
+                                     ]
+                   },
+                   {
+                       "nombre":  "ProductoProveedor",
+                       "grupo":  "Compras",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "proveedor_id [FK]",
+                                         "variante_id [FK]",
+                                         "precio",
+                                         "lead_time"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Compra",
+                       "grupo":  "Compras",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "codigo",
+                                         "proveedor_id [FK]",
+                                         "sucursal_id [FK]",
+                                         "estado",
+                                         "fecha"
+                                     ]
+                   },
+                   {
+                       "nombre":  "DetalleCompra",
+                       "grupo":  "Compras",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "compra_id [FK]",
+                                         "variante_id [FK]",
+                                         "cantidad",
+                                         "precio_unitario"
+                                     ]
+                   },
+                   {
+                       "nombre":  "Envio",
+                       "grupo":  "Envios",
+                       "atributos":  [
+                                         "id [PK]",
+                                         "tenant_id [FK]",
+                                         "venta_id [FK]",
+                                         "repartidor",
+                                         "direccion",
+                                         "estado",
+                                         "fecha"
+                                     ]
+                   }
+               ],
+    "relaciones":  [
+                       {
+                           "de":  "Tenant",
+                           "a":  "Suscripcion",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Plan",
+                           "a":  "Suscripcion",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Tenant",
+                           "a":  "User",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "Tenant",
+                           "a":  "Sucursal",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "User",
+                           "a":  "UsuarioRol",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Rol",
+                           "a":  "UsuarioRol",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "User",
+                           "a":  "PerfilUsuario",
+                           "mult":  [
+                                        "1",
+                                        "0..1"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "User",
+                           "a":  "Bitacora",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Categoria",
+                           "a":  "Producto",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Temporada",
+                           "a":  "Producto",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Producto",
+                           "a":  "Variante",
+                           "mult":  [
+                                        "1",
+                                        "1..*"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "Talla",
+                           "a":  "Variante",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Color",
+                           "a":  "Variante",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Producto",
+                           "a":  "Promocion",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "DetalleVenta",
+                           "a":  "DescuentoVenta",
+                           "mult":  [
+                                        "1",
+                                        "0..1"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Sucursal",
+                           "a":  "Inventario",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Variante",
+                           "a":  "Inventario",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Inventario",
+                           "a":  "MovimientoInventario",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "User",
+                           "a":  "Cliente",
+                           "mult":  [
+                                        "1",
+                                        "0..1"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Cliente",
+                           "a":  "CarritoCliente",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "Cliente",
+                           "a":  "PrendaFavorita",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Cliente",
+                           "a":  "PrendaResena",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Producto",
+                           "a":  "PrendaFavorita",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Producto",
+                           "a":  "PrendaResena",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Sucursal",
+                           "a":  "Reserva",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Cliente",
+                           "a":  "Reserva",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Reserva",
+                           "a":  "DetalleReserva",
+                           "mult":  [
+                                        "1",
+                                        "1..*"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "Reserva",
+                           "a":  "CitaReserva",
+                           "mult":  [
+                                        "1",
+                                        "0..1"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "Variante",
+                           "a":  "DetalleReserva",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Sucursal",
+                           "a":  "Venta",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "User",
+                           "a":  "Venta",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Cliente",
+                           "a":  "Venta",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Venta",
+                           "a":  "DetalleVenta",
+                           "mult":  [
+                                        "1",
+                                        "1..*"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "Venta",
+                           "a":  "Pago",
+                           "mult":  [
+                                        "1",
+                                        "1..*"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "Variante",
+                           "a":  "DetalleVenta",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Venta",
+                           "a":  "CambioPrenda",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Venta",
+                           "a":  "Envio",
+                           "mult":  [
+                                        "1",
+                                        "0..1"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Proveedor",
+                           "a":  "ProductoProveedor",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Variante",
+                           "a":  "ProductoProveedor",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Proveedor",
+                           "a":  "Compra",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Sucursal",
+                           "a":  "Compra",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "Compra",
+                           "a":  "DetalleCompra",
+                           "mult":  [
+                                        "1",
+                                        "1..*"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "Variante",
+                           "a":  "DetalleCompra",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "CajaPage",
+                           "a":  "OfflineService",
+                           "mult":  [
+                                        "1",
+                                        "1"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "OfflineService",
+                           "a":  "OperacionLocal",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "composicion"
+                       },
+                       {
+                           "de":  "OfflineService",
+                           "a":  "sincronizacion",
+                           "mult":  [
+                                        "1",
+                                        "1"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "sincronizacion",
+                           "a":  "OperacionLog",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "sincronizacion",
+                           "a":  "ventas_service",
+                           "mult":  [
+                                        "1",
+                                        "1"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "ventas_service",
+                           "a":  "Venta",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "ventas_service",
+                           "a":  "Inventario",
+                           "mult":  [
+                                        "1",
+                                        "0..*"
+                                    ],
+                           "tipo":  "asociacion"
+                       },
+                       {
+                           "de":  "User",
+                           "a":  "CajaPage",
+                           "mult":  [
+                                        "1",
+                                        "0..1"
+                                    ],
+                           "tipo":  "asociacion"
+                       }
+                   ]
+}

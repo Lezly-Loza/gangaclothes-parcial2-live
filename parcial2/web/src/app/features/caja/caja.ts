@@ -6,6 +6,7 @@ import { mensajeDeError } from '../../core/errores.interceptor';
 import { Notificaciones } from '../../core/notificaciones';
 import { SesionStore } from '../../core/sesion';
 import { SucursalActual } from '../../core/sucursal-actual';
+import { OfflineService, OperacionLocal } from '../../services/offline.service';
 import { OpcionFiltro, SelectorEstado } from '../../shared/estado/selector-estado';
 import { fechaLocal, fechaSinZona, moneda } from '../../shared/formato';
 import { SelectorSucursal } from '../../shared/sucursal/selector-sucursal';
@@ -149,8 +150,44 @@ export class Caja {
   private http = inject(HttpClient);
   private avisos = inject(Notificaciones);
   private comprobantes = inject(Comprobantes);
+  private offline = inject(OfflineService);
   readonly sesion = inject(SesionStore);
   readonly sucursal = inject(SucursalActual);
+
+  // ---- modo sin conexion (simulado) ----
+  // Permite demostrar el CU-20 sin tener que apagar el wifi: cuando esta ON,
+  // la caja no pega a /ventas; la venta queda encolada en IndexedDB y se
+  // sincroniza al apagarlo o al volver la red real.
+  readonly modoOffline = signal(false);
+  readonly ventasPendientes = signal<OperacionLocal[]>([]);
+  readonly sincronizandoColaCaja = signal(false);
+  async cargarPendientes(): Promise<void> {
+    try {
+      const todas = await this.offline.operaciones();
+      this.ventasPendientes.set(todas.filter(o => o.tipo === 'venta'));
+    } catch { /* la IndexedDB puede no estar lista aun */ }
+  }
+  toggleOffline(): void {
+    const siguiente = !this.modoOffline();
+    this.modoOffline.set(siguiente);
+    this.errorCobro.set(null);
+    if (!siguiente) void this.sincronizarCola();
+  }
+  async sincronizarCola(): Promise<void> {
+    if (this.sincronizandoColaCaja()) return;
+    this.sincronizandoColaCaja.set(true);
+    try {
+      await this.offline.sincronizarPendientes(true);
+      await this.cargarPendientes();
+      this.cargarCatalogo();
+      this.avisos.ok('Sincronizacion de caja terminada. Revisa los resultados.');
+    } catch {
+      await this.cargarPendientes();
+      this.avisos.error('No se pudo contactar al servidor. Las ventas quedan en la cola.');
+    } finally {
+      this.sincronizandoColaCaja.set(false);
+    }
+  }
 
   readonly metodos = METODOS;
   readonly moneda = moneda;
@@ -222,6 +259,7 @@ export class Caja {
 
   constructor() {
     this.cargarCatalogo();
+    void this.cargarPendientes();
     effect(() => {
       const id = this.sucursal.id();
       untracked(() => {
@@ -232,6 +270,12 @@ export class Caja {
     effect(() => {
       this.metodo();
       untracked(() => this.errorCobro.set(null));
+    });
+    // Cada vez que OfflineService sincroniza (al reconectar o al apagar el
+    // interruptor), refresco la cola local y el catalogo para reflejar stock.
+    effect(() => {
+      this.offline.revision();
+      untracked(() => { void this.cargarPendientes(); });
     });
   }
 
@@ -350,14 +394,41 @@ export class Caja {
 
     const recibido = this.montoRecibido();
     const nombreSucursal = this.sucursal.actual()?.nombre ?? 'la sucursal';
+    const reserva = this.reservaCargada();
+    const lineas = this.lineas().map(l => ({ ...l }));
+
+    // Modo sin conexion (simulado): no vamos al servidor, encolamos la venta.
+    // Cada linea del carrito se guarda como una operacion `venta` separada en
+    // IndexedDB (el endpoint /offline/sincronizar valida una variante por venta).
+    if (this.modoOffline() && this.metodo() === 'efectivo') {
+      this.cobrando.set(true);
+      this.errorCobro.set(null);
+      const fechaLocal = new Date().toISOString();
+      Promise.all(lineas.map(l => this.offline.encolarVentaCaja({
+        tipo: 'venta', sucursal_id: sucursalId, variante_id: l.variante.id,
+        cantidad: l.cantidad, precio_unitario: l.variante.precio,
+        monto_recibido: l.variante.precio * l.cantidad, fecha_hora_prueba: null,
+        fecha_local: fechaLocal, nombre: l.variante.prenda, sku: l.variante.sku,
+        sucursal: nombreSucursal,
+      }))).then(() => {
+        this.cobrando.set(false);
+        this.nuevaVenta();
+        void this.cargarPendientes();
+        const total = lineas.reduce((s, l) => s + l.variante.precio * l.cantidad, 0);
+        this.avisos.ok(`Venta registrada en local por Bs ${moneda(total)}. Se confirmara al restablecer la red.`);
+      }).catch(err => {
+        this.cobrando.set(false);
+        this.errorCobro.set({ titulo: 'No se pudo guardar sin conexion', detalle: err instanceof Error ? err.message : 'Error desconocido' });
+      });
+      return;
+    }
+
     this.cobrando.set(true);
     this.errorCobro.set(null);
     const firma = this.firma();
     if (!this.operacionCaja || this.operacionCaja.firma !== firma) {
       this.operacionCaja = { firma, uuid: crypto.randomUUID() };
     }
-    const reserva = this.reservaCargada();
-    const lineas = this.lineas().map(l => ({ ...l }));
     this.http.post<{ id: number; codigo: string; total: number; items: { variante_id: number; precio_unitario: number; precio_lista: number; descuento: number; subtotal: number; promocion: string | null }[] }>(`${API_URL}/ventas`, {
       sucursal_id: sucursalId, reserva_id: reserva?.id ?? null, forma_pago: 'EFECTIVO', monto_recibido: recibido,
       uuid_operacion: this.operacionCaja.uuid, items: lineas.map(l => ({ variante_id: l.variante.id, cantidad: l.cantidad })),

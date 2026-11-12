@@ -50,17 +50,28 @@ import { OfflineService, CopiaOffline, OpcionOffline, OperacionLocal, ocupaCopia
       <button class="btn rosa" (click)="sincronizar()" [disabled]="sincronizando() || operaciones().length === 0">{{ sincronizando() ? 'Sincronizando…' : 'Sincronizar pendientes' }}</button>
       @if (mensaje()) { <p role="status">{{ mensaje() }}</p> }
       @for (op of operaciones(); track op.uuid_operacion) {
-        <article><b>{{ op.tipo === 'venta' ? 'Venta de contado' : 'Reserva' }} · {{ op.nombre }} · {{ op.sku }}</b>
-          <p>{{ op.sucursal }} · {{ op.cantidad }} × Bs {{ op.precio_unitario }} · {{ op.estado === 'pendiente' ? 'Pendiente: aún no confirmada' : op.estado === 'conflicto' ? 'No confirmada' : 'Confirmada' }} @if (op.codigo) { · Código {{ op.codigo }} }</p>
-          @if (op.error) { <p role="alert">{{ op.error }}</p> }
-          @if (op.estado === 'conflicto') { <p>Revisa el stock o precio en línea. Puedes descartar esta operación y crear otra con datos actualizados.</p> }
+        <article [class.conflicto]="op.estado === 'conflicto'" [class.confirmada]="op.estado === 'confirmada'">
+          <b>{{ op.tipo === 'venta' ? 'Venta de contado' : 'Reserva' }} · {{ op.nombre }} · {{ op.sku }}</b>
+          <p>
+            {{ op.sucursal }} · {{ op.cantidad }} × Bs {{ op.precio_unitario }}
+            @if (op.estado === 'pendiente') { · <span class="badge pend">Pendiente de sincronizar</span> }
+            @else if (op.estado === 'conflicto') { · <span class="badge rech">{{ op.tipo === 'venta' ? 'Pago rechazado' : 'Reserva rechazada' }}</span> }
+            @else { · <span class="badge ok">Confirmada</span> @if (op.codigo) { · Código {{ op.codigo }} } }
+          </p>
+          @if (op.estado === 'conflicto') {
+            <p class="motivo" role="alert">
+              <strong>{{ op.tipo === 'venta' ? 'No se procesó tu pago' : 'No se pudo tomar la reserva' }}:</strong>
+              {{ op.error || 'otra operación tomó el stock antes que la tuya.' }}
+            </p>
+            <p class="ayuda">Esta operación quedó registrada localmente como rechazada. Si cobraste efectivo al cliente, devolvelo o bien registrá una nueva operación con los datos actualizados del catálogo.</p>
+          }
           @if (op.estado !== 'pendiente') { <button class="btn linea" (click)="quitar(op)">{{ op.estado === 'conflicto' ? 'Descartar conflicto' : 'Quitar del historial local' }}</button> }
         </article>
       } @empty { <p>No hay operaciones guardadas.</p> }
     </section>
     <p>Para abrir la aplicación sin internet, instálala y ábrela al menos una vez con conexión.</p>
   </main>
-`, styles: [`.contenido{max-width:950px;margin:28px auto;padding:0 20px}h1{font-size:24px;font-weight:800}h2{font-size:17px;font-weight:800}.tarjeta{background:white;border:1px solid var(--linea);border-radius:12px;padding:18px;margin:16px 0}label{display:inline-flex;flex-direction:column;gap:5px;margin:8px 12px 8px 0}.tarjeta>button{margin-top:12px}article{border-top:1px solid var(--linea);padding:10px 0}article span{float:right}article p{font-size:13px;color:var(--gris)}`] })
+`, styles: [`.contenido{max-width:950px;margin:28px auto;padding:0 20px}h1{font-size:24px;font-weight:800}h2{font-size:17px;font-weight:800}.tarjeta{background:white;border:1px solid var(--linea);border-radius:12px;padding:18px;margin:16px 0}label{display:inline-flex;flex-direction:column;gap:5px;margin:8px 12px 8px 0}.tarjeta>button{margin-top:12px}article{border-top:1px solid var(--linea);padding:12px 0}article p{font-size:13px;color:var(--gris)}article.conflicto{background:#fef2f2;border-left:3px solid #dc2626;padding-left:12px}article.confirmada{background:#f0fdf4;border-left:3px solid #16a34a;padding-left:12px}.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;color:#fff}.badge.pend{background:#f59e0b}.badge.rech{background:#dc2626}.badge.ok{background:#16a34a}.motivo{color:#991b1b!important;font-weight:600;background:#fee;padding:8px;border-radius:6px;margin:6px 0}.ayuda{font-size:12px!important;color:#64748b!important;margin-top:4px}`] })
 export class ModoOfflinePage {
   private servicio = inject(OfflineService); private sesion = inject(SesionStore);
   readonly esCliente = this.sesion.tieneAlgunRol('cliente') && this.sesion.tienePermiso('reservas:crear');

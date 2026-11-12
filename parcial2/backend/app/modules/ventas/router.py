@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from ...core.database import TenantScope
-from ...core.deps import get_db, require_permiso, require_auth
+from ...core.deps import get_db, require_permiso, require_tenant as require_auth
 from . import schemas, service
 from .comprobante_pdf import generar_pdf_comprobante
 from ...models import Cliente

@@ -12,6 +12,51 @@
   <app-selector-sucursal />
 </div>
 
+<!-- Interruptor de red local. Deliberadamente discreto. -->
+<div class="chip-red" [class.off]="modoOffline()">
+  <label class="mini-sw" [title]="modoOffline() ? 'Trabajando en local' : 'Red activa'">
+    <input type="checkbox" [checked]="!modoOffline()" (change)="toggleOffline()" />
+    <span class="pista"><span class="pelota"></span></span>
+  </label>
+  <span class="chip-txt">{{ modoOffline() ? 'local' : 'red' }}</span>
+  @if (ventasPendientes().length) {
+    <span class="chip-cnt" [title]="'Operaciones en cola: ' + ventasPendientes().length">
+      {{ ventasPendientes().length }}
+    </span>
+  }
+  @if (!modoOffline() && ventasPendientes().length) {
+    <button type="button" class="chip-btn" (click)="sincronizarCola()" [disabled]="sincronizandoColaCaja()" title="Sincronizar operaciones encoladas">
+      {{ sincronizandoColaCaja() ? '…' : '↻' }}
+    </button>
+  }
+</div>
+
+@if (ventasPendientes().length) {
+  <section class="cola-caja">
+    <h2>Operaciones en cola</h2>
+    @for (op of ventasPendientes(); track op.uuid_operacion) {
+      <article [class.conf]="op.estado === 'confirmada'" [class.conf-rech]="op.estado === 'conflicto'">
+        <div class="linea">
+          <strong>{{ op.nombre }} · {{ op.sku }}</strong>
+          @if (op.estado === 'pendiente') { <span class="pin pend">Pendiente</span> }
+          @else if (op.estado === 'confirmada') { <span class="pin ok">Confirmada · {{ op.codigo }}</span> }
+          @else { <span class="pin err">Pago rechazado</span> }
+        </div>
+        <div class="detalle">
+          {{ op.sucursal }} · {{ op.cantidad }} u. × Bs {{ moneda(op.precio_unitario) }}
+          = Bs {{ moneda((op.monto_recibido || op.precio_unitario * op.cantidad)) }}
+        </div>
+        @if (op.estado === 'conflicto' && op.error) {
+          <div class="motivo-rech">
+            <strong>No se proceso el pago:</strong> {{ op.error }}
+            <div class="ayuda">Si recibiste efectivo, devolvelo al cliente o registra otra venta con el stock real.</div>
+          </div>
+        }
+      </article>
+    }
+  </section>
+}
+
 @if (sucursal.error(); as error) {
   <div class="mensaje error">
     <p>{{ error }}</p>
